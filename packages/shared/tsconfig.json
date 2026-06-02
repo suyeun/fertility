@@ -11,7 +11,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "ignoreDeprecations": "5.0"
   },
   "include": ["index.ts", "lib/**/*", "types/**/*", "hooks/**/*", "data/**/*"],
   "exclude": ["node_modules", "dist"]
