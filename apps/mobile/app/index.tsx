@@ -231,8 +231,8 @@ export default function HomeScreen() {
         <View style={s.chatBannerLeft}>
           <Text style={s.chatBannerEmoji}>🌸</Text>
           <View>
-            <Text style={s.chatBannerTitle}>AI 파트너 봄이에게 물어보기</Text>
-            <Text style={s.chatBannerSub}>수치·주기·시술 궁금증을 바로 해결해요</Text>
+            <Text style={s.chatBannerTitle}>AI 파트너 봄이 — 서비스 준비중</Text>
+            <Text style={s.chatBannerSub}>곧 만나요! 수치·주기·시술 AI 상담 💕</Text>
           </View>
         </View>
         <Text style={s.chatBannerArrow}>›</Text>

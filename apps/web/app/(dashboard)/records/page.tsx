@@ -262,35 +262,8 @@ export default function RecordsPage() {
     setDiaryError(null)
 
     try {
-      let aiAnalysis = ''
-      try {
-        const response = await fetch('/api/ai', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: [
-              {
-                role: 'user',
-                content: `다음 일기를 쓴 사용자의 감정을 따뜻하게 공감하고, 힘이 나는 응원 편지를 2-3문장으로 다정하게 써주세요. 의학적 판단은 금지입니다:\n\n"${diaryContent}"`,
-                timestamp: new Date().toISOString()
-              }
-            ]
-          }),
-        })
-        
-        if (response.ok) {
-          const text = await response.text()
-          aiAnalysis = text
-        } else {
-          aiAnalysis = getLocalMockFeedback(selectedMood, diaryContent)
-        }
-      } catch (err) {
-        aiAnalysis = getLocalMockFeedback(selectedMood, diaryContent)
-      }
-
-      setAiFeedback(aiAnalysis)
+      // AI 분석 서비스 준비중 — 추후 활성화 예정
+      const aiAnalysis = ''
 
       await diaryApi.save(todayStr, {
         mood: selectedMood,
@@ -989,29 +962,19 @@ export default function RecordsPage() {
                 disabled={savingDiary}
                 className="w-full py-3.5 bg-primary text-white rounded-2xl text-sm font-semibold hover:bg-rose-500 active-press transition-all flex justify-center items-center gap-2 shadow-lg shadow-rose-200"
               >
-                {savingDiary ? 'AI 위로 편지 배달 중...' : '오늘 일기 저장 및 AI 분석'}
+                {savingDiary ? '저장 중...' : '오늘 일기 저장'}
               </button>
             </form>
           </div>
 
-          {/* AI 위로 피드백 */}
-          {aiFeedback && (
-            <div className="bg-gradient-soft-rose rounded-3xl p-5 shadow-md border border-rose-200/40 relative overflow-hidden animate-fade-in">
-              <div className="absolute top-3 right-3 text-amber-400">
-                <Sparkles size={18} className="animate-pulse" />
-              </div>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl">💌</span>
-                <h4 className="text-xs font-bold text-rose-950 font-outfit">AI 동반자가 드리는 위로</h4>
-              </div>
-              <p className="text-xs text-rose-900/90 leading-relaxed font-medium bg-white/50 p-4 rounded-2xl border border-white/40">
-                {aiFeedback}
-              </p>
-              <span className="block text-[9px] text-rose-900/40 mt-3 text-right">
-                * 이 위로는 일기 감정 분석에 기초한 심리 케어로, 의학적 소견을 대체할 수 없습니다.
-              </span>
+          {/* AI 위로 피드백 — 서비스 준비중 */}
+          <div className="bg-rose-50 rounded-3xl p-5 border border-rose-100/60 flex items-center gap-3">
+            <span className="text-2xl">🌸</span>
+            <div>
+              <p className="text-xs font-bold text-rose-400">AI 감정 분석 — 서비스 준비중</p>
+              <p className="text-[10px] text-rose-300 mt-0.5">곧 AI가 일기를 읽고 따뜻한 위로를 전해드릴게요 💕</p>
             </div>
-          )}
+          </div>
 
           {/* 과거 일기 내역 */}
           <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
