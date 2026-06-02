@@ -13,7 +13,7 @@ type Tab = 'regular' | 'info' | 'secret'
 
 export default function CommunityPage() {
   const { user, profile } = useAuth()
-  const [activeTab, setActiveTab] = useState<Tab>('regular')
+  const [activeTab, setActiveTab] = useState<Tab>('secret')
   const [posts, setPosts] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedFilter, setSelectedFilter] = useState<Stage>('all')
@@ -149,8 +149,18 @@ export default function CommunityPage() {
         )}
       </div>
 
-      {/* 탭 전환 */}
+      {/* 탭 전환 — 시술 이야기방 우선 */}
       <div className="flex bg-slate-100/70 rounded-2xl p-1 gap-1">
+        <button
+          onClick={() => setActiveTab('secret')}
+          className={`flex-1 py-2.5 text-[10px] font-semibold rounded-xl transition-all flex items-center justify-center gap-1 ${
+            activeTab === 'secret'
+              ? 'bg-white text-rose-700 shadow-sm'
+              : 'text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          🌸 시술 이야기방
+        </button>
         <button
           onClick={() => setActiveTab('regular')}
           className={`flex-1 py-2.5 text-[10px] font-semibold rounded-xl transition-all ${
@@ -170,16 +180,6 @@ export default function CommunityPage() {
           }`}
         >
           📚 정보 나눔
-        </button>
-        <button
-          onClick={() => setActiveTab('secret')}
-          className={`flex-1 py-2.5 text-[10px] font-semibold rounded-xl transition-all flex items-center justify-center gap-1 ${
-            activeTab === 'secret'
-              ? 'bg-white text-purple-700 shadow-sm'
-              : 'text-gray-400 hover:text-gray-600'
-          }`}
-        >
-          <Lock size={11} /> 비밀 대화방
         </button>
       </div>
 

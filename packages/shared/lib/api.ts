@@ -150,6 +150,8 @@ export const communityApi = {
   getSecretPosts: (tag?: string) => request('GET', `/community/secret${tag ? `?tag=${tag}` : ''}`),
   createSecretPost: (data: any) => request('POST', '/community/secret', data),
   likeSecretPost: (id: string) => request('POST', `/community/secret/${id}/like`),
+  reactSecretPost: (id: string, reaction: 'cheer' | 'empathy' | 'pray') =>
+    request('POST', `/community/secret/${id}/react`, { reaction }),
   getSecretComments: (id: string) => request('GET', `/community/secret/${id}/comments`),
   addSecretComment: (id: string, content: string, anonymousName?: string) =>
     request('POST', `/community/secret/${id}/comments`, { content, anonymousName }),

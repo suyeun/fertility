@@ -31,11 +31,11 @@ export default function DashboardLayout({
   if (!user) return null
 
   const navItems = [
-    { href: '/',           icon: Home,     label: '홈' },
-    { href: '/calendar',   icon: Calendar, label: '캘린더' },
-    { href: '/records',    icon: BarChart3, label: '기록' },
+    { href: '/community',  icon: Users,    label: '이야기방' },
     { href: '/treatment',  icon: Syringe,  label: '일정' },
-    { href: '/community',  icon: Users,    label: '커뮤니티' },
+    { href: '/',           icon: Home,     label: '홈' },
+    { href: '/records',    icon: BarChart3, label: '기록' },
+    { href: '/calendar',   icon: Calendar, label: '캘린더' },
   ]
 
   const getStageLabel = (stage: string) => {
