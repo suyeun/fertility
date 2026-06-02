@@ -15,6 +15,6 @@
     "build:all": "npm run build:shared && npm run build --workspace=apps/backend && npm run build --workspace=apps/web"
   },
   "devDependencies": {
-    "typescript": "^5.3.0"
+    "typescript": "^6.0.0"
   }
 }
