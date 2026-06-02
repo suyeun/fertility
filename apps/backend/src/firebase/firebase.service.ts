@@ -49,6 +49,7 @@ export class FirebaseService implements OnModuleInit {
     }
 
     this._db = admin.firestore()
+    this._db.settings({ ignoreUndefinedProperties: true })
     this._messaging = admin.messaging()
   }
 
