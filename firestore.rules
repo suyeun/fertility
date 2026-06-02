@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── 공통 헬퍼 ──────────────────────────────────────────
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isLoggedIn() && request.auth.uid == uid;
+    }
+
+    // ── 유저 프로필 ────────────────────────────────────────
+    // 문서 ID = uid 이므로 본인 것만 읽기/쓰기
+    match /user_profiles/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    // ── 개인 기록 (사이클 / 호르몬 / 일정 / 일기 / 채팅) ──
+    // 문서 안의 userId 필드가 로그인 UID와 일치해야 접근 가능
+    match /menstrual_cycles/{docId} {
+      allow read, write: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isLoggedIn()
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /hormone_records/{docId} {
+      allow read, write: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isLoggedIn()
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /treatment_schedules/{docId} {
+      allow read, write: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isLoggedIn()
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /diary_entries/{docId} {
+      allow read, write: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isLoggedIn()
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /chat_messages/{docId} {
+      allow read, write: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isLoggedIn()
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // ── 커뮤니티 게시판 ────────────────────────────────────
+    // 읽기: 로그인한 사용자 누구나
+    // 쓰기(생성): 로그인한 사용자 (userId가 본인이어야 함)
+    // 수정(좋아요 등): 로그인한 사용자 누구나 (likes 배열 업데이트)
+    // 삭제: 본인 글만
+    match /community_posts/{postId} {
+      allow read: if isLoggedIn();
+      allow create: if isLoggedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isLoggedIn();
+      allow delete: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /community_comments/{commentId} {
+      allow read: if isLoggedIn();
+      allow create: if isLoggedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow delete: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ── 비밀 대화방 ────────────────────────────────────────
+    // uid를 저장하지 않으므로 로그인 여부만 체크
+    // authorToken(해시값)으로 본인 식별 — 서버에서 검증
+    match /secret_posts/{postId} {
+      allow read: if isLoggedIn();
+      allow create: if isLoggedIn();
+      allow update: if isLoggedIn(); // 좋아요, commentsCount 업데이트
+      allow delete: if false;        // 삭제 불가 (익명 게시물)
+    }
+
+    match /secret_comments/{commentId} {
+      allow read: if isLoggedIn();
+      allow create: if isLoggedIn();
+      allow delete: if false;
+    }
+  }
+}

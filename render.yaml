@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: bom-backend
+    env: node
+    region: singapore   # 한국과 가장 가까운 리전
+    plan: free          # 무료 (슬립 있음) → 유료 전환 시 starter로 변경
+    buildCommand: npm ci && npm run build:shared && npm run build --workspace=apps/backend
+    startCommand: node apps/backend/dist/main.js
+    healthCheckPath: /api/auth/me   # 헬스체크 (401 반환해도 서버 살아있음 확인됨)
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000         # Render 기본 포트
+      - key: JWT_SECRET
+        sync: false          # 대시보드에서 직접 입력
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: REVENUECAT_WEBHOOK_SECRET
+        sync: false
+      - key: SCHEDULER_SECRET
+        sync: false

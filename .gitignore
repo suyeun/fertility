@@ -1,0 +1,40 @@
+# 의존성
+node_modules/
+
+# Next.js 빌드 결과물
+apps/web/.next/
+apps/web/out/
+
+# 환경변수 — 절대 커밋하지 마세요!
+.env
+.env.local
+.env.*.local
+apps/web/.env.local
+apps/web/.env.*.local
+apps/backend/.env
+apps/mobile/.env
+
+# 빌드 결과물 (배포 시 CI에서 재생성)
+apps/backend/dist/
+packages/shared/dist/
+
+# Firebase 로컬 설정
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# 시스템 파일
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# 로그
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# TypeScript 빌드 캐시
+*.tsbuildinfo
