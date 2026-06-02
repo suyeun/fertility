@@ -1,32 +1,32 @@
 import { useState, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Pressable, ActivityIndicator
+  StyleSheet, ActivityIndicator
 } from 'react-native'
 import { router } from 'expo-router'
 import {
   useOnboarding,
-  resolveUserStage,
   STEP1_OPTIONS,
-  STEP2_OPTIONS,
+  CYCLE_GUIDE,
   type OnboardingData,
+  type TreatmentStage,
 } from '@fertility/shared'
 import { ProgressBar } from '../../components/onboarding/ProgressBar'
-import { OptionButton } from '../../components/onboarding/OptionButton'
+import { usersApi, cyclesApi } from '@fertility/shared'
 
 // ============================
 // 완료 화면
 // ============================
-const STAGE_CONFIG = {
-  beginner:     { emoji: '🌱', color: '#ff8fab', title: '임신 준비 파트너가\n생겼어요!',   desc: '배란일 예측, 주기 추적, 임신 팁으로 시작해요.' },
-  intermediate: { emoji: '🌸', color: '#c026d3', title: '호르몬 수치도\n같이 관리해요!', desc: 'AMH·FSH 기록, AI 수치 해석이 준비됐어요.' },
-  advanced:     { emoji: '💪', color: '#4f46e5', title: '시술 전 과정을\n함께할게요!',   desc: '일정 관리, 약 복용 알림, AI Q&A가 모두 열렸어요.' },
+const STAGE_CONFIG: Record<TreatmentStage, { emoji: string; color: string; title: string; desc: string }> = {
+  natural:  { emoji: '🌱', color: '#22c55e', title: '자연임신 준비\n파트너가 생겼어요!',    desc: '배란일 예측, 주기 추적, BBT·OPK 기록으로 시작해요.' },
+  iui:      { emoji: '🧪', color: '#3b82f6', title: 'IUI 시술\n함께 준비할게요!',          desc: '시술 일정·약물 알림, 호르몬 수치 기록이 모두 열렸어요.' },
+  ivf:      { emoji: '🧬', color: '#8b5cf6', title: 'IVF 시술\n모든 과정을 함께해요!',     desc: '과배란 유도부터 이식까지 — 일정, 수치, 약물, 감정 모두 기록해요.' },
+  fet:      { emoji: '❄️', color: '#06b6d4', title: 'FET 동결이식\n곁에 있을게요!',        desc: '이식 일정, 자궁내막 두께, 황체호르몬 기록을 도와드려요.' },
+  pregnant: { emoji: '🌸', color: '#ff8fab', title: '임신을 진심으로\n축하해요!',           desc: '소중한 이 시간, BOM이 함께할게요.' },
 }
 
-import { usersApi, cyclesApi } from '@fertility/shared'
-
 function CompleteScreen({ data, user }: { data: OnboardingData; user: any }) {
-  const stage = resolveUserStage(data)
+  const stage = data.treatmentStage ?? 'natural'
   const cfg = STAGE_CONFIG[stage]
   const [saving, setSaving] = useState(false)
 
@@ -34,16 +34,7 @@ function CompleteScreen({ data, user }: { data: OnboardingData; user: any }) {
     if (!user) return
     setSaving(true)
     try {
-      // 온보딩 답변에 맞는 핵심 치료 단계(treatmentStage) 매핑
-      let treatmentStage: 'natural' | 'iui' | 'ivf' | 'fet' | 'pregnant' = 'natural'
-      if (data.treatmentExperience === 'iui') {
-        treatmentStage = 'iui'
-      } else if (data.treatmentExperience === 'ivf') {
-        treatmentStage = 'ivf'
-      }
-
-      await usersApi.updateProfile({ treatmentStage, averageCycleLength: data.cycleLength })
-
+      await usersApi.updateProfile({ treatmentStage: stage, averageCycleLength: data.cycleLength })
       const currentCycles = await cyclesApi.getAll()
       if (currentCycles.length === 0) {
         await cyclesApi.save({
@@ -52,8 +43,6 @@ function CompleteScreen({ data, user }: { data: OnboardingData; user: any }) {
           periodLength: 5,
         })
       }
-
-      // 3단계: 홈 화면으로 대체 이동
       router.replace('/')
     } catch (err) {
       console.error('모바일 온보딩 저장 실패:', err)
@@ -70,21 +59,20 @@ function CompleteScreen({ data, user }: { data: OnboardingData; user: any }) {
       <Text style={styles.completeTitle}>{cfg.title}</Text>
       <Text style={styles.completeDesc}>{cfg.desc}</Text>
       <View style={styles.infoBox}>
-        <Text style={styles.infoBoxTitle}>선택한 정보</Text>
-        <Text style={styles.infoBoxRow}>생리 주기: <Text style={styles.infoVal}>{data.cycleLength}일</Text></Text>
-        <Text style={styles.infoBoxRow}>배란 예정일: <Text style={styles.infoVal}>{data.cycleLength - 14}일째</Text></Text>
+        <Text style={styles.infoBoxTitle}>설정 정보</Text>
+        <Text style={styles.infoBoxRow}>치료 단계: <Text style={styles.infoVal}>{cfg.emoji} {stage.toUpperCase()}</Text></Text>
+        <Text style={styles.infoBoxRow}>주기 설정: <Text style={styles.infoVal}>{data.cycleLength}일</Text></Text>
       </View>
       <TouchableOpacity
-        style={[styles.startBtn, { backgroundColor: cfg.color }, saving && { opacity: 0.6 }]}
+        style={[styles.startBtn, { backgroundColor: cfg.color }]}
         onPress={handleStart}
         disabled={saving}
         activeOpacity={0.85}
       >
-        {saving ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.startBtnText}>시작하기 →</Text>
-        )}
+        {saving
+          ? <ActivityIndicator color="#fff" />
+          : <Text style={styles.startBtnText}>시작하기 →</Text>
+        }
       </TouchableOpacity>
       <Text style={styles.changeNote}>언제든지 설정에서 변경할 수 있어요</Text>
     </View>
@@ -92,68 +80,53 @@ function CompleteScreen({ data, user }: { data: OnboardingData; user: any }) {
 }
 
 // ============================
-// Step 3 — 주기 슬라이더
+// Step 2 — 주기 설정
 // ============================
-const CYCLE_OPTIONS = [21, 23, 25, 26, 27, 28, 29, 30, 31, 32, 35, 40, 45]
+function Step2Cycle({ stage, cycleLength, onChange, onNext }: {
+  stage: TreatmentStage | null
+  cycleLength: number
+  onChange: (v: number) => void
+  onNext: () => void
+}) {
+  const guide = stage ? CYCLE_GUIDE[stage] : '평균 생리 주기를 입력해 주세요'
+  const presets = [24, 26, 28, 30, 32, 35, 38, 40]
 
-function Step3({
-  cycleLength,
-  onChange,
-  onComplete,
-}: { cycleLength: number; onChange: (v: number) => void; onComplete: () => void }) {
   return (
     <View>
-      <Text style={styles.q}>평균 생리 주기가{'\n'}어떻게 되세요?</Text>
-      <Text style={styles.qSub}>잘 모르면 28일로 두셔도 돼요 🙂</Text>
+      <Text style={styles.q}>생리 주기가{'\n'}며칠인가요?</Text>
+      <Text style={styles.qSub}>{guide}</Text>
 
-      {/* 큰 숫자 */}
-      <View style={styles.bigNumRow}>
-        <Text style={styles.bigNum}>{cycleLength}</Text>
-        <Text style={styles.bigNumUnit}>일</Text>
-      </View>
-      <Text style={styles.ovNote}>배란일은 약 {cycleLength - 14}일째 예정이에요</Text>
-
-      {/* - / + 버튼으로 슬라이더 대체 (RN Slider 라이브러리 없이) */}
-      <View style={styles.stepper}>
-        <TouchableOpacity
-          style={styles.stepBtn}
-          onPress={() => onChange(Math.max(21, cycleLength - 1))}
-        >
+      {/* 수동 조절 */}
+      <View style={styles.cycleRow}>
+        <TouchableOpacity style={styles.stepBtn} onPress={() => onChange(Math.max(21, cycleLength - 1))}>
           <Text style={styles.stepBtnText}>−</Text>
         </TouchableOpacity>
-        <View style={styles.stepTrack}>
-          <View
-            style={[
-              styles.stepFill,
-              { width: `${((cycleLength - 21) / (45 - 21)) * 100}%` },
-            ]}
-          />
+        <View style={{ alignItems: 'center' }}>
+          <Text style={styles.bigNum}>{cycleLength}</Text>
+          <Text style={styles.bigNumUnit}>일</Text>
         </View>
-        <TouchableOpacity
-          style={styles.stepBtn}
-          onPress={() => onChange(Math.min(45, cycleLength + 1))}
-        >
+        <TouchableOpacity style={styles.stepBtn} onPress={() => onChange(Math.min(45, cycleLength + 1))}>
           <Text style={styles.stepBtnText}>+</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 자주 쓰는 값 */}
+      {/* 빠른 선택 */}
       <View style={styles.chipRow}>
-        {CYCLE_OPTIONS.map((v) => (
-          <Pressable
-            key={v}
-            onPress={() => onChange(v)}
-            style={[styles.chip, cycleLength === v && styles.chipActive]}
+        {presets.map(n => (
+          <TouchableOpacity
+            key={n}
+            style={[styles.chip, cycleLength === n && styles.chipActive]}
+            onPress={() => onChange(n)}
           >
-            <Text style={[styles.chipText, cycleLength === v && styles.chipTextActive]}>
-              {v}일
-            </Text>
-          </Pressable>
+            <Text style={[styles.chipText, cycleLength === n && styles.chipTextActive]}>{n}일</Text>
+          </TouchableOpacity>
         ))}
       </View>
 
-      <TouchableOpacity style={styles.completeBtn} onPress={onComplete} activeOpacity={0.85}>
-        <Text style={styles.completeBtnText}>맞춤 대시보드 시작하기 🎀</Text>
+      <Text style={styles.note}>정확하지 않아도 괜찮아요 — 나중에 언제든지 수정할 수 있어요</Text>
+
+      <TouchableOpacity style={styles.completeBtn} onPress={onNext} activeOpacity={0.85}>
+        <Text style={styles.completeBtnText}>다음 →</Text>
       </TouchableOpacity>
     </View>
   )
@@ -163,11 +136,7 @@ function Step3({
 // 메인 온보딩 스크린
 // ============================
 export default function OnboardingScreen() {
-  const {
-    step, data,
-    setPreparation, setTreatment,
-    setCycleLength, goBack,
-  } = useOnboarding()
+  const { step, data, setStage, setCycleLength, goBack } = useOnboarding()
   const [done, setDone] = useState(false)
   const [user, setUser] = useState<any>(null)
 
@@ -183,11 +152,10 @@ export default function OnboardingScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} bounces={false}>
       <View style={styles.card}>
-        {/* 로고 */}
         {!done && (
           <View style={styles.logoRow}>
             <Text style={styles.logoEmoji}>🌸</Text>
-            <Text style={styles.logoText}>꽃봄</Text>
+            <Text style={styles.logoText}>BOM</Text>
           </View>
         )}
 
@@ -199,29 +167,33 @@ export default function OnboardingScreen() {
 
             {step === 1 && (
               <View>
-                <Text style={styles.q}>임신 준비를{'\n'}얼마나 하셨나요?</Text>
-                <Text style={styles.qSub}>솔직하게 알려주시면 딱 맞는 기능을 드릴게요 🌸</Text>
+                <Text style={styles.q}>지금 어떤 단계에{'\n'}계세요?</Text>
+                <Text style={styles.qSub}>현재 상황에 맞는 기능을 바로 열어드릴게요 🌸</Text>
                 {STEP1_OPTIONS.map((opt) => (
-                  <OptionButton key={opt.value} {...opt} onPress={() => setPreparation(opt.value)} />
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={styles.optionBtn}
+                    onPress={() => setStage(opt.value)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.optionIcon, { backgroundColor: opt.color + '18' }]}>
+                      <Text style={{ fontSize: 22 }}>{opt.emoji}</Text>
+                    </View>
+                    <View style={styles.optionText}>
+                      <Text style={styles.optionLabel}>{opt.label}</Text>
+                      <Text style={styles.optionSub}>{opt.sub}</Text>
+                    </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
 
             {step === 2 && (
-              <View>
-                <Text style={styles.q}>검사나 시술을{'\n'}받아보신 적 있나요?</Text>
-                <Text style={styles.qSub}>해당하는 상황을 선택해 주세요</Text>
-                {STEP2_OPTIONS.map((opt) => (
-                  <OptionButton key={opt.value} {...opt} onPress={() => setTreatment(opt.value)} />
-                ))}
-              </View>
-            )}
-
-            {step === 3 && (
-              <Step3
+              <Step2Cycle
+                stage={data.treatmentStage}
                 cycleLength={data.cycleLength}
                 onChange={setCycleLength}
-                onComplete={() => setDone(true)}
+                onNext={() => setDone(true)}
               />
             )}
           </>
@@ -235,11 +207,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#fff8f9' },
   content: { flexGrow: 1, justifyContent: 'center', padding: 16 },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 28,
-    padding: 24,
-    borderWidth: 0.5,
-    borderColor: '#ffd6e0',
+    backgroundColor: '#fff', borderRadius: 28, padding: 24,
+    borderWidth: 0.5, borderColor: '#ffd6e0',
   },
   logoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 24, gap: 4 },
   logoEmoji: { fontSize: 22 },
@@ -247,55 +216,43 @@ const styles = StyleSheet.create({
   q: { fontSize: 22, fontWeight: '700', color: '#5a3042', lineHeight: 30, marginBottom: 6 },
   qSub: { fontSize: 13, color: '#b07080', marginBottom: 20, lineHeight: 20 },
 
-  // Step 3
-  bigNumRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'center', marginBottom: 4 },
+  // 선택지 버튼
+  optionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 14, backgroundColor: '#fff',
+    borderRadius: 16, borderWidth: 1, borderColor: '#ffd6e0', marginBottom: 8,
+  },
+  optionIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  optionText: { flex: 1 },
+  optionLabel: { fontSize: 14, fontWeight: '700', color: '#5a3042' },
+  optionSub: { fontSize: 11, color: '#b07080', marginTop: 2 },
+
+  // 주기 설정
+  cycleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
+  stepBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#ffd6e0', alignItems: 'center', justifyContent: 'center' },
+  stepBtnText: { fontSize: 22, color: '#c0005a' },
   bigNum: { fontSize: 64, fontWeight: '700', color: '#ff8fab' },
-  bigNumUnit: { fontSize: 22, color: '#b07080', marginBottom: 10, marginLeft: 4 },
-  ovNote: { fontSize: 12, color: '#b07080', textAlign: 'center', marginBottom: 20 },
-  stepper: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 20 },
-  stepBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#ffd6e0',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  stepBtnText: { fontSize: 22, color: '#c0005a', lineHeight: 26 },
-  stepTrack: {
-    flex: 1, height: 8, backgroundColor: '#ffd6e0',
-    borderRadius: 4, overflow: 'hidden',
-  },
-  stepFill: { height: '100%', backgroundColor: '#ff8fab', borderRadius: 4 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 },
-  chip: {
-    paddingHorizontal: 14, paddingVertical: 7,
-    borderRadius: 20, borderWidth: 0.5,
-    borderColor: '#ffd6e0', backgroundColor: '#fff',
-  },
+  bigNumUnit: { fontSize: 16, color: '#b07080', textAlign: 'center' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 0.5, borderColor: '#ffd6e0', backgroundColor: '#fff' },
   chipActive: { backgroundColor: '#ff8fab', borderColor: '#ff8fab' },
   chipText: { fontSize: 13, fontWeight: '600', color: '#8c5060' },
   chipTextActive: { color: '#fff' },
-  completeBtn: {
-    backgroundColor: '#ff8fab', borderRadius: 20,
-    paddingVertical: 16, alignItems: 'center',
-  },
+  note: { fontSize: 11, color: '#c4a0ae', textAlign: 'center', marginBottom: 20 },
+  completeBtn: { backgroundColor: '#ff8fab', borderRadius: 20, paddingVertical: 16, alignItems: 'center' },
   completeBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
-  // Complete
+  // 완료 화면
   completeWrap: { alignItems: 'center', gap: 16 },
   completeIcon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
   completeEmoji: { fontSize: 48 },
   completeTitle: { fontSize: 22, fontWeight: '700', color: '#5a3042', textAlign: 'center', lineHeight: 30 },
   completeDesc: { fontSize: 14, color: '#b07080', textAlign: 'center', lineHeight: 22 },
-  infoBox: {
-    width: '100%', backgroundColor: '#fff0f4',
-    borderRadius: 16, padding: 16, gap: 4,
-  },
+  infoBox: { width: '100%', backgroundColor: '#fff0f4', borderRadius: 16, padding: 16, gap: 4 },
   infoBoxTitle: { fontSize: 12, fontWeight: '700', color: '#ff8fab', marginBottom: 4 },
   infoBoxRow: { fontSize: 13, color: '#8c5060' },
   infoVal: { fontWeight: '700', color: '#5a3042' },
-  startBtn: {
-    width: '100%', borderRadius: 20,
-    paddingVertical: 16, alignItems: 'center',
-  },
+  startBtn: { width: '100%', borderRadius: 20, paddingVertical: 16, alignItems: 'center' },
   startBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   changeNote: { fontSize: 12, color: '#c4a0ae' },
 })

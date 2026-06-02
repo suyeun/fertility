@@ -4,62 +4,42 @@ import { useState } from 'react'
 
 // ============================
 // 온보딩 공유 타입 & 훅
+// 시술 환자 중심으로 재정의
 // ============================
 
-export type PreparationDuration =
-  | 'just_started'   // 막 시작
-  | 'under_6months'  // 6개월 미만
-  | 'over_6months'   // 6개월 이상
-  | 'over_1year'     // 1년 이상
-
-export type TreatmentExperience =
-  | 'none'           // 아직 없음
-  | 'tested'         // 검사만 받음
-  | 'iui'            // IUI 경험
-  | 'ivf'            // IVF/FET 경험
+export type TreatmentStage =
+  | 'natural'    // 자연임신 시도 중
+  | 'iui'        // IUI 인공수정
+  | 'ivf'        // IVF 시험관
+  | 'fet'        // FET 동결이식
+  | 'pregnant'   // 임신 성공
 
 export interface OnboardingData {
-  preparationDuration: PreparationDuration | null
-  treatmentExperience: TreatmentExperience | null
-  cycleLength: number  // 생리 주기 (일)
+  treatmentStage: TreatmentStage | null
+  cycleLength: number
 }
 
-// 온보딩 답변 → 앱 stage 결정
-export type UserStage = 'beginner' | 'intermediate' | 'advanced'
-
-export function resolveUserStage(data: OnboardingData): UserStage {
-  if (
-    data.treatmentExperience === 'iui' ||
-    data.treatmentExperience === 'ivf'
-  ) return 'advanced'
-  if (
-    data.treatmentExperience === 'tested' ||
-    data.preparationDuration === 'over_6months' ||
-    data.preparationDuration === 'over_1year'
-  ) return 'intermediate'
+// 온보딩 답변 → 앱 stage (직접 매핑)
+export function resolveUserStage(data: OnboardingData): 'beginner' | 'intermediate' | 'advanced' {
+  if (data.treatmentStage === 'ivf' || data.treatmentStage === 'fet') return 'advanced'
+  if (data.treatmentStage === 'iui') return 'intermediate'
   return 'beginner'
 }
 
 // ============================
-// 공유 훅
+// 공유 훅 (2단계로 단순화)
 // ============================
 
 export function useOnboarding() {
   const [step, setStep] = useState<1 | 2 | 3>(1)
   const [data, setData] = useState<OnboardingData>({
-    preparationDuration: null,
-    treatmentExperience: null,
+    treatmentStage: null,
     cycleLength: 28,
   })
 
-  const setPreparation = (v: PreparationDuration) => {
-    setData((d) => ({ ...d, preparationDuration: v }))
+  const setStage = (v: TreatmentStage) => {
+    setData((d) => ({ ...d, treatmentStage: v }))
     setStep(2)
-  }
-
-  const setTreatment = (v: TreatmentExperience) => {
-    setData((d) => ({ ...d, treatmentExperience: v }))
-    setStep(3)
   }
 
   const setCycleLength = (v: number) =>
@@ -68,25 +48,66 @@ export function useOnboarding() {
   const goBack = () => setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s))
 
   const isComplete =
-    data.preparationDuration !== null &&
-    data.treatmentExperience !== null &&
+    data.treatmentStage !== null &&
     data.cycleLength >= 21 &&
     data.cycleLength <= 45
 
-  return { step, data, setPreparation, setTreatment, setCycleLength, goBack, isComplete }
+  return { step, data, setStage, setCycleLength, goBack, isComplete }
 }
 
-// 각 스텝 콘텐츠 (웹·앱 공통)
-export const STEP1_OPTIONS: { value: PreparationDuration; emoji: string; label: string; sub: string }[] = [
-  { value: 'just_started', emoji: '🌱', label: '막 시작했어요', sub: '임신 준비를 이제 시작하는 단계예요' },
-  { value: 'under_6months', emoji: '🌸', label: '6개월 미만', sub: '열심히 시도 중이에요' },
-  { value: 'over_6months', emoji: '💪', label: '6개월 이상', sub: '꽤 오래 준비하고 있어요' },
-  { value: 'over_1year', emoji: '🌟', label: '1년 이상', sub: '정말 오랫동안 노력 중이에요' },
+// ============================
+// Step 1: 현재 시술 단계
+// ============================
+
+export const STEP1_OPTIONS: {
+  value: TreatmentStage
+  emoji: string
+  label: string
+  sub: string
+  color: string
+}[] = [
+  {
+    value: 'natural',
+    emoji: '🌱',
+    label: '자연임신 시도 중',
+    sub: '자연 주기로 임신을 준비하고 있어요',
+    color: '#22c55e',
+  },
+  {
+    value: 'iui',
+    emoji: '🧪',
+    label: 'IUI 인공수정',
+    sub: '인공수정 시술을 받고 있거나 앞두고 있어요',
+    color: '#3b82f6',
+  },
+  {
+    value: 'ivf',
+    emoji: '🧬',
+    label: 'IVF 시험관',
+    sub: '시험관 시술을 받고 있거나 앞두고 있어요',
+    color: '#8b5cf6',
+  },
+  {
+    value: 'fet',
+    emoji: '❄️',
+    label: 'FET 동결이식',
+    sub: '동결 배아 이식을 받고 있거나 앞두고 있어요',
+    color: '#06b6d4',
+  },
+  {
+    value: 'pregnant',
+    emoji: '🌸',
+    label: '임신 성공!',
+    sub: '축하해요! 임신 중 관리를 도와드릴게요',
+    color: '#ff8fab',
+  },
 ]
 
-export const STEP2_OPTIONS: { value: TreatmentExperience; emoji: string; label: string; sub: string }[] = [
-  { value: 'none', emoji: '🙂', label: '아직 없어요', sub: '자연 임신을 시도 중이에요' },
-  { value: 'tested', emoji: '🧪', label: '검사는 받았어요', sub: 'AMH, FSH 등 검사를 받아봤어요' },
-  { value: 'iui', emoji: '💊', label: 'IUI와 함께 준비 중', sub: 'IUI와 함께 임신을 준비하고 있어요' },
-  { value: 'ivf', emoji: '💉', label: 'IVF/FET와 함께', sub: 'IVF나 FET와 함께 나아가고 있어요' },
-]
+// Step 2에서 사용 (주기 길이 안내 문구 - 시술별 맞춤)
+export const CYCLE_GUIDE: Record<TreatmentStage, string> = {
+  natural: '자연 생리 주기를 입력해 주세요',
+  iui:     'IUI 시술 전 마지막 자연 주기를 참고해서 입력해 주세요',
+  ivf:     '시술 전 마지막 자연 주기를 참고해서 입력해 주세요',
+  fet:     '동결이식 준비 중인 주기를 입력해 주세요',
+  pregnant:'임신 전 마지막 생리 주기를 입력해 주세요',
+}
