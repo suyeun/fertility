@@ -9,9 +9,10 @@ export class CyclesService {
   async getAll(uid: string) {
     const snap = await this.firebase.collection('menstrual_cycles')
       .where('userId', '==', uid)
-      .orderBy('startDate', 'desc')
       .get()
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a: any, b: any) => b.startDate?.localeCompare(a.startDate ?? '') ?? 0)
   }
 
   async save(uid: string, data: any) {

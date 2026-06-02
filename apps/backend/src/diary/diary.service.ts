@@ -9,31 +9,22 @@ export class DiaryService {
   async getAll(uid: string) {
     const snap = await this.firebase.collection('diary_entries')
       .where('userId', '==', uid)
-      .orderBy('date', 'desc')
       .get()
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a: any, b: any) => b.date?.localeCompare(a.date ?? '') ?? 0)
   }
 
   async save(uid: string, date: string, data: any) {
-    // 같은 날짜 기록이 있으면 업데이트
     const existing = await this.firebase.collection('diary_entries')
       .where('userId', '==', uid)
       .where('date', '==', date)
       .limit(1)
       .get()
 
-    let id: string
-    if (!existing.empty) {
-      id = existing.docs[0].id
-    } else {
-      id = uuidv4()
-    }
-
+    const id = existing.empty ? uuidv4() : existing.docs[0].id
     const record = {
-      ...data,
-      id,
-      userId: uid,
-      date,
+      ...data, id, userId: uid, date,
       createdAt: data.createdAt || new Date().toISOString(),
     }
     await this.firebase.collection('diary_entries').doc(id).set(record, { merge: true })

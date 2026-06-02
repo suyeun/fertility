@@ -4,17 +4,20 @@ import { v4 as uuidv4 } from 'uuid'
 import * as crypto from 'crypto'
 
 const hashUid = (uid: string) => crypto.createHash('sha256').update(uid + 'bom_salt').digest('hex').substring(0, 8)
+const sortDesc = (arr: any[], key: string) =>
+  arr.sort((a, b) => b[key]?.localeCompare(a[key] ?? '') ?? 0)
+const sortAsc = (arr: any[], key: string) =>
+  arr.sort((a, b) => a[key]?.localeCompare(b[key] ?? '') ?? 0)
 
 @Injectable()
 export class CommunityService {
   constructor(private firebase: FirebaseService) {}
 
-  // 커뮤니티 일반 게시글
   async getPosts(stage?: string) {
-    let q: any = this.firebase.collection('community_posts').orderBy('createdAt', 'desc').limit(50)
-    if (stage) q = this.firebase.collection('community_posts').where('treatmentStage', '==', stage).orderBy('createdAt', 'desc').limit(50)
-    const snap = await q.get()
-    return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }))
+    let q: any = this.firebase.collection('community_posts')
+    if (stage) q = q.where('treatmentStage', '==', stage)
+    const snap = await q.limit(50).get()
+    return sortDesc(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })), 'createdAt')
   }
 
   async createPost(uid: string, userName: string, stage: string, body: any) {
@@ -34,9 +37,7 @@ export class CommunityService {
     const doc = await ref.get()
     if (!doc.exists) return
     const likes: string[] = doc.data().likes || []
-    const newLikes = likes.includes(uid)
-      ? likes.filter(id => id !== uid)
-      : [...likes, uid]
+    const newLikes = likes.includes(uid) ? likes.filter(id => id !== uid) : [...likes, uid]
     await ref.update({ likes: newLikes })
     return { likes: newLikes }
   }
@@ -44,9 +45,8 @@ export class CommunityService {
   async getComments(postId: string) {
     const snap = await this.firebase.collection('community_comments')
       .where('postId', '==', postId)
-      .orderBy('createdAt', 'asc')
       .get()
-    return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }))
+    return sortAsc(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })), 'createdAt')
   }
 
   async addComment(uid: string, userName: string, postId: string, content: string) {
@@ -61,25 +61,24 @@ export class CommunityService {
     return comment
   }
 
-  // 비밀 대화방 (익명)
   async getSecretPosts(tag?: string) {
-    let q: any = this.firebase.collection('secret_posts').orderBy('createdAt', 'desc').limit(50)
-    if (tag) q = this.firebase.collection('secret_posts').where('topicTag', '==', tag).orderBy('createdAt', 'desc').limit(50)
-    const snap = await q.get()
-    return snap.docs.map((d: any) => {
-      const { authorToken, ...rest } = d.data()
-      return { id: d.id, ...rest }
-    })
+    let q: any = this.firebase.collection('secret_posts')
+    if (tag) q = q.where('topicTag', '==', tag)
+    const snap = await q.limit(50).get()
+    return sortDesc(
+      snap.docs.map((d: any) => {
+        const { authorToken, ...rest } = d.data()
+        return { id: d.id, ...rest }
+      }),
+      'createdAt'
+    )
   }
 
   async createSecretPost(uid: string, anonymousName: string, body: any) {
     const id = uuidv4()
     const post = {
-      id,
-      authorToken: hashUid(uid),
-      anonymousName,
-      topicTag: body.topicTag,
-      content: body.content,
+      id, authorToken: hashUid(uid), anonymousName,
+      topicTag: body.topicTag, content: body.content,
       likes: [], commentsCount: 0,
       createdAt: new Date().toISOString(),
     }
@@ -102,22 +101,22 @@ export class CommunityService {
   async getSecretComments(postId: string) {
     const snap = await this.firebase.collection('secret_comments')
       .where('postId', '==', postId)
-      .orderBy('createdAt', 'asc')
       .get()
-    return snap.docs.map((d: any) => {
-      const { authorToken, ...rest } = d.data()
-      return { id: d.id, ...rest }
-    })
+    return sortAsc(
+      snap.docs.map((d: any) => {
+        const { authorToken, ...rest } = d.data()
+        return { id: d.id, ...rest }
+      }),
+      'createdAt'
+    )
   }
 
   async addSecretComment(uid: string, anonymousName: string, postId: string, content: string) {
     const postDoc = await this.firebase.collection('secret_posts').doc(postId).get()
     const isAuthor = postDoc.exists && postDoc.data().authorToken === hashUid(uid)
-
     const id = uuidv4()
     const comment = {
-      id, postId,
-      authorToken: hashUid(uid),
+      id, postId, authorToken: hashUid(uid),
       anonymousName, isAuthor, content,
       createdAt: new Date().toISOString(),
     }

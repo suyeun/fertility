@@ -9,9 +9,10 @@ export class HormonesService {
   async getAll(uid: string) {
     const snap = await this.firebase.collection('hormone_records')
       .where('userId', '==', uid)
-      .orderBy('recordedAt', 'desc')
       .get()
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a: any, b: any) => b.recordedAt?.localeCompare(a.recordedAt ?? '') ?? 0)
   }
 
   async save(uid: string, data: any) {

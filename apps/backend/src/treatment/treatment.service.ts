@@ -13,9 +13,10 @@ export class TreatmentService {
   async getAll(uid: string) {
     const snap = await this.firebase.collection('treatment_schedules')
       .where('userId', '==', uid)
-      .orderBy('scheduledAt', 'desc')
       .get()
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a: any, b: any) => b.scheduledAt?.localeCompare(a.scheduledAt ?? '') ?? 0)
   }
 
   async save(uid: string, data: any) {
@@ -23,7 +24,6 @@ export class TreatmentService {
     const record = { ...data, id, userId: uid }
     await this.firebase.collection('treatment_schedules').doc(id).set(record, { merge: true })
 
-    // 새 일정이면 FCM 알림 스케줄 등록
     if (!data.id && record.status === 'scheduled') {
       await this.notifications.scheduleAppointmentNotification(uid, record)
     }
