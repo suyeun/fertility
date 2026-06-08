@@ -141,15 +141,26 @@ export const aiApi = {
 }
 
 export const communityApi = {
-  getPosts: (stage?: string) => request('GET', `/community/posts${stage ? `?stage=${stage}` : ''}`),
-  createPost: (data: any) => request('POST', '/community/posts', data),
-  likePost: (id: string) => request('POST', `/community/posts/${id}/like`),
+  // 게시글 목록 — category/tag/userMode 필터 지원
+  getPosts: (params?: { category?: string; tag?: string; userMode?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.category) q.set('category', params.category)
+    if (params?.tag) q.set('tag', params.tag)
+    if (params?.userMode) q.set('userMode', params.userMode)
+    const qs = q.toString()
+    return request('GET', `/community/posts${qs ? `?${qs}` : ''}`)
+  },
+  createPost: (data: { tag: string; content: string; anonymousName?: string }) =>
+    request('POST', '/community/posts', data),
+  reactPost: (id: string, reaction: 'cheer' | 'empathy' | 'pray') =>
+    request('POST', `/community/posts/${id}/react`, { reaction }),
   getComments: (id: string) => request('GET', `/community/posts/${id}/comments`),
-  addComment: (id: string, content: string) => request('POST', `/community/posts/${id}/comments`, { content }),
+  addComment: (id: string, content: string, anonymousName?: string) =>
+    request('POST', `/community/posts/${id}/comments`, { content, anonymousName }),
 
+  // 레거시 — SecretChatTab 컴포넌트 호환용 (추후 제거 예정)
   getSecretPosts: (tag?: string) => request('GET', `/community/secret${tag ? `?tag=${tag}` : ''}`),
   createSecretPost: (data: any) => request('POST', '/community/secret', data),
-  likeSecretPost: (id: string) => request('POST', `/community/secret/${id}/like`),
   reactSecretPost: (id: string, reaction: 'cheer' | 'empathy' | 'pray') =>
     request('POST', `/community/secret/${id}/react`, { reaction }),
   getSecretComments: (id: string) => request('GET', `/community/secret/${id}/comments`),

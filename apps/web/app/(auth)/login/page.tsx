@@ -32,12 +32,26 @@ export default function LoginPage() {
     }
   }
 
-  const handleDemoLogin = async () => {
+  const handleDemoLogin = async (mode: 'NATURAL' | 'CLINIC') => {
     setError(null)
     setLoading(true)
+    const email = mode === 'NATURAL' ? 'demo.natural@bom.app' : 'demo.clinic@bom.app'
+    const name  = mode === 'NATURAL' ? '자연임신 데모' : '시술모드 데모'
     try {
-      try { await signup({ email: 'demo@fertility.com', password: 'demo1234', name: '데모 사용자' }) } catch {}
-      await login('demo@fertility.com', 'demo1234')
+      // 계정이 없으면 생성, 있으면 그냥 로그인
+      try {
+        await signup({ email, password: 'demo1234', name })
+      } catch {}
+      await login(email, 'demo1234')
+
+      // 프로필에 모드 강제 세팅 (매번 덮어써서 항상 올바른 모드로 진입)
+      const { usersApi } = await import('@fertility/shared')
+      await usersApi.updateProfile({
+        currentMode: mode,
+        treatmentStage: mode === 'NATURAL' ? 'natural' : 'ivf',
+        averageCycleLength: 28,
+      })
+
       router.push('/')
     } catch (err: any) {
       setError(err.message || '데모 로그인 실패')
@@ -108,13 +122,22 @@ export default function LoginPage() {
         <div className="flex-grow border-t border-rose-100"></div>
       </div>
 
-      <button
-        onClick={handleDemoLogin}
-        disabled={loading}
-        className="w-full py-3.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-2xl text-sm font-semibold active-press transition-all border border-rose-100"
-      >
-        데모 체험용 간편 로그인 🚀
-      </button>
+      <div className="flex flex-col gap-2">
+        <button
+          onClick={() => handleDemoLogin('NATURAL')}
+          disabled={loading}
+          className="w-full py-3 bg-[#f0fdf4] hover:bg-[#dcfce7] text-[#15803d] rounded-2xl text-sm font-semibold active:scale-[0.98] transition-all border border-[#bbf7d0]"
+        >
+          🌱 자연임신 모드로 체험하기
+        </button>
+        <button
+          onClick={() => handleDemoLogin('CLINIC')}
+          disabled={loading}
+          className="w-full py-3 bg-[#f5f3ff] hover:bg-[#ede9fe] text-[#6d28d9] rounded-2xl text-sm font-semibold active:scale-[0.98] transition-all border border-[#ddd6fe]"
+        >
+          🏥 시술 모드로 체험하기
+        </button>
+      </div>
 
       <div className="text-center mt-4">
         <p className="text-xs text-rose-600/70">
