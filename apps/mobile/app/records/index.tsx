@@ -109,59 +109,7 @@ export default function RecordsScreen() {
   const fetchRecords = async (userId: string) => {
     try {
       const data = await hormonesApi.getAll()
-      if (data.length === 0) {
-        const demoRecords: HormoneRecord[] = [
-          {
-            id: 'demo_h1',
-            userId,
-            recordedAt: new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            amh: 1.5,
-            fsh: 8.2,
-            lh: 5.4,
-            estradiol: 42.0,
-            progesterone: 0.8,
-            bbt: 36.20,
-            opkIndex: 2,
-            cervicalMucus: 'dry',
-            notes: '초기 기본 검사 결과'
-          },
-          {
-            id: 'demo_h2',
-            userId,
-            recordedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            amh: 1.6,
-            fsh: 7.9,
-            lh: 5.6,
-            estradiol: 48.0,
-            progesterone: 1.2,
-            bbt: 36.45,
-            opkIndex: 5,
-            cervicalMucus: 'creamy',
-            notes: '검사 2회차 추이 확인'
-          },
-          {
-            id: 'demo_h3',
-            userId,
-            recordedAt: new Date().toISOString().split('T')[0],
-            amh: 1.8,
-            fsh: 7.5,
-            lh: 6.0,
-            estradiol: 55.0,
-            progesterone: 1.5,
-            bbt: 36.85,
-            opkIndex: 9,
-            cervicalMucus: 'eggwhite',
-            notes: '현재 수치 (영양제 복용 후 상승)'
-          }
-        ]
-        for (const record of demoRecords) {
-          await hormonesApi.save(record)
-        }
-        const refetched = await hormonesApi.getAll()
-        setRecords(refetched)
-      } else {
-        setRecords(data)
-      }
+      setRecords(data)
     } catch (err) {
       console.error('호르몬 기록 로드 실패:', err)
     } finally {

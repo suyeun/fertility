@@ -5,6 +5,18 @@
 
 export type CyclePhase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal'
 
+// 캘린더 이벤트 구분 — 모드 스위칭 시 데이터 연속성 보장
+export type CalendarEventType =
+  | 'period'          // 생리
+  | 'ovulation'       // 배란 예정
+  | 'fertile'         // 가임기
+  | 'intercourse'     // 부부관계 (자연임신 모드)
+  | 'opk_peak'        // OPK 피크
+  | 'clinic_retrieval'   // 난자 채취 (시술 모드)
+  | 'clinic_transfer'    // 이식 (시술 모드)
+  | 'clinic_monitoring'  // 모니터링 방문 (시술 모드)
+  | 'medication'      // 약물 복용 (공통)
+
 export interface CycleDay {
   date: string        // YYYY-MM-DD
   phase: CyclePhase
@@ -87,12 +99,16 @@ export interface DiaryEntry {
   createdAt: string
 }
 
+// 앱의 핵심 모드: 자연임신 준비 vs 병원 시술
+export type UserMode = 'NATURAL' | 'CLINIC'
+
 export interface UserProfile {
   id: string
   email: string
   name: string
   dateOfBirth?: string
   partnerName?: string
+  currentMode: UserMode              // 현재 앱 모드 (기본값: 'NATURAL')
   treatmentStage?: 'natural' | 'iui' | 'ivf' | 'fet' | 'pregnant'
   averageCycleLength: number    // 기본값: 28
   averagePeriodLength: number   // 기본값: 5

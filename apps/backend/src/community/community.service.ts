@@ -98,6 +98,24 @@ export class CommunityService {
     return { likes: newLikes.length }
   }
 
+  async reactSecretPost(uid: string, postId: string, reaction: 'cheer' | 'empathy' | 'pray') {
+    const token = hashUid(uid)
+    const ref = this.firebase.collection('secret_posts').doc(postId)
+    const doc = await ref.get()
+    if (!doc.exists) return
+
+    const reactions = doc.data().reactions || { cheer: [], empathy: [], pray: [] }
+    const current: string[] = reactions[reaction] || []
+    const updated = current.includes(token)
+      ? current.filter((t: string) => t !== token)
+      : [...current, token]
+
+    await ref.update({ [`reactions.${reaction}`]: updated })
+    return {
+      reactions: { ...reactions, [reaction]: updated },
+    }
+  }
+
   async getSecretComments(postId: string) {
     const snap = await this.firebase.collection('secret_comments')
       .where('postId', '==', postId)

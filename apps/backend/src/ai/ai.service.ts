@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import Anthropic from '@anthropic-ai/sdk'
-import { SYSTEM_PROMPT } from '@fertility/shared'
+import { getSystemPrompt } from '@fertility/shared'
+import type { UserMode } from '@fertility/shared'
 import { Response } from 'express'
 
 @Injectable()
@@ -12,14 +13,18 @@ export class AiService {
     this.client = new Anthropic({ apiKey: this.config.get('ANTHROPIC_API_KEY') })
   }
 
-  async streamChat(messages: { role: 'user' | 'assistant'; content: string }[], res: Response) {
+  async streamChat(
+    messages: { role: 'user' | 'assistant'; content: string }[],
+    res: Response,
+    userMode: UserMode = 'CLINIC',
+  ) {
     res.setHeader('Content-Type', 'text/plain; charset=utf-8')
     res.setHeader('Transfer-Encoding', 'chunked')
 
     const stream = await this.client.messages.stream({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      system: SYSTEM_PROMPT,
+      system: getSystemPrompt(userMode),
       messages,
     })
 

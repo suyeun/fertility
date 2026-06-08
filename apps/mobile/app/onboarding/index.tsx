@@ -6,10 +6,12 @@ import {
 import { router } from 'expo-router'
 import {
   useOnboarding,
-  STEP1_OPTIONS,
+  MODE_OPTIONS,
+  CLINIC_STAGE_OPTIONS,
   CYCLE_GUIDE,
   type OnboardingData,
   type TreatmentStage,
+  type UserMode,
 } from '@fertility/shared'
 import { ProgressBar } from '../../components/onboarding/ProgressBar'
 import { usersApi, cyclesApi } from '@fertility/shared'
@@ -17,24 +19,34 @@ import { usersApi, cyclesApi } from '@fertility/shared'
 // ============================
 // 완료 화면
 // ============================
-const STAGE_CONFIG: Record<TreatmentStage, { emoji: string; color: string; title: string; desc: string }> = {
-  natural:  { emoji: '🌱', color: '#22c55e', title: '자연임신 준비\n파트너가 생겼어요!',    desc: '배란일 예측, 주기 추적, BBT·OPK 기록으로 시작해요.' },
-  iui:      { emoji: '🧪', color: '#3b82f6', title: 'IUI 시술\n함께 준비할게요!',          desc: '시술 일정·약물 알림, 호르몬 수치 기록이 모두 열렸어요.' },
-  ivf:      { emoji: '🧬', color: '#8b5cf6', title: 'IVF 시술\n모든 과정을 함께해요!',     desc: '과배란 유도부터 이식까지 — 일정, 수치, 약물, 감정 모두 기록해요.' },
-  fet:      { emoji: '❄️', color: '#06b6d4', title: 'FET 동결이식\n곁에 있을게요!',        desc: '이식 일정, 자궁내막 두께, 황체호르몬 기록을 도와드려요.' },
-  pregnant: { emoji: '🌸', color: '#ff8fab', title: '임신을 진심으로\n축하해요!',           desc: '소중한 이 시간, BOM이 함께할게요.' },
+const MODE_CONFIG: Record<UserMode, { emoji: string; color: string; title: string; desc: string }> = {
+  NATURAL: {
+    emoji: '🌱', color: '#22c55e',
+    title: '자연 임신 준비\n파트너가 생겼어요!',
+    desc: '배란일 예측, 기초체온(BBT), 배란테스트기(OPK) 기록으로 가임기를 잡아드려요.',
+  },
+  CLINIC: {
+    emoji: '🏥', color: '#8b5cf6',
+    title: '시술 전 과정을\n함께할게요!',
+    desc: '시술 일정·약물 알림, 호르몬 수치 기록, 커뮤니티까지 모두 열렸어요.',
+  },
 }
 
 function CompleteScreen({ data, user }: { data: OnboardingData; user: any }) {
+  const mode: UserMode = data.mode ?? 'NATURAL'
   const stage = data.treatmentStage ?? 'natural'
-  const cfg = STAGE_CONFIG[stage]
+  const cfg = MODE_CONFIG[mode]
   const [saving, setSaving] = useState(false)
 
   const handleStart = async () => {
     if (!user) return
     setSaving(true)
     try {
-      await usersApi.updateProfile({ treatmentStage: stage, averageCycleLength: data.cycleLength })
+      await usersApi.updateProfile({
+        currentMode: mode,
+        treatmentStage: stage,
+        averageCycleLength: data.cycleLength,
+      })
       const currentCycles = await cyclesApi.getAll()
       if (currentCycles.length === 0) {
         await cyclesApi.save({
@@ -58,31 +70,37 @@ function CompleteScreen({ data, user }: { data: OnboardingData; user: any }) {
       </View>
       <Text style={styles.completeTitle}>{cfg.title}</Text>
       <Text style={styles.completeDesc}>{cfg.desc}</Text>
+
       <View style={styles.infoBox}>
         <Text style={styles.infoBoxTitle}>설정 정보</Text>
-        <Text style={styles.infoBoxRow}>치료 단계: <Text style={styles.infoVal}>{cfg.emoji} {stage.toUpperCase()}</Text></Text>
-        <Text style={styles.infoBoxRow}>주기 설정: <Text style={styles.infoVal}>{data.cycleLength}일</Text></Text>
+        <Text style={styles.infoBoxRow}>
+          모드: <Text style={styles.infoVal}>{mode === 'NATURAL' ? '🌱 자연 임신 준비' : '🏥 병원 시술'}</Text>
+        </Text>
+        <Text style={styles.infoBoxRow}>
+          주기: <Text style={styles.infoVal}>{data.cycleLength}일</Text>
+        </Text>
       </View>
+
       <TouchableOpacity
         style={[styles.startBtn, { backgroundColor: cfg.color }]}
         onPress={handleStart}
-        disabled={saving}
         activeOpacity={0.85}
+        disabled={saving}
       >
         {saving
           ? <ActivityIndicator color="#fff" />
           : <Text style={styles.startBtnText}>시작하기 →</Text>
         }
       </TouchableOpacity>
-      <Text style={styles.changeNote}>언제든지 설정에서 변경할 수 있어요</Text>
+      <Text style={styles.changeNote}>언제든지 설정에서 모드를 변경할 수 있어요</Text>
     </View>
   )
 }
 
 // ============================
-// Step 2 — 주기 설정
+// Step 3 — 주기 설정
 // ============================
-function Step2Cycle({ stage, cycleLength, onChange, onNext }: {
+function StepCycle({ stage, cycleLength, onChange, onNext }: {
   stage: TreatmentStage | null
   cycleLength: number
   onChange: (v: number) => void
@@ -96,7 +114,6 @@ function Step2Cycle({ stage, cycleLength, onChange, onNext }: {
       <Text style={styles.q}>생리 주기가{'\n'}며칠인가요?</Text>
       <Text style={styles.qSub}>{guide}</Text>
 
-      {/* 수동 조절 */}
       <View style={styles.cycleRow}>
         <TouchableOpacity style={styles.stepBtn} onPress={() => onChange(Math.max(21, cycleLength - 1))}>
           <Text style={styles.stepBtnText}>−</Text>
@@ -110,7 +127,6 @@ function Step2Cycle({ stage, cycleLength, onChange, onNext }: {
         </TouchableOpacity>
       </View>
 
-      {/* 빠른 선택 */}
       <View style={styles.chipRow}>
         {presets.map(n => (
           <TouchableOpacity
@@ -136,7 +152,7 @@ function Step2Cycle({ stage, cycleLength, onChange, onNext }: {
 // 메인 온보딩 스크린
 // ============================
 export default function OnboardingScreen() {
-  const { step, data, setStage, setCycleLength, goBack } = useOnboarding()
+  const { step, data, totalSteps, selectMode, setStage, setCycleLength, goBack } = useOnboarding()
   const [done, setDone] = useState(false)
   const [user, setUser] = useState<any>(null)
 
@@ -163,13 +179,39 @@ export default function OnboardingScreen() {
           <CompleteScreen data={data} user={user} />
         ) : (
           <>
-            <ProgressBar step={step} onBack={goBack} />
+            <ProgressBar step={step} totalSteps={totalSteps} onBack={goBack} />
 
+            {/* Step 1: 모드 선택 */}
             {step === 1 && (
               <View>
-                <Text style={styles.q}>지금 어떤 단계에{'\n'}계세요?</Text>
-                <Text style={styles.qSub}>현재 상황에 맞는 기능을 바로 열어드릴게요 🌸</Text>
-                {STEP1_OPTIONS.map((opt) => (
+                <Text style={styles.q}>지금 어떻게{'\n'}임신을 준비하고 있나요?</Text>
+                <Text style={styles.qSub}>선택에 따라 맞춤 기능을 바로 열어드려요 🌸</Text>
+                {MODE_OPTIONS.map((opt) => (
+                  <TouchableOpacity
+                    key={opt.value}
+                    style={styles.optionBtn}
+                    onPress={() => selectMode(opt.value)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.optionIcon, { backgroundColor: opt.color + '18' }]}>
+                      <Text style={{ fontSize: 24 }}>{opt.emoji}</Text>
+                    </View>
+                    <View style={styles.optionText}>
+                      <Text style={styles.optionLabel}>{opt.label}</Text>
+                      <Text style={styles.optionSub}>{opt.sub}</Text>
+                    </View>
+                    <Text style={{ color: '#ffd6e0', fontSize: 16 }}>→</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Step 2: CLINIC 전용 — 시술 단계 선택 */}
+            {step === 2 && (
+              <View>
+                <Text style={styles.q}>어떤 시술을{'\n'}진행 중이세요?</Text>
+                <Text style={styles.qSub}>시술 단계에 맞는 기록·알림 기능을 열어드릴게요</Text>
+                {CLINIC_STAGE_OPTIONS.map((opt) => (
                   <TouchableOpacity
                     key={opt.value}
                     style={styles.optionBtn}
@@ -188,8 +230,9 @@ export default function OnboardingScreen() {
               </View>
             )}
 
-            {step === 2 && (
-              <Step2Cycle
+            {/* Step 3 (NATURAL: Step 2): 주기 입력 */}
+            {step === 3 && (
+              <StepCycle
                 stage={data.treatmentStage}
                 cycleLength={data.cycleLength}
                 onChange={setCycleLength}
@@ -216,18 +259,16 @@ const styles = StyleSheet.create({
   q: { fontSize: 22, fontWeight: '700', color: '#5a3042', lineHeight: 30, marginBottom: 6 },
   qSub: { fontSize: 13, color: '#b07080', marginBottom: 20, lineHeight: 20 },
 
-  // 선택지 버튼
   optionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 14, backgroundColor: '#fff',
-    borderRadius: 16, borderWidth: 1, borderColor: '#ffd6e0', marginBottom: 8,
+    padding: 16, backgroundColor: '#fff',
+    borderRadius: 16, borderWidth: 1.5, borderColor: '#ffd6e0', marginBottom: 8,
   },
-  optionIcon: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  optionIcon: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   optionText: { flex: 1 },
   optionLabel: { fontSize: 14, fontWeight: '700', color: '#5a3042' },
   optionSub: { fontSize: 11, color: '#b07080', marginTop: 2 },
 
-  // 주기 설정
   cycleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 },
   stepBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#ffd6e0', alignItems: 'center', justifyContent: 'center' },
   stepBtnText: { fontSize: 22, color: '#c0005a' },
@@ -242,7 +283,6 @@ const styles = StyleSheet.create({
   completeBtn: { backgroundColor: '#ff8fab', borderRadius: 20, paddingVertical: 16, alignItems: 'center' },
   completeBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
-  // 완료 화면
   completeWrap: { alignItems: 'center', gap: 16 },
   completeIcon: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center' },
   completeEmoji: { fontSize: 48 },

@@ -4,13 +4,14 @@ import { useOnboarding } from '@fertility/shared'
 import { ProgressBar } from '../../../components/onboarding/ProgressBar'
 import { Step1 } from '../../../components/onboarding/Step1'
 import { Step2 } from '../../../components/onboarding/Step2'
+import { Step3 } from '../../../components/onboarding/Step3'
 import { CompleteScreen } from '../../../components/onboarding/CompleteScreen'
 import { useState } from 'react'
 
 export default function OnboardingPage() {
   const {
-    step, data,
-    setStage, setCycleLength, goBack,
+    step, data, totalSteps,
+    selectMode, setStage, setCycleLength, goBack,
   } = useOnboarding()
   const [done, setDone] = useState(false)
 
@@ -29,17 +30,24 @@ export default function OnboardingPage() {
           <CompleteScreen data={data} />
         ) : (
           <>
-            <ProgressBar step={step} onBack={goBack} />
+            <ProgressBar step={step} totalSteps={totalSteps} onBack={goBack} />
 
+            {/* Step 1: 모드 선택 (자연임신 / 병원 시술) */}
             {step === 1 && (
-              <Step1 onSelect={setStage} />
+              <Step1 onSelect={selectMode} />
             )}
+
+            {/* Step 2: CLINIC 모드만 — 시술 단계 선택 */}
             {step === 2 && (
-              <Step2
-                stage={data.treatmentStage}
+              <Step2 onSelect={setStage} />
+            )}
+
+            {/* Step 3 (NATURAL: Step 2): 주기 길이 입력 */}
+            {step === 3 && (
+              <Step3
                 cycleLength={data.cycleLength}
                 onChange={setCycleLength}
-                onNext={() => setDone(true)}
+                onComplete={() => setDone(true)}
               />
             )}
           </>

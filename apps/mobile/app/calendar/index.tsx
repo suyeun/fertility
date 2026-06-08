@@ -66,53 +66,7 @@ export default function CalendarScreen() {
       setHormones(fetchedHormones)
       
       const fetchedSchedules = await treatmentApi.getAll()
-      if (fetchedSchedules.length === 0) {
-        const demoSchedules: TreatmentSchedule[] = [
-          {
-            id: 'demo_s1',
-            userId,
-            type: 'IVF',
-            title: '병원 내원 - 난포 자라나는 상황 초음파 확인',
-            scheduledAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16),
-            status: 'scheduled',
-            hospitalName: '서울미래여성의원',
-            notes: '오전 9시까지 내원. 공복 유지할 필요 없음.',
-            medications: [
-              {
-                name: '고날에프 펜 (난포자극주사)',
-                dose: '150 IU',
-                times: ['08:30'],
-                startDate: new Date().toISOString().split('T')[0],
-                endDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-              },
-              {
-                name: '자가 주사 보관 주의',
-                dose: '냉장보관',
-                times: ['21:00'],
-                startDate: new Date().toISOString().split('T')[0]
-              }
-            ]
-          },
-          {
-            id: 'demo_s2',
-            userId,
-            type: 'monitoring',
-            title: '피검사 및 초음파 모니터링',
-            scheduledAt: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString().substring(0, 16),
-            status: 'scheduled',
-            hospitalName: '서울미래여성의원',
-            notes: 'AMH 및 E2 호르몬 수치 더블체크 예정',
-            medications: []
-          }
-        ]
-        for (const schedule of demoSchedules) {
-          await treatmentApi.save(schedule)
-        }
-        const refetched = await treatmentApi.getAll()
-        setSchedules(refetched)
-      } else {
-        setSchedules(fetchedSchedules)
-      }
+      setSchedules(fetchedSchedules)
     } catch (error) {
       console.error('데이터 로드 실패:', error)
     } finally {

@@ -16,10 +16,10 @@ export class AiController {
   @Post('chat')
   async chat(
     @CurrentUser() user: JwtPayload,
-    @Body() body: { messages: any[] },
+    @Body() body: { messages: any[]; mode?: 'NATURAL' | 'CLINIC' },
     @Res() res: Response,
   ) {
-    await this.ai.streamChat(body.messages, res)
+    await this.ai.streamChat(body.messages, res, body.mode ?? 'CLINIC')
   }
 
   @Get('history')

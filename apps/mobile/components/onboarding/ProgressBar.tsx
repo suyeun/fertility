@@ -2,12 +2,11 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'
 
 interface ProgressBarProps {
   step: 1 | 2 | 3
+  totalSteps: number
   onBack: () => void
 }
 
-const STEPS = ['임신 준비 기간', '시술 경험', '생리 주기']
-
-export function ProgressBar({ step, onBack }: ProgressBarProps) {
+export function ProgressBar({ step, totalSteps, onBack }: ProgressBarProps) {
   return (
     <View style={styles.wrap}>
       <View style={styles.topRow}>
@@ -18,18 +17,17 @@ export function ProgressBar({ step, onBack }: ProgressBarProps) {
         >
           <Text style={styles.backText}>← 이전</Text>
         </TouchableOpacity>
-        <Text style={styles.counter}>{step} / 3</Text>
+        <Text style={styles.counter}>{step} / {totalSteps}</Text>
         <View style={styles.spacer} />
       </View>
       <View style={styles.barRow}>
-        {[1, 2, 3].map((s) => (
+        {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => (
           <View
             key={s}
             style={[styles.bar, s <= step ? styles.barActive : styles.barInactive]}
           />
         ))}
       </View>
-      <Text style={styles.stepLabel}>{STEPS[step - 1]}</Text>
     </View>
   )
 }
@@ -46,5 +44,4 @@ const styles = StyleSheet.create({
   bar: { flex: 1, height: 6, borderRadius: 3 },
   barActive: { backgroundColor: '#ff8fab' },
   barInactive: { backgroundColor: '#ffd6e0' },
-  stepLabel: { fontSize: 12, color: '#b07080', fontWeight: '500', textAlign: 'center', marginTop: 6 },
 })

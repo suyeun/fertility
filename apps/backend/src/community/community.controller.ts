@@ -58,6 +58,15 @@ export class CommunityController {
     return this.community.likeSecretPost(user.sub, postId)
   }
 
+  @Post('secret/:id/react')
+  reactSecretPost(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') postId: string,
+    @Body('reaction') reaction: 'cheer' | 'empathy' | 'pray',
+  ) {
+    return this.community.reactSecretPost(user.sub, postId, reaction)
+  }
+
   @Get('secret/:id/comments')
   getSecretComments(@Param('id') postId: string) {
     return this.community.getSecretComments(postId)
