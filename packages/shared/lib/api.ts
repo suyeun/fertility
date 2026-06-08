@@ -114,6 +114,7 @@ export const aiApi = {
   streamChat: async (
     messages: { role: 'user' | 'assistant'; content: string }[],
     onToken: (token: string) => void,
+    mode?: 'NATURAL' | 'CLINIC',
   ) => {
     const url = `${getBaseUrl()}/ai/chat`
     const token = getToken()
@@ -123,7 +124,7 @@ export const aiApi = {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ messages }),
+      body: JSON.stringify({ messages, mode }),
     })
     if (!res.ok) throw new Error(`AI API ${res.status}`)
     const reader = res.body?.getReader()

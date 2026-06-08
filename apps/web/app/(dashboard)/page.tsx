@@ -2,36 +2,28 @@
 
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useHomeData, cyclesApi, treatmentApi, diaryApi, hormonesApi } from '@fertility/shared'
-import type { MenstrualCycle, TreatmentSchedule, DiaryEntry, HormoneRecord } from '@fertility/shared'
+import { useHomeData, cyclesApi, treatmentApi, hormonesApi } from '@fertility/shared'
+import type { MenstrualCycle, TreatmentSchedule, HormoneRecord, UserMode } from '@fertility/shared'
 import HeroCard from '../../components/home/HeroCard'
-import TodayTasks from '../../components/home/TodayTasks'
-import WeekStreakCard from '../../components/home/WeekStreakCard'
 import NaturalDashboard from '../../components/home/NaturalDashboard'
 import ClinicDashboard from '../../components/home/ClinicDashboard'
+import { NaturalChecklist, ClinicChecklist } from '../../components/home/TodayChecklist'
+import WeekStreakCard from '../../components/home/WeekStreakCard'
+import { CalendarCheck } from 'lucide-react'
 
 export default function DashboardPage() {
   const { user, profile } = useAuth()
-  const [cycles, setCycles] = useState<MenstrualCycle[]>([])
+  const [cycles,    setCycles]    = useState<MenstrualCycle[]>([])
   const [schedules, setSchedules] = useState<TreatmentSchedule[]>([])
-  const [diaries, setDiaries] = useState<DiaryEntry[]>([])
-  const [hormones, setHormones] = useState<HormoneRecord[]>([])
-  const [loading, setLoading] = useState(true)
+  const [hormones,  setHormones]  = useState<HormoneRecord[]>([])
+  const [loading,   setLoading]   = useState(true)
 
   useEffect(() => {
     if (!user) return
     const load = async () => {
       try {
-        const [c, s, d, h] = await Promise.all([
-          cyclesApi.getAll(),
-          treatmentApi.getAll(),
-          diaryApi.getAll(),
-          hormonesApi.getAll(),
-        ])
-        setCycles(c)
-        setSchedules(s)
-        setDiaries(d)
-        setHormones(h)
+        const [c, s, h] = await Promise.all([cyclesApi.getAll(), treatmentApi.getAll(), hormonesApi.getAll()])
+        setCycles(c); setSchedules(s); setHormones(h)
       } catch (err) {
         console.error('홈 데이터 로드 실패:', err)
       } finally {
@@ -41,12 +33,11 @@ export default function DashboardPage() {
     load()
   }, [user])
 
-  const home = useHomeData(profile?.treatmentStage, cycles, hormones, schedules, diaries)
-  const todayStr = new Date().toISOString().split('T')[0]
+  const home = useHomeData(profile?.treatmentStage, cycles, hormones, schedules, [])
+  const todayStr     = new Date().toISOString().split('T')[0]
   const todayHormone = hormones.find(h => h.recordedAt.split('T')[0] === todayStr)
 
-  // currentMode 없는 기존 유저는 treatmentStage로 판별 (하위 호환)
-  const mode = profile?.currentMode
+  const mode: UserMode = (profile?.currentMode as UserMode)
     ?? (profile?.treatmentStage === 'natural' ? 'NATURAL' : 'CLINIC')
 
   if (loading) {
@@ -58,46 +49,30 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 32 }}>
+    <div className="flex flex-col gap-5 pb-4">
 
       {/* 인사 */}
-      <div style={{ paddingTop: 12, paddingBottom: 16 }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-[18px] font-semibold" style={{ color: '#5a3042' }}>
-              {profile?.name || '사용자'}님, 안녕하세요 🌸
-            </h2>
-            <p className="text-[12px] mt-0.5" style={{ color: '#b07080' }}>
-              봄이 따뜻한 기적을 함께 만들어가요
-            </p>
-          </div>
-          {/* 모드 배지 */}
-          <span
-            className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-            style={{
-              backgroundColor: mode === 'NATURAL' ? '#dcfce7' : '#ede9fe',
-              color: mode === 'NATURAL' ? '#16a34a' : '#7c3aed',
-            }}
-          >
-            {mode === 'NATURAL' ? '🌱 자연임신' : '🏥 시술 모드'}
-          </span>
-        </div>
+      <div className="pt-1">
+        <h2 className="text-[18px] font-semibold text-[#5a3042]">
+          {profile?.name || '사용자'}님, 안녕하세요 {mode === 'NATURAL' ? '🌱' : '🏥'}
+        </h2>
+        <p className="text-[12px] text-[#b07080] mt-0.5">봄이 따뜻한 기적을 함께 만들어가요</p>
       </div>
 
-      {/* 히어로 카드 (공통) */}
-      <div style={{ marginBottom: 24 }}>
-        <HeroCard
-          phase={home.todayCycleInfo?.phase ?? 'follicular'}
-          phaseLabel={home.todayPhaseLabel}
-          cycleDay={home.currentCycleDay}
-          tip={home.todayTip}
-          dDay={home.ovulationDDay}
-          ovulationDate={home.nextOvulationDate}
-          isFertileWindow={home.isFertileWindow}
-        />
-      </div>
+      {/* 히어로 카드 */}
+      <HeroCard
+        mode={mode}
+        phase={home.todayCycleInfo?.phase ?? 'follicular'}
+        phaseLabel={home.todayPhaseLabel}
+        cycleDay={home.currentCycleDay}
+        tip={home.todayTip}
+        dDay={home.ovulationDDay}
+        ovulationDate={home.nextOvulationDate}
+        isFertileWindow={home.isFertileWindow}
+        treatmentStage={profile?.treatmentStage}
+      />
 
-      {/* 모드별 전용 대시보드 섹션 */}
+      {/* 모드별 데이터 위젯 */}
       {mode === 'NATURAL' ? (
         <NaturalDashboard
           todayHormone={todayHormone}
@@ -113,15 +88,23 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* 오늘 할 일 */}
-      <div style={{ marginBottom: 24 }}>
-        <TodayTasks tasks={home.todayTasks} todayHormone={todayHormone} />
+      {/* 오늘 할 일 체크리스트 */}
+      <div>
+        <div className="flex items-center gap-1.5 mb-3">
+          <CalendarCheck size={15} className="text-[#ff8fab]" />
+          <span className="text-[13px] font-semibold text-[#5a3042]">
+            {mode === 'NATURAL' ? '오늘 할 일' : '오늘 미션'}
+          </span>
+        </div>
+        {mode === 'NATURAL' ? (
+          <NaturalChecklist todayHormone={todayHormone} />
+        ) : (
+          <ClinicChecklist schedules={schedules} todayHormone={todayHormone} />
+        )}
       </div>
 
-      {/* 이번 주 기록 */}
-      <div>
-        <WeekStreakCard weekDays={home.weekStreak} streakCount={home.streakCount} />
-      </div>
+      {/* 이번 주 기록 스트릭 */}
+      <WeekStreakCard weekDays={home.weekStreak} streakCount={home.streakCount} />
 
     </div>
   )
