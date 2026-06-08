@@ -5,10 +5,10 @@ import { GuestProvider } from './context/GuestContext'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: '임신 준비 AI 올인원 파트너 | Fertility AI',
-  description: '생리 주기 추적, 배란일 예측, 병원 일정 관리, AI 질문 응답, 감정 기록까지. 임신을 준비하는 여성과 커플을 위한 맞춤형 동반자 서비스.',
-  keywords: ['임신 준비', '배란일 예측', '생리 주기', 'IVF', 'IUI', '호르몬 기록', 'AI 상담', '감정 일기'],
-  authors: [{ name: 'Fertility AI Team' }],
+  title: '루네라(Lunera) · 임신준비 배란일 캘린더',
+  description: '배란일·가임기부터 IVF 시술 일정·약물 스케줄까지, 임신 준비의 모든 것을 하나의 캘린더에. 자연임신·난임 시술을 준비하는 분들을 위한 개인 건강 기록 스케줄러.',
+  keywords: ['임신 준비', '배란일 계산기', '가임기', '생리 주기', '시험관', 'IVF', '인공수정', '난임', '임신 캘린더', '영양제 트래킹'],
+  authors: [{ name: 'Lunera Team' }],
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no',
 }
 
