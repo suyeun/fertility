@@ -132,7 +132,7 @@ export default function SignupPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="봄이엄마"
+              placeholder="루네라유저"
               required
               className="w-full px-4 py-3 rounded-2xl border border-rose-100 bg-rose-50/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-rose-950 placeholder:text-rose-300 transition-all"
             />
@@ -249,7 +249,7 @@ export default function SignupPage() {
               type="text"
               value={partnerName}
               onChange={(e) => setPartnerName(e.target.value)}
-              placeholder="봄이아빠"
+              placeholder="든든한파트너"
               className="w-full px-4 py-3 rounded-2xl border border-rose-100 bg-rose-50/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm text-rose-950 placeholder:text-rose-300 transition-all"
             />
           </div>

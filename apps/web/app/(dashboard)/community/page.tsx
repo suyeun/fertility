@@ -171,7 +171,7 @@ export default function CommunityPage() {
       <div className="rounded-xl px-3 py-2.5 text-[11px] flex items-start gap-2 bg-[#f5f3ff] border border-[#ddd6fe]">
         <Lock size={12} className="text-[#7c3aed] shrink-0 mt-0.5" />
         <p className="text-[#6d28d9] leading-relaxed">
-          BOM 커뮤니티는 유저분들의 소중한 프라이버시를 위해 <b>100% 익명</b>으로 안전하게 운영됩니다. 안심하고 마음을 나눠보세요. 🌸
+          Lunera 커뮤니티는 유저분들의 소중한 프라이버시를 위해 <b>100% 익명</b>으로 안전하게 운영됩니다. 안심하고 마음을 나눠보세요. 🌸
         </p>
       </div>
 

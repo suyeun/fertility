@@ -56,7 +56,7 @@ export default function DashboardPage() {
         <h2 className="text-[18px] font-semibold text-[#5a3042]">
           {profile?.name || '사용자'}님, 안녕하세요 {mode === 'NATURAL' ? '🌱' : '🏥'}
         </h2>
-        <p className="text-[12px] text-[#b07080] mt-0.5">봄이 따뜻한 기적을 함께 만들어가요</p>
+        <p className="text-[12px] text-[#b07080] mt-0.5">루네라가 따뜻한 기적을 함께 만들어가요</p>
       </div>
 
       {/* 히어로 카드 */}

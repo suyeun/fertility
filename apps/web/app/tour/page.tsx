@@ -24,7 +24,7 @@ const MODES: {
       '배란 D-Day & 임신 확률 시각화',
       'OPK / BBT 데이터 대시보드',
       '오늘 할 일 체크리스트',
-      'AI 봄이 자연임신 상담',
+      '루나 챗봇 자연임신 가이드',
     ],
     color: '#16a34a',
     bg: '#f0fdf4',
@@ -39,7 +39,7 @@ const MODES: {
       '시술 타임라인 & D-Day 관리',
       '난포/호르몬 수치 대시보드',
       '주사·약물 투약 체크리스트',
-      'AI 봄이 시술 전문 상담',
+      '루나 챗봇 시술 전문 가이드',
     ],
     color: '#7c3aed',
     bg: '#f5f3ff',
@@ -63,7 +63,7 @@ export default function TourPage() {
       <div className="text-center mb-8">
         <div className="text-3xl mb-2">🌸</div>
         <h1 className="text-xl font-bold text-[#5a3042] leading-snug">
-          BOM에 오신 것을 환영해요!
+          Lunera에 오신 것을 환영해요!
         </h1>
         <p className="text-sm text-[#b07080] mt-2 leading-relaxed max-w-xs">
           어떤 준비를 하고 계시는지 선택하시면<br />맞춤형 가이드 화면을 보여드려요.

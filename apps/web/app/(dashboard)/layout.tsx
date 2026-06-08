@@ -37,7 +37,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="flex items-center gap-2">
           <span className="text-xl">🌸</span>
           <div>
-            <h1 className="font-bold text-base text-rose-950 font-outfit tracking-tight leading-none">BOM</h1>
+            <h1 className="font-bold text-base text-rose-950 font-outfit tracking-tight leading-none">Lunera</h1>
             <span
               className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
               style={{

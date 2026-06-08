@@ -22,7 +22,7 @@ export default function OnboardingPage() {
         {!done && (
           <div className="text-center mb-6">
             <span className="text-2xl">🌸</span>
-            <span className="text-base font-bold text-[#ff8fab] ml-1">BOM</span>
+            <span className="text-base font-bold text-[#ff8fab] ml-1">Lunera</span>
           </div>
         )}
 

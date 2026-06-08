@@ -131,7 +131,7 @@ export default function TourPreviewPage() {
       <header className="px-4 py-3 flex items-center justify-between border-b border-[#ffd6e0] bg-white">
         <div className="flex items-center gap-2">
           <span className="text-xl">🌸</span>
-          <span className="font-bold text-base text-rose-950">BOM</span>
+          <span className="font-bold text-base text-rose-950">Lunera</span>
         </div>
         <button onClick={() => router.push('/signup')}
           className="text-xs font-bold text-[#ff8fab] bg-[#fff0f4] px-3 py-1.5 rounded-full border border-[#ffd6e0]">
@@ -147,7 +147,7 @@ export default function TourPreviewPage() {
           <h2 className="text-[18px] font-semibold text-[#5a3042]">
             안녕하세요 {isNatural ? '🌱' : '🏥'}
           </h2>
-          <p className="text-[12px] text-[#b07080] mt-0.5">봄이 따뜻한 기적을 함께 만들어가요</p>
+          <p className="text-[12px] text-[#b07080] mt-0.5">루네라가 따뜻한 기적을 함께 만들어가요</p>
         </div>
 
         {/* HeroCard 데모 */}

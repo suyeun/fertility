@@ -27,11 +27,11 @@ function DisclaimerBanner({ onConfirm }: { onConfirm: () => void }) {
 
           <div className="flex gap-2">
             <span className="shrink-0">✅</span>
-            <p>봄이(BOM AI)는 <b>의료기기가 아니며</b>, 제공하는 정보는 <b>참고용 건강 정보 및 기록 정리</b> 목적입니다.</p>
+            <p>루나(Lunera 챗봇)는 <b>의료기기가 아니며</b>, 제공하는 정보는 <b>참고용 건강 정보 및 기록 정리</b> 목적입니다.</p>
           </div>
           <div className="flex gap-2">
             <span className="shrink-0">✅</span>
-            <p>봄이는 <b>진단·처방·치료 행위를 하지 않습니다.</b> 수치 설명은 데이터 트렌드 안내 수준으로만 제공됩니다.</p>
+            <p>루나는 <b>진단·처방·치료 행위를 하지 않습니다.</b> 수치 설명은 데이터 트렌드 안내 수준으로만 제공됩니다.</p>
           </div>
           <div className="flex gap-2">
             <span className="shrink-0">✅</span>
@@ -51,7 +51,7 @@ function DisclaimerBanner({ onConfirm }: { onConfirm: () => void }) {
           onClick={onConfirm}
           className="w-full py-3.5 bg-[#ff8fab] text-white rounded-2xl text-sm font-bold active:scale-[0.98] transition-all"
         >
-          확인했어요, 봄이와 대화 시작하기
+          확인했어요, 루나와 대화 시작하기
         </button>
       </div>
     </div>
@@ -164,7 +164,7 @@ export default function ChatPage() {
         <div className="flex items-center gap-2 pb-3 border-b border-[#ffd6e0]">
           <Sparkles size={18} className="text-[#ff8fab]" />
           <div>
-            <h2 className="text-sm font-bold text-[#5a3042]">AI 봄이와 대화하기</h2>
+            <h2 className="text-sm font-bold text-[#5a3042]">루나와 대화하기</h2>
             <p className="text-[10px] text-[#b07080]">
               {mode === 'NATURAL' ? '자연 임신 준비 모드' : '시술 모드'}
             </p>
@@ -179,7 +179,7 @@ export default function ChatPage() {
         <div className="flex items-start gap-2 bg-[#fffbeb] border border-[#fde68a] rounded-xl px-3 py-2 mt-2">
           <Info size={12} className="text-yellow-500 shrink-0 mt-0.5" />
           <p className="text-[10px] text-yellow-800 leading-relaxed">
-            <b>BOM AI 파트너는 의료 진단이나 처방을 제공하지 않습니다.</b> 본 답변은 기록 및 정보 참고용이며, 의료적 판단은 반드시 전문의와 상의하세요.
+            <b>루나는 의료 진단이나 처방을 제공하지 않습니다.</b> 본 답변은 기록 및 정보 참고용이며, 의료적 판단은 반드시 전문의와 상의하세요.
           </p>
         </div>
 
@@ -190,7 +190,7 @@ export default function ChatPage() {
           {messages.length === 0 && (
             <div className="flex flex-col gap-3">
               <div className="bg-[#fff0f4] rounded-2xl p-4 text-sm text-[#5a3042] leading-relaxed">
-                <p className="font-bold mb-1">안녕하세요! 봄이예요 🌸</p>
+                <p className="font-bold mb-1">안녕하세요! 루나예요 🌸</p>
                 <p className="text-[12px] text-[#b07080]">
                   {mode === 'NATURAL'
                     ? '배란일, 기초체온, OPK 수치 등 자연 임신 준비 관련 궁금한 점을 물어보세요.'
@@ -281,7 +281,7 @@ export default function ChatPage() {
           </div>
           {/* 하단 고정 경고문 */}
           <p className="text-[9px] text-[#b07080] text-center mt-1.5 leading-relaxed">
-            BOM AI 파트너는 의료 진단·처방을 제공하지 않습니다. 본 답변은 기록 및 정보 참고용이며,{' '}
+            루나는 의료 진단·처방을 제공하지 않습니다. 본 답변은 기록 및 정보 참고용이며,{' '}
             의료적 판단은 반드시 담당 난임 전문의와 상의하세요.
           </p>
         </div>
