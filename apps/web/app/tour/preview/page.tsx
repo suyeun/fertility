@@ -70,10 +70,10 @@ const DEMO_CLINIC = {
 const WEEKDAYS = ['월', '화', '수', '목', '금', '토', '일']
 
 const DEMO_POSTS = [
-  { id: 1, tag: '일상', emoji: '🌱', content: '오늘 OPK 드디어 두 줄 나왔어요!! 배란 오는 것 같아서 너무 설레요 🥺', reactions: { cheer: 24, empathy: 18, pray: 31 }, comments: 7, time: '2시간 전' },
-  { id: 2, tag: '시술정보', emoji: '🏥', content: '2차 이식 판정일이에요. 떨리는 마음에 잠을 못잤어요. 다들 응원해주세요 💜', reactions: { cheer: 52, empathy: 41, pray: 88 }, comments: 23, time: '5시간 전' },
-  { id: 3, tag: '일상', emoji: '💊', content: '엽산 먹은 지 3개월 됐는데 생리통이 확실히 줄었어요! 영양제 효과 있는 것 같아요', reactions: { cheer: 15, empathy: 9, pray: 12 }, comments: 4, time: '어제' },
-  { id: 4, tag: '궁금해요', emoji: '🤔', content: 'AMH 수치가 0.8인데 자연임신 가능성이 있을까요? 병원에선 빨리 시작하라고 하던데…', reactions: { cheer: 8, empathy: 34, pray: 27 }, comments: 12, time: '어제' },
+  { id: 1, category: '💬 자유수다/일상', tag: '#감정토닥', content: '오늘 OPK 드디어 두 줄 나왔어요!! 배란 오는 것 같아서 너무 설레요 🥺', reactions: { cheer: 24, empathy: 18, pray: 31 }, comments: 7, time: '2시간 전' },
+  { id: 2, category: '🧬 시험관/시술', tag: '#시험관_신선', content: '2차 이식 판정일이에요. 떨리는 마음에 잠을 못잤어요. 다들 응원해주세요 💜', reactions: { cheer: 52, empathy: 41, pray: 88 }, comments: 23, time: '5시간 전' },
+  { id: 3, category: '💡 꿀팁/정보공유', tag: '#영양제추천', content: '엽산 먹은 지 3개월 됐는데 생리통이 확실히 줄었어요! 영양제 효과 있는 것 같아요', reactions: { cheer: 15, empathy: 9, pray: 12 }, comments: 4, time: '어제' },
+  { id: 4, category: '💡 꿀팁/정보공유', tag: '#배테기_기초체온', content: 'AMH 수치가 0.8인데 자연임신 가능성이 있을까요? 병원에선 빨리 시작하라고 하던데…', reactions: { cheer: 8, empathy: 34, pray: 27 }, comments: 12, time: '어제' },
 ]
 
 const DEMO_AI_MESSAGES = [
@@ -296,7 +296,7 @@ function CalendarTab({ isNatural, requireLogin }: { isNatural: boolean; requireL
         </div>
 
         {/* 날짜 셀 */}
-        <div className="grid grid-cols-7 gap-y-1">
+        <div className="grid grid-cols-7 gap-1">
           {cells.map((d, i) => {
             if (!d) return <div key={i} />
             const isToday = d === todayDate
@@ -305,9 +305,9 @@ function CalendarTab({ isNatural, requireLogin }: { isNatural: boolean; requireL
               <button
                 key={i}
                 onClick={() => requireLogin('일정을 기록하려면 가입이 필요해요')}
-                className={`flex flex-col items-center rounded-xl py-1 transition-all active:scale-90 hover:bg-[#fff0f4] min-h-[48px] ${
-                  isToday ? 'ring-2 ring-[#ff8fab] ring-offset-0' : ''
-                }`}
+                className={`flex flex-col items-center rounded-lg py-1 transition-all active:scale-90 min-h-[44px] ${
+                  isToday ? 'ring-2 ring-[#ff8fab] ring-offset-1' : ''
+                } ${!data ? 'hover:bg-[#fff0f4]' : ''}`}
                 style={data ? { backgroundColor: data.bg } : {}}
               >
                 {/* 날짜 숫자 */}
@@ -437,13 +437,18 @@ function CommunityTab({ requireLogin }: { requireLogin: (msg?: string) => void }
       </div>
 
       {/* 카테고리 탭 */}
-      <div className="flex gap-2">
-        {['전체', '일상', '시술정보', '궁금해요'].map((cat, i) => (
-          <button key={cat}
-            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all ${
-              i === 0 ? 'bg-[#ff8fab] text-white' : 'bg-white border border-[#ffd6e0] text-[#b07080]'
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {[
+          { label: '전체', active: true },
+          { label: '💬 자유수다/일상', active: false },
+          { label: '🧬 시험관/시술', active: false },
+          { label: '💡 꿀팁/정보공유', active: false },
+        ].map((cat) => (
+          <button key={cat.label}
+            className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all whitespace-nowrap ${
+              cat.active ? 'bg-[#ff8fab] text-white' : 'bg-white border border-[#ffd6e0] text-[#b07080]'
             }`}>
-            {cat}
+            {cat.label}
           </button>
         ))}
       </div>
@@ -453,8 +458,11 @@ function CommunityTab({ requireLogin }: { requireLogin: (msg?: string) => void }
         {DEMO_POSTS.map(post => (
           <div key={post.id}
             className="bg-white border border-[#ffd6e0] rounded-2xl p-4 flex flex-col gap-3">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#fff0f4] text-[#ff8fab]">
+                {post.category}
+              </span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#f5f5f5] text-[#b07080]">
                 {post.tag}
               </span>
               <span className="text-[10px] text-[#c4a0ae] ml-auto">{post.time}</span>
