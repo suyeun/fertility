@@ -242,99 +242,161 @@ function CalendarTab({ isNatural, requireLogin }: { isNatural: boolean; requireL
   const firstDay = new Date(year, month, 1).getDay()
   const todayDate = today.getDate()
 
-  // 데모: 배란기 하이라이트 (8~14일), 생리일 (1~4일)
-  const phaseDay = (d: number) => {
-    if (d >= 1 && d <= 4) return 'period'
-    if (d >= 10 && d <= 14) return 'fertile'
-    if (d === 14) return 'ovulation'
-    return null
+  // 날짜별 배지 텍스트 + 배경색 (실제 앱 UI와 동일한 스타일)
+  type DayData = { label: string; bg: string; color: string; extra?: string }
+  const naturalDays: Record<number, DayData> = {
+    1:  { label: '생리', bg: '#fecdd3', color: '#be123c' },
+    2:  { label: '생리', bg: '#fecdd3', color: '#be123c' },
+    3:  { label: '생리', bg: '#fecdd3', color: '#be123c' },
+    4:  { label: '생리', bg: '#fecdd3', color: '#be123c' },
+    9:  { label: '가임', bg: '#bbf7d0', color: '#15803d' },
+    10: { label: '가임', bg: '#bbf7d0', color: '#15803d' },
+    11: { label: '가임', bg: '#bbf7d0', color: '#15803d', extra: '♥' },
+    12: { label: '가임', bg: '#bbf7d0', color: '#15803d' },
+    13: { label: '가임', bg: '#bbf7d0', color: '#15803d', extra: '♥' },
+    14: { label: '배란', bg: '#ffd6e0', color: '#ff8fab', extra: '♥' },
   }
+  const clinicDays: Record<number, DayData> = {
+    3:  { label: '주사', bg: '#ede9fe', color: '#7c3aed' },
+    4:  { label: '주사', bg: '#ede9fe', color: '#7c3aed' },
+    5:  { label: '병원', bg: '#ddd6fe', color: '#6d28d9' },
+    6:  { label: '주사', bg: '#ede9fe', color: '#7c3aed' },
+    7:  { label: '주사', bg: '#ede9fe', color: '#7c3aed' },
+    8:  { label: '병원', bg: '#ddd6fe', color: '#6d28d9' },
+    9:  { label: '주사', bg: '#ede9fe', color: '#7c3aed' },
+    10: { label: '주사', bg: '#ede9fe', color: '#7c3aed' },
+    15: { label: '이식', bg: '#ffd6e0', color: '#ff8fab' },
+  }
+  const dayData = isNatural ? naturalDays : clinicDays
 
-  const cells = []
+  const cells: (number | null)[] = []
   for (let i = 0; i < firstDay; i++) cells.push(null)
   for (let d = 1; d <= daysInMonth; d++) cells.push(d)
 
   return (
     <div className="flex flex-col gap-4">
+      {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-bold text-[#5a3042]">
-          {year}년 {month + 1}월
-        </h2>
+        <h2 className="text-base font-bold text-[#5a3042]">{year}년 {month + 1}월</h2>
         <div className="flex items-center gap-1 text-[10px] text-[#c4a0ae]">
           <Lock size={10} />
           <span>기록은 가입 후 가능해요</span>
         </div>
       </div>
 
-      {/* 캘린더 범례 */}
-      <div className="flex gap-3 flex-wrap">
-        {isNatural ? (
-          <>
-            <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#fca5a5]" /><span className="text-[10px] text-[#b07080]">생리</span></div>
-            <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#86efac]" /><span className="text-[10px] text-[#b07080]">가임기</span></div>
-            <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#ff8fab]" /><span className="text-[10px] text-[#b07080]">배란일</span></div>
-          </>
-        ) : (
-          <>
-            <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#c4b5fd]" /><span className="text-[10px] text-[#b07080]">주사</span></div>
-            <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#6d28d9]" /><span className="text-[10px] text-[#b07080]">병원</span></div>
-            <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-[#ff8fab]" /><span className="text-[10px] text-[#b07080]">이식일</span></div>
-          </>
-        )}
-      </div>
-
       {/* 캘린더 그리드 */}
-      <div className="bg-white rounded-2xl border border-[#ffd6e0] p-4">
-        <div className="grid grid-cols-7 mb-2">
-          {['일','월','화','수','목','금','토'].map(d => (
-            <div key={d} className="text-center text-[10px] font-semibold text-[#b07080] py-1">{d}</div>
+      <div className="bg-white rounded-2xl border border-[#ffd6e0] p-3">
+        {/* 요일 헤더 */}
+        <div className="grid grid-cols-7 mb-1">
+          {['일','월','화','수','목','금','토'].map((d, i) => (
+            <div key={d} className={`text-center text-[10px] font-semibold py-1 ${
+              i === 0 ? 'text-rose-400' : i === 6 ? 'text-blue-400' : 'text-[#b07080]'
+            }`}>{d}</div>
           ))}
         </div>
+
+        {/* 날짜 셀 */}
         <div className="grid grid-cols-7 gap-y-1">
           {cells.map((d, i) => {
             if (!d) return <div key={i} />
-            const phase = phaseDay(d)
             const isToday = d === todayDate
-            let bg = ''
-            if (phase === 'period') bg = 'bg-[#fca5a5]'
-            else if (phase === 'fertile') bg = 'bg-[#86efac]'
-            else if (phase === 'ovulation') bg = 'bg-[#ff8fab]'
+            const data = dayData[d]
             return (
-              <button key={i}
+              <button
+                key={i}
                 onClick={() => requireLogin('일정을 기록하려면 가입이 필요해요')}
-                className={`aspect-square flex items-center justify-center rounded-full text-[12px] transition-all active:scale-90 ${
-                  isToday ? 'ring-2 ring-[#ff8fab] ring-offset-1' : ''
-                } ${bg || 'hover:bg-[#fff0f4]'}`}>
-                <span className={`${phase ? 'text-white font-semibold' : 'text-[#5a3042]'} ${isToday && !phase ? 'font-bold text-[#ff8fab]' : ''}`}>
+                className={`flex flex-col items-center rounded-xl py-1 transition-all active:scale-90 hover:bg-[#fff0f4] min-h-[48px] ${
+                  isToday ? 'ring-2 ring-[#ff8fab] ring-offset-0' : ''
+                }`}
+                style={data ? { backgroundColor: data.bg } : {}}
+              >
+                {/* 날짜 숫자 */}
+                <span className={`text-[12px] font-medium leading-none mt-1 ${
+                  data ? '' : isToday ? 'text-[#ff8fab] font-bold' : 'text-[#5a3042]'
+                }`} style={data ? { color: data.color } : {}}>
                   {d}
                 </span>
+                {/* 배지 텍스트 */}
+                {data && (
+                  <span className="text-[9px] font-semibold mt-0.5 leading-none" style={{ color: data.color }}>
+                    {data.label}
+                  </span>
+                )}
+                {/* 관계일 하트 */}
+                {data?.extra && (
+                  <span className="text-[9px] leading-none mt-0.5">
+                    {data.extra}
+                  </span>
+                )}
               </button>
             )
           })}
         </div>
       </div>
 
-      {/* 이번달 요약 데모 */}
+      {/* 범례 */}
+      <div className="flex gap-3 flex-wrap px-1">
+        {isNatural ? (
+          <>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#fecdd3]" /><span className="text-[10px] text-[#b07080]">생리 기간</span></div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#bbf7d0]" /><span className="text-[10px] text-[#b07080]">가임 시기</span></div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#ffd6e0]" /><span className="text-[10px] text-[#b07080]">배란 예정일</span></div>
+            <div className="flex items-center gap-1"><span className="text-[10px]">♥</span><span className="text-[10px] text-[#b07080]">관계일</span></div>
+          </>
+        ) : (
+          <>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#ede9fe]" /><span className="text-[10px] text-[#b07080]">주사</span></div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#ddd6fe]" /><span className="text-[10px] text-[#b07080]">병원/내원</span></div>
+            <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-[#ffd6e0]" /><span className="text-[10px] text-[#b07080]">이식일</span></div>
+          </>
+        )}
+      </div>
+
+      {/* 선택 날짜 상세 (데모) */}
+      <div className="bg-white rounded-2xl border border-[#ffd6e0] p-4 flex flex-col gap-2">
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[12px] font-bold text-[#5a3042]">
+            {isNatural ? `6월 14일 (토) · 배란 예정일` : `6월 15일 (일) · 이식일`}
+          </p>
+          <span className="text-[9px] text-[#ff8fab] bg-[#fff0f4] px-2 py-0.5 rounded-full font-bold">데모</span>
+        </div>
+        {isNatural ? (
+          <div className="flex flex-col gap-2 text-[11px] text-[#5a3042]">
+            <div className="flex items-center gap-2"><span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#ffd6e0] text-[#ff8fab] font-bold">배란</span><span>배란 예정일이에요</span></div>
+            <div className="flex items-center gap-2"><span className="text-[10px]">♥</span><span>관계일 기록됨</span></div>
+            <div className="flex items-center gap-2"><span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#bbf7d0] text-[#15803d] font-bold">OPK</span><span>9.2 · 피크 🔴</span></div>
+            <div className="flex items-center gap-2"><span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#fecdd3] text-[#be123c] font-bold">BBT</span><span>36.85℃ · 고온기</span></div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 text-[11px] text-[#5a3042]">
+            <div className="flex items-center gap-2"><span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#ffd6e0] text-[#ff8fab] font-bold">이식</span><span>신선 배아 이식 예정 (2개)</span></div>
+            <div className="flex items-center gap-2"><span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[#ede9fe] text-[#7c3aed] font-bold">주사</span><span>황체호르몬 · 오전 8:00</span></div>
+          </div>
+        )}
+      </div>
+
+      {/* 이번달 요약 */}
       <div className="bg-white rounded-2xl border border-[#ffd6e0] p-4 flex flex-col gap-3">
         <p className="text-[13px] font-semibold text-[#5a3042]">이번 달 요약 (데모)</p>
         {isNatural ? (
-          <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="grid grid-cols-4 gap-2 text-center">
             {[
               { label: '사이클', value: '28일' },
               { label: '배란 예측', value: '6/14' },
               { label: '가임기', value: '5일' },
+              { label: '관계일', value: '3회' },
             ].map(item => (
-              <div key={item.label} className="bg-[#fff8f9] rounded-xl p-2.5">
-                <p className="text-[10px] text-[#b07080]">{item.label}</p>
-                <p className="text-sm font-bold text-[#ff8fab]">{item.value}</p>
+              <div key={item.label} className="bg-[#fff8f9] rounded-xl p-2">
+                <p className="text-[9px] text-[#b07080]">{item.label}</p>
+                <p className="text-[13px] font-bold text-[#ff8fab]">{item.value}</p>
               </div>
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2 text-center">
             {[
-              { label: '주사 일정', value: '12회' },
-              { label: '병원 방문', value: '4회' },
+              { label: '주사 일정', value: '8회' },
+              { label: '병원 방문', value: '2회' },
               { label: '이식 예정', value: 'D-5' },
             ].map(item => (
               <div key={item.label} className="bg-[#f5f3ff] rounded-xl p-2.5">
