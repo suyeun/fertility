@@ -1,6 +1,7 @@
 // apps/web/app/layout.tsx
 import type { Metadata } from 'next'
 import { AuthProvider } from './context/AuthContext'
+import { GuestProvider } from './context/GuestContext'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -27,7 +28,9 @@ export default function RootLayout({
         {/* 모바일 폰 레이아웃 스타일의 고해상도 컨테이너로 감싸기 */}
         <div className="w-full max-w-[480px] min-h-screen bg-background text-foreground shadow-[0_0_60px_-15px_rgba(136,19,55,0.15)] relative flex flex-col border-x border-rose-100/30 dark:border-zinc-900">
           <AuthProvider>
-            {children}
+            <GuestProvider>
+              {children}
+            </GuestProvider>
           </AuthProvider>
         </div>
       </body>

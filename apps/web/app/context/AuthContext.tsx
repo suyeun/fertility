@@ -1,11 +1,10 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { authApi, usersApi, configureTokenStore, setToken, getToken } from '@fertility/shared'
+import { authApi, usersApi, configureTokenStore, setToken } from '@fertility/shared'
 import { UserProfile } from '@fertility/shared'
 import { useRouter, usePathname } from 'next/navigation'
 
-// 웹: localStorage를 토큰 저장소로 설정
 if (typeof window !== 'undefined') {
   configureTokenStore(
     () => localStorage.getItem('bom_token'),
@@ -50,7 +49,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (user) await loadProfile()
   }
 
-  // 앱 시작 시 저장된 토큰으로 자동 로그인
   useEffect(() => {
     const init = async () => {
       const token = typeof window !== 'undefined' ? localStorage.getItem('bom_token') : null
@@ -68,16 +66,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     init()
   }, [])
 
-  // 라우팅 보호
+  // 라우팅 보호 — /tour 는 게스트 허용
   useEffect(() => {
     if (loading) return
-    const isAuthPage = pathname?.startsWith('/login') || pathname?.startsWith('/signup')
+    const isAuthPage  = pathname?.startsWith('/login') || pathname?.startsWith('/signup')
     const isOnboarding = pathname?.startsWith('/onboarding')
+    const isGuestTour  = pathname?.startsWith('/tour')   // 게스트 둘러보기 허용
 
-    if (!user && !isAuthPage) {
+    if (!user && !isAuthPage && !isGuestTour) {
       router.push('/login')
     } else if (user) {
-      if (isAuthPage) {
+      if (isAuthPage || isGuestTour) {
         router.push('/')
       } else if (!profile?.treatmentStage && !isOnboarding) {
         router.push('/onboarding')
@@ -98,7 +97,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const res = await authApi.signup(data)
     setToken(res.access_token)
     setUser({ uid: res.uid, email: res.email })
-    await loadProfile()
+    const p = await loadProfile()
+
+    // 게스트 세션에 저장된 모드를 프로필에 자동 동기화
+    const guestMode = sessionStorage.getItem('bom_guest_mode')
+    if (guestMode && (guestMode === 'NATURAL' || guestMode === 'CLINIC')) {
+      try {
+        await usersApi.updateProfile({
+          currentMode: guestMode,
+          treatmentStage: guestMode === 'NATURAL' ? 'natural' : p?.treatmentStage,
+        })
+      } catch {}
+      sessionStorage.removeItem('bom_guest_mode')
+    }
   }
 
   const logout = () => {

@@ -147,6 +147,15 @@ export default function LoginPage() {
           </Link>
         </p>
       </div>
+
+      <div className="text-center mt-2">
+        <Link
+          href="/tour"
+          className="text-xs text-[#c4a0ae] underline underline-offset-2 hover:text-[#b07080] transition-colors"
+        >
+          로그인 없이 먼저 둘러보기 →
+        </Link>
+      </div>
     </div>
   )
 }
