@@ -7,7 +7,7 @@ import {
   CATEGORY_ORDER, CATEGORY_LABEL, CATEGORY_ANONYMOUS, TAG_META,
   type PostCategory, type PostTag, type CommunityPost, type UserMode,
 } from '@fertility/shared'
-import { Plus, MessageSquare, Send, Users, Lock, User } from 'lucide-react'
+import { Plus, MessageSquare, Send, Users, Lock } from 'lucide-react'
 
 const CATEGORY_TAGS: Record<PostCategory, PostTag[]> = {
   DAILY:  ['#감정토닥', '#남편_시댁', '#아무말'],
@@ -123,9 +123,7 @@ export default function CommunityPage() {
     finally { setCommentSaving(false) }
   }
 
-  const isCurrentCategoryAnonymous = CATEGORY_ANONYMOUS[activeCategory]
-  // 글쓰기 모달에서 선택한 태그의 카테고리 익명 여부
-  const isNewTagAnonymous = CATEGORY_ANONYMOUS[TAG_META[newTag]?.category ?? activeCategory]
+  // 전체 익명 운영 — 모든 카테고리 익명
 
   return (
     <div className="flex flex-col gap-4 pb-8">
@@ -160,29 +158,21 @@ export default function CommunityPage() {
               }`}
             >
               <span>{emoji} {label}</span>
-              {/* 익명/실명 뱃지 */}
-              <span className={`text-[8px] font-semibold px-1.5 py-0.5 rounded-full ${
-                isAnon
-                  ? 'bg-[#ede9fe] text-[#7c3aed]'
-                  : 'bg-[#f0fdf4] text-[#16a34a]'
-              }`}>
-                {isAnon ? '🔒 익명' : '👤 실명'}
+              {/* 전체 익명 뱃지 */}
+              <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded-full bg-[#ede9fe] text-[#7c3aed]">
+                🔒 익명
               </span>
             </button>
           )
         })}
       </div>
 
-      {/* 현재 카테고리 익명 여부 안내 */}
-      <div className={`rounded-xl px-3 py-2 text-[11px] flex items-center gap-2 ${
-        isCurrentCategoryAnonymous
-          ? 'bg-[#ede9fe] text-[#6d28d9]'
-          : 'bg-[#f0fdf4] text-[#15803d]'
-      }`}>
-        {isCurrentCategoryAnonymous
-          ? <><Lock size={11} /> 이 게시판은 익명으로 운영돼요. 닉네임이 자동 생성됩니다.</>
-          : <><User size={11} /> 이 게시판은 프로필 이름으로 작성됩니다.</>
-        }
+      {/* 100% 익명 안내 문구 */}
+      <div className="rounded-xl px-3 py-2.5 text-[11px] flex items-start gap-2 bg-[#f5f3ff] border border-[#ddd6fe]">
+        <Lock size={12} className="text-[#7c3aed] shrink-0 mt-0.5" />
+        <p className="text-[#6d28d9] leading-relaxed">
+          BOM 커뮤니티는 유저분들의 소중한 프라이버시를 위해 <b>100% 익명</b>으로 안전하게 운영됩니다. 안심하고 마음을 나눠보세요. 🌸
+        </p>
       </div>
 
       {/* 세부 태그 필터 */}
@@ -237,11 +227,7 @@ export default function CommunityPage() {
                 {/* 헤더 */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    {/* 익명/실명 아이콘 */}
-                    {post.isAnonymous
-                      ? <Lock size={11} className="text-[#7c3aed]" />
-                      : <User size={11} className="text-[#16a34a]" />
-                    }
+                    <Lock size={11} className="text-[#7c3aed]" />
                     <span className="text-xs font-bold text-[#5a3042]">{post.authorName}</span>
                     <span
                       className="text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -313,10 +299,7 @@ export default function CommunityPage() {
                           <div key={c.id} className="bg-[#fff8f9] rounded-xl px-3 py-2">
                             <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-1">
-                                {c.isAnonymous
-                                  ? <Lock size={9} className="text-[#7c3aed]" />
-                                  : <User size={9} className="text-[#16a34a]" />
-                                }
+                                <Lock size={9} className="text-[#7c3aed]" />
                                 <span className="text-[10px] font-bold text-[#5a3042]">
                                   {c.authorName}{c.isAuthor && ' (글쓴이)'}
                                 </span>
@@ -345,16 +328,10 @@ export default function CommunityPage() {
               <button onClick={() => setIsModalOpen(false)} className="text-xs text-[#b07080]">닫기</button>
             </div>
 
-            {/* 익명/실명 상태 안내 */}
-            <div className={`rounded-xl px-3 py-2 text-[11px] flex items-center gap-2 ${
-              isNewTagAnonymous
-                ? 'bg-[#ede9fe] text-[#6d28d9]'
-                : 'bg-[#f0fdf4] text-[#15803d]'
-            }`}>
-              {isNewTagAnonymous
-                ? <><Lock size={11} /> 선택한 태그는 <b>익명</b>으로 게시돼요. 닉네임이 자동 생성됩니다.</>
-                : <><User size={11} /> 선택한 태그는 <b>프로필 이름({profile?.name})</b>으로 게시돼요.</>
-              }
+            {/* 익명 안내 */}
+            <div className="rounded-xl px-3 py-2 text-[11px] flex items-center gap-2 bg-[#f5f3ff] border border-[#ddd6fe]">
+              <Lock size={11} className="text-[#7c3aed] shrink-0" />
+              <span className="text-[#6d28d9]"><b>익명</b>으로 게시돼요. 닉네임이 자동 생성됩니다.</span>
             </div>
 
             <form onSubmit={handleCreatePost} className="flex flex-col gap-3">

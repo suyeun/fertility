@@ -198,11 +198,11 @@ export const CATEGORY_LABEL: Record<PostCategory, { label: string; emoji: string
   INFO:   { label: '꿀팁/정보공유',   emoji: '💡' },
 }
 
-// 카테고리별 익명 여부 — CLINIC만 익명
+// 카테고리별 익명 여부 — 전체 익명 (프라이버시 보호 정책)
 export const CATEGORY_ANONYMOUS: Record<PostCategory, boolean> = {
-  DAILY:  false,  // 실명
-  CLINIC: true,   // 익명 (민감한 시술 이야기)
-  INFO:   false,  // 실명
+  DAILY:  true,   // 익명 (감정토닥, 남편/시댁 등 민감 주제)
+  CLINIC: true,   // 익명 (시술 이야기)
+  INFO:   true,   // 익명 (신체 데이터 질문 부담 완화)
 }
 
 export interface CommunityPost {
