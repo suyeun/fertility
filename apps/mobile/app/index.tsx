@@ -10,6 +10,8 @@ import { router } from 'expo-router'
 import { loadStoredToken, loadUser, clearAuth } from '../lib/auth'
 import { initNotifications, addNotificationListeners } from '../lib/notifications'
 import { initPurchases, identifyUser } from '../lib/purchases'
+import { useVersionCheck } from '../lib/useVersionCheck'
+import UpdateModal from '../components/UpdateModal'
 
 const PINK = '#ff8fab'
 const DARK_ROSE = '#5a3042'
@@ -26,6 +28,10 @@ export default function HomeScreen() {
   const [schedules, setSchedules] = useState<TreatmentSchedule[]>([])
   const [diaries, setDiaries] = useState<DiaryEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [showOptional, setShowOptional] = useState(true)
+
+  // 앱 버전 체크
+  const { result: versionResult, openStore } = useVersionCheck()
 
   // 알림 리스너 등록 (포그라운드 수신 + 탭 처리)
   useEffect(() => {
@@ -94,6 +100,15 @@ export default function HomeScreen() {
   }
 
   return (
+    <>
+      {/* 버전 업데이트 모달 */}
+      <UpdateModal
+        status={showOptional ? versionResult.status : 'ok'}
+        message={versionResult.message}
+        onUpdate={() => openStore(versionResult.storeUrl)}
+        onLater={versionResult.status === 'optional' ? () => setShowOptional(false) : undefined}
+      />
+
     <ScrollView style={s.container} showsVerticalScrollIndicator={false}>
       {/* 인사 */}
       <Text style={s.greeting}>{profile?.name || '사용자'}님, 안녕하세요 🌸</Text>
@@ -250,6 +265,7 @@ export default function HomeScreen() {
 
       <View style={{ height: 24 }} />
     </ScrollView>
+    </>
   )
 }
 

@@ -11,6 +11,7 @@ import { AiModule } from './ai/ai.module'
 import { CommunityModule } from './community/community.module'
 import { NotificationsModule } from './notifications/notifications.module'
 import { PaymentsModule } from './payments/payments.module'
+import { AppVersionModule } from './app-version/app-version.module'
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { PaymentsModule } from './payments/payments.module'
     CommunityModule,
     NotificationsModule,
     PaymentsModule,
+    AppVersionModule,
   ],
 })
 export class AppModule {}

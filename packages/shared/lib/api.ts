@@ -173,3 +173,8 @@ export const notificationsApi = {
   registerToken: (token: string, platform: 'ios' | 'android') =>
     request('POST', '/notifications/token', { token, platform }),
 }
+
+export const versionApi = {
+  check: (version: string, platform: 'ios' | 'android') =>
+    request('GET', `/app/version-check?version=${encodeURIComponent(version)}&platform=${platform}`),
+}
