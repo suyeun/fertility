@@ -130,6 +130,15 @@ interface SupplementModalProps {
   isOpen: boolean
   onClose: () => void
   mode: UserMode
+  phase?: string // 사이클 단계 — AI 코멘트 개인화
+}
+
+// 사이클 단계별 맞춤 인트로 문구
+const PHASE_INTRO: Record<string, string> = {
+  follicular: '현재 난포기 사이클에는 난자 질 개선을 돕는 영양 성분이 특히 중요해요.',
+  ovulation:  '배란기에는 항산화 영양소가 건강한 배란을 도와줄 수 있어요.',
+  luteal:     '황체기에는 착상을 돕는 영양소 섭취가 도움이 돼요.',
+  menstrual:  '생리 중에는 철분과 엽산을 꼭 챙겨보세요.',
 }
 
 function SupplementCard({ item }: { item: SupplementInfo }) {
@@ -199,10 +208,11 @@ function InfoRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-export default function SupplementModal({ isOpen, onClose, mode }: SupplementModalProps) {
+export default function SupplementModal({ isOpen, onClose, mode, phase }: SupplementModalProps) {
   if (!isOpen) return null
 
   const supplements = SUPPLEMENT_DB[mode]
+  const phaseIntro = phase ? PHASE_INTRO[phase] : null
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
@@ -220,10 +230,10 @@ export default function SupplementModal({ isOpen, onClose, mode }: SupplementMod
           <div>
             <h3 className="text-base font-bold text-[#5a3042] flex items-center gap-1.5">
               <Sparkles size={16} className="text-[#ff8fab]" />
-              BOM AI 영양제 추천 리포트
+              BOM 추천 영양제 가이드
             </h3>
             <p className="text-[10px] text-[#b07080] mt-0.5">
-              {mode === 'NATURAL' ? '자연 임신 준비' : '시술 환자'} 맞춤 영양제 정보예요
+              {mode === 'NATURAL' ? '자연 임신 준비' : '시술 환자'} 맞춤 영양 성분 정보예요
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-xl hover:bg-[#fff0f4] transition-colors">
@@ -231,10 +241,18 @@ export default function SupplementModal({ isOpen, onClose, mode }: SupplementMod
           </button>
         </div>
 
-        {/* 안내 문구 */}
-        <div className="mx-5 mb-3 px-3 py-2 bg-[#fff0f4] rounded-xl border border-[#ffd6e0]">
-          <p className="text-[10px] text-[#8c5060] leading-relaxed">
-            아래 정보는 참고용이며 의학적 처방이 아닙니다. 복용 전 담당 의사 또는 약사와 상담하세요.
+        {/* 사이클 단계 맞춤 인트로 (개인화) */}
+        {phaseIntro && (
+          <div className="mx-5 mb-2 px-3 py-2 bg-[#fff0f4] rounded-xl border border-[#ffd6e0] flex items-start gap-2">
+            <Sparkles size={12} className="text-[#ff8fab] shrink-0 mt-0.5" />
+            <p className="text-[10px] text-[#8c5060] leading-relaxed">{phaseIntro}</p>
+          </div>
+        )}
+
+        {/* 면책 안내 */}
+        <div className="mx-5 mb-3 px-3 py-2 bg-white rounded-xl border border-[#ffd6e0]">
+          <p className="text-[10px] text-[#c4a0ae] leading-relaxed">
+            ※ 아래 정보는 참고용이며 의학적 처방이 아닙니다. 복용 전 담당 의사 또는 약사와 상담하세요.
           </p>
         </div>
 

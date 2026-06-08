@@ -97,7 +97,10 @@ export default function DashboardPage() {
           </span>
         </div>
         {mode === 'NATURAL' ? (
-          <NaturalChecklist todayHormone={todayHormone} />
+          <NaturalChecklist
+            todayHormone={todayHormone}
+            phase={home.todayCycleInfo?.phase}
+          />
         ) : (
           <ClinicChecklist schedules={schedules} todayHormone={todayHormone} />
         )}
