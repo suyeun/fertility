@@ -63,7 +63,7 @@ export default function TourPage() {
       <div className="text-center mb-8">
         <div className="text-3xl mb-2">🌸</div>
         <h1 className="text-xl font-bold text-[#5a3042] leading-snug">
-          Lunera에 오신 것을 환영해요!
+          어서 오세요!
         </h1>
         <p className="text-sm text-[#b07080] mt-2 leading-relaxed max-w-xs">
           어떤 준비를 하고 계시는지 선택하시면<br />맞춤형 가이드 화면을 보여드려요.
