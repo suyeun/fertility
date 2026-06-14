@@ -19,7 +19,7 @@ export class PaymentsController {
     @Body() body: any,
   ) {
     const secret = process.env.REVENUECAT_WEBHOOK_SECRET
-    if (secret && auth !== secret) {
+    if (!secret || auth !== secret) {
       throw new UnauthorizedException('Invalid webhook secret')
     }
 

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useHomeData, cyclesApi, treatmentApi, hormonesApi } from '@fertility/shared'
-import type { MenstrualCycle, TreatmentSchedule, HormoneRecord, UserMode } from '@fertility/shared'
+import type { MenstrualCycle, TreatmentSchedule, HormoneRecord } from '@fertility/shared'
 import HeroCard from '../../components/home/HeroCard'
 import NaturalDashboard from '../../components/home/NaturalDashboard'
 import ClinicDashboard from '../../components/home/ClinicDashboard'
@@ -12,7 +12,7 @@ import WeekStreakCard from '../../components/home/WeekStreakCard'
 import { CalendarCheck } from 'lucide-react'
 
 export default function DashboardPage() {
-  const { user, profile } = useAuth()
+  const { user, profile, mode } = useAuth()
   const [cycles,    setCycles]    = useState<MenstrualCycle[]>([])
   const [schedules, setSchedules] = useState<TreatmentSchedule[]>([])
   const [hormones,  setHormones]  = useState<HormoneRecord[]>([])
@@ -37,8 +37,6 @@ export default function DashboardPage() {
   const todayStr     = new Date().toISOString().split('T')[0]
   const todayHormone = hormones.find(h => h.recordedAt.split('T')[0] === todayStr)
 
-  const mode: UserMode = (profile?.currentMode as UserMode)
-    ?? (profile?.treatmentStage === 'natural' ? 'NATURAL' : 'CLINIC')
 
   if (loading) {
     return (

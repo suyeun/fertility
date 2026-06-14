@@ -87,7 +87,13 @@ export const usersApi = {
 }
 
 export const cyclesApi = {
-  getAll: () => request('GET', '/cycles'),
+  getAll: (params?: { cursor?: string; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.cursor) q.set('cursor', params.cursor)
+    if (params?.limit) q.set('limit', String(params.limit))
+    const qs = q.toString()
+    return request('GET', `/cycles${qs ? `?${qs}` : ''}`)
+  },
   save: (data: any) => request('POST', '/cycles', data),
 }
 
@@ -105,7 +111,13 @@ export const treatmentApi = {
 }
 
 export const diaryApi = {
-  getAll: () => request('GET', '/diary'),
+  getAll: (params?: { cursor?: string; limit?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.cursor) q.set('cursor', params.cursor)
+    if (params?.limit) q.set('limit', String(params.limit))
+    const qs = q.toString()
+    return request('GET', `/diary${qs ? `?${qs}` : ''}`)
+  },
   save: (date: string, data: any) => request('POST', `/diary/${date}`, data),
   delete: (id: string) => request('DELETE', `/diary/${id}`),
 }

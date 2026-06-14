@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { Home, CalendarDays, Users, Sparkles, Settings } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, mode, loading } = useAuth()
   const pathname = usePathname()
 
   if (loading) {
@@ -21,7 +21,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   if (!user) return null
 
-  const mode = profile?.currentMode ?? (profile?.treatmentStage === 'natural' ? 'NATURAL' : 'CLINIC')
 
   const navItems = [
     { href: '/',           icon: Home,        label: '홈'      },

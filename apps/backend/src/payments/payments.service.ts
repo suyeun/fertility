@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
+import { ApiTags } from '@nestjs/swagger'
 
 // RevenueCat 이벤트 타입
 // https://www.revenuecat.com/docs/webhooks
@@ -26,7 +27,8 @@ export class PaymentsService {
 
     const eventType: RCEventType = event.type
     const appUserId: string = event.app_user_id  // RevenueCat logIn()에 넘긴 uid
-    const expiresAt: string | null = event.expiration_at_ms
+    // [BIZ-002] expiresAt을 subscriptionExpiresAt으로 명확하게 분리
+    const subscriptionExpiresAt: string | null = event.expiration_at_ms
       ? new Date(event.expiration_at_ms).toISOString()
       : null
     const productId: string = event.product_id ?? ''
@@ -37,12 +39,12 @@ export class PaymentsService {
       case 'INITIAL_PURCHASE':
       case 'RENEWAL':
       case 'UNCANCELLATION':
-        await this.setSubscription(appUserId, 'active', expiresAt, productId)
+        await this.setSubscription(appUserId, 'active', subscriptionExpiresAt, productId)
         break
 
       case 'CANCELLATION':
         // 취소해도 만료 전까지는 이용 가능 → cancelled 상태로 표시
-        await this.setSubscription(appUserId, 'cancelled', expiresAt, productId)
+        await this.setSubscription(appUserId, 'cancelled', subscriptionExpiresAt, productId)
         break
 
       case 'EXPIRATION':
@@ -60,23 +62,28 @@ export class PaymentsService {
   private async setSubscription(
     uid: string,
     status: 'active' | 'trial' | 'cancelled',
-    expiresAt: string | null,
+    subscriptionExpiresAt: string | null,
     productId: string,
   ): Promise<void> {
-    const userRef = this.firebase.collection('users').doc(uid)
-    const doc = await userRef.get()
-    if (!doc.exists) {
-      this.logger.warn(`구독 업데이트 실패: 유저 없음 (${uid})`)
-      return
+    try {
+      const userRef = this.firebase.collection('users').doc(uid)
+
+      // [PERF-004] set({ merge: true })으로 원자적 처리 — get() 후 update() 패턴의 race condition 제거
+      // [BIZ-002] trialEndsAt → subscriptionExpiresAt (구독 만료와 트라이얼 만료 필드 분리)
+      await userRef.set(
+        {
+          subscriptionStatus: status,
+          ...(subscriptionExpiresAt ? { subscriptionExpiresAt } : {}),
+          subscriptionProductId: productId,
+          subscriptionUpdatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      )
+
+      this.logger.log(`구독 상태 업데이트: ${uid} → ${status}`)
+    } catch (err) {
+      this.logger.error(`구독 업데이트 실패 (${uid}):`, err)
+      throw err
     }
-
-    await userRef.update({
-      subscriptionStatus: status,
-      ...(expiresAt ? { trialEndsAt: expiresAt } : {}),
-      subscriptionProductId: productId,
-      subscriptionUpdatedAt: new Date().toISOString(),
-    })
-
-    this.logger.log(`구독 상태 업데이트: ${uid} → ${status}`)
   }
 }
