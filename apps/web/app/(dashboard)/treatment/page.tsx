@@ -15,7 +15,7 @@ import {
   CheckCircle2, Clock, XCircle, Trash2, AlertCircle, Syringe,
   Lock, Bell, BellOff,
 } from 'lucide-react'
-import PaywallModal from '../../../../components/PaywallModal'
+import PaywallModal from '../../../components/PaywallModal'
 
 // ============================
 // 모드별 일정 종류 설정
