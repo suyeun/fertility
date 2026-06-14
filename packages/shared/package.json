@@ -25,10 +25,7 @@
     "testMatch": ["**/*.spec.ts"],
     "globals": {
       "ts-jest": {
-        "tsconfig": {
-          "strict": false,
-          "esModuleInterop": true
-        }
+        "tsconfig": "./tsconfig.test.json"
       }
     }
   }
