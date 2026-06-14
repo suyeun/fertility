@@ -54,6 +54,9 @@ export default function CalendarPage() {
   // 약 복용 완료 상태 기록용 로컬스토리지 연동
   const [checkedMeds, setCheckedMeds] = useState<Record<string, boolean>>({})
 
+  // 날짜 탭 → 당일 상세 모달
+  const [isDayModalOpen, setIsDayModalOpen] = useState(false)
+
   const fetchCycles = async () => {
     if (!user) return
     try {
@@ -127,24 +130,16 @@ export default function CalendarPage() {
   // 생리 시작일 리스트 및 사이클 데이 매핑용 데이터 생성
   let cycleDaysMap: Record<string, any> = {}
   
-  if (cycles.length > 0) {
-    cycles.slice(0, 3).forEach(cycle => {
-      const start = new Date(cycle.startDate)
-      const days = calculateCycleDays(start, cycle.cycleLength || cycleLength, cycle.periodLength || periodLength, 45)
-      days.forEach(d => {
-        const existing = cycleDaysMap[d.date]
-        if (!existing || d.isMenstruation || d.isOvulation) {
-          cycleDaysMap[d.date] = d
-        }
-      })
-    })
-  } else {
-    const defaultStart = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 5)
-    const days = calculateCycleDays(defaultStart, cycleLength, periodLength, 60)
+  cycles.slice(0, 3).forEach(cycle => {
+    const start = new Date(cycle.startDate)
+    const days = calculateCycleDays(start, cycle.cycleLength || cycleLength, cycle.periodLength || periodLength, 45)
     days.forEach(d => {
-      cycleDaysMap[d.date] = d
+      const existing = cycleDaysMap[d.date]
+      if (!existing || d.isMenstruation || d.isOvulation) {
+        cycleDaysMap[d.date] = d
+      }
     })
-  }
+  })
 
   // 달력 격자 생성 로직
   const year = currentDate.getFullYear()
@@ -295,6 +290,42 @@ export default function CalendarPage() {
     })
   })
 
+  // 선택 날짜 파생 데이터
+  const selectedDayHormone = hormones.find(h => h.recordedAt === selectedDateStr)
+  const selectedCycleRecord = cycles.find(c => {
+    const start = new Date(c.startDate)
+    const pLen  = c.periodLength || periodLength
+    const end   = c.endDate ? new Date(c.endDate) : new Date(start.getTime() + (pLen - 1) * 86400000)
+    const sel   = new Date(selectedDateStr)
+    return sel >= start && sel <= end
+  })
+
+  const openPeriodRecord = () => {
+    setStartDate(selectedDateStr)
+    setEndDate(selectedCycleRecord?.endDate || '')
+    setIncludePeriod(true)
+    setIncludeIntercourse(false)
+    setIncludeHealth(false)
+    setIsDayModalOpen(false)
+    setIsModalOpen(true)
+  }
+
+  const openHealthRecord = () => {
+    setStartDate(selectedDateStr)
+    setIncludePeriod(false)
+    setIncludeIntercourse(true)
+    setIncludeHealth(true)
+    if (selectedDayHormone) {
+      setBbt(selectedDayHormone.bbt?.toString() || '')
+      setOpkIndex(selectedDayHormone.opkIndex?.toString() || '')
+      setIntercourse(selectedDayHormone.intercourse || false)
+    } else {
+      setBbt(''); setOpkIndex(''); setIntercourse(false)
+    }
+    setIsDayModalOpen(false)
+    setIsModalOpen(true)
+  }
+
   const getTypeBadge = (sType: string) => {
     switch (sType) {
       case 'IVF': return <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full font-bold">🧬 시험관</span>
@@ -397,7 +428,7 @@ export default function CalendarPage() {
             return (
               <div
                 key={idx}
-                onClick={() => setSelectedDateStr(cDay.dateStr)}
+                onClick={() => { setSelectedDateStr(cDay.dateStr); setIsDayModalOpen(true) }}
                 className={`relative min-h-[50px] flex flex-col justify-between items-center p-1 rounded-xl transition-all cursor-pointer ${
                   cDay.isCurrentMonth ? 'text-slate-800' : 'text-slate-300'
                 } ${
@@ -441,6 +472,24 @@ export default function CalendarPage() {
           })}
         </div>
 
+        {/* 주기 기록 없을 때 안내 배너 */}
+        {cycles.length === 0 && (
+          <div className="mt-4 pt-3.5 border-t border-slate-100/60">
+            <div className="bg-rose-50/60 border border-dashed border-rose-200 rounded-2xl px-4 py-3 text-center space-y-1.5">
+              <p className="text-xs font-bold text-rose-800">🌸 생리 시작일을 기록해보세요</p>
+              <p className="text-[10px] text-rose-900/60 leading-relaxed">
+                첫 생리 시작일을 기록하면 가임기·배란일 예측을 시작해드려요.
+              </p>
+              <button
+                onClick={() => { setStartDate(new Date().toISOString().split('T')[0]); setIsModalOpen(true) }}
+                className="text-[11px] font-bold text-primary hover:underline"
+              >
+                + 첫 생리 시작일 기록하기
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 콤팩트 범례 한 줄 */}
         <div className="flex flex-wrap justify-center items-center gap-x-5 gap-y-1.5 mt-4 pt-3.5 border-t border-slate-100/60 text-[10px] text-rose-900/50 font-medium">
           <div className="flex items-center gap-1">
@@ -466,131 +515,10 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* 선택한 날짜의 투약 및 일정 종합 뷰 */}
-      <div className="space-y-4">
-        {/* 복용/투약 체크리스트 — 자연임신 준비 사용자에게는 비표시 */}
-        {profile?.treatmentStage !== 'natural' && (
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-            <div className="flex items-center gap-1.5 mb-3">
-              <Bell size={14} className="text-primary shrink-0" />
-              <div className="min-w-0">
-                <h3 className="text-xs font-bold text-slate-800 leading-tight">복용/투약 체크리스트</h3>
-                <p className="text-[10px] text-rose-900/50 mt-0.5">{selectedDateFormatted}</p>
-              </div>
-            </div>
-
-            {dateMedications.length > 0 ? (
-              <div className="space-y-2.5">
-                {dateMedications.map((med, i) => {
-                  const medKey = `${med.name}_${med.dose}_${med.times.join(',')}`
-                  const isChecked = !!checkedMeds[medKey]
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => handleCheckMed(medKey)}
-                      className={`w-full flex justify-between items-center p-3.5 rounded-2xl border text-left active-press transition-all ${
-                        isChecked
-                          ? 'bg-slate-50 border-slate-100 text-slate-400 line-through'
-                          : 'bg-rose-50/10 border-rose-100/30 text-slate-700 hover:bg-rose-50/20'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className={`w-5 h-5 rounded-full flex justify-center items-center border transition-all ${
-                          isChecked ? 'bg-primary border-primary text-white' : 'border-rose-200 bg-white'
-                        }`}>
-                          {isChecked && <Check size={12} />}
-                        </span>
-                        <div>
-                          <p className="text-xs font-bold">{med.name}</p>
-                          <p className="text-[9px] text-gray-400 mt-0.5">용량: {med.dose}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                          isChecked ? 'bg-gray-100 text-gray-400' : 'bg-rose-500/10 text-primary'
-                        }`}>
-                          🕒 {med.times.join(', ')}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
-              </div>
-            ) : (
-              <div className="text-center py-8 border border-dashed border-slate-100 rounded-2xl">
-                <p className="text-xs text-gray-400">선택된 날짜의 복용 일정이 없습니다.</p>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 병원 일정 타임라인 */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-          <div className="flex items-center gap-1.5 mb-3">
-            <ClipboardList size={14} className="text-primary shrink-0" />
-            <div className="min-w-0">
-              <h3 className="text-xs font-bold text-slate-800 leading-tight">병원 및 진료 일정</h3>
-              <p className="text-[10px] text-rose-900/50 mt-0.5">{selectedDateFormatted}</p>
-            </div>
-          </div>
-
-          {dateSchedules.length > 0 ? (
-            <div className="space-y-3 pl-3 border-l-2 border-rose-100/60">
-              {dateSchedules.map((s, idx) => {
-                const dateObj = new Date(s.scheduledAt)
-                const timeStr = dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
-
-                return (
-                  <div key={s.id || idx} className="bg-slate-50 border border-slate-100 p-3.5 rounded-2xl space-y-1.5">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <div className="text-[8px] font-semibold">{getTypeBadge(s.type)}</div>
-                        <h4 className="text-xs font-bold text-slate-700 leading-tight mt-1">{s.title}</h4>
-                      </div>
-                      <span className="text-[9px] font-bold text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded">{timeStr}</span>
-                    </div>
-
-                    {s.hospitalName && (
-                      <p className="text-[9px] text-gray-500">🏢 병원: {s.hospitalName}</p>
-                    )}
-
-                    {s.notes && (
-                      <p className="text-[9px] bg-white p-2 rounded-xl border border-slate-100 text-gray-600 leading-relaxed italic">
-                        {s.notes}
-                      </p>
-                    )}
-
-                    {s.medications && s.medications.length > 0 && (
-                      <div className="space-y-1 mt-2 pt-2 border-t border-slate-200/50">
-                        <span className="text-[8px] font-bold text-rose-900/60 block">복용 약물 및 주사</span>
-                        {s.medications.map((m, mIdx) => (
-                          <div key={mIdx} className="flex justify-between text-[8px] text-gray-500 bg-white p-1 rounded border border-slate-100">
-                            <span>{m.name} ({m.dose})</span>
-                            <span className="font-bold text-primary">{m.times.join(', ')}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="text-center py-8 border border-dashed border-slate-100 rounded-2xl flex flex-col justify-center items-center gap-2">
-              <p className="text-xs text-gray-400">등록된 병원/진료 일정이 없습니다.</p>
-              <button
-                onClick={() => {
-                  setMedStartDate(selectedDateStr)
-                  setIsScheduleModalOpen(true)
-                }}
-                className="text-[10px] text-primary font-bold hover:underline"
-              >
-                + 새로운 일정 추가하기
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* 날짜 탭 힌트 */}
+      <p className="text-[10px] text-rose-900/40 text-center -mt-2">
+        날짜를 탭하면 기록을 확인하거나 추가할 수 있어요
+      </p>
 
 
       {/* 주기 기록 리스트 요약 */}
@@ -618,6 +546,166 @@ export default function CalendarPage() {
           <p className="text-xs text-gray-400 text-center py-6">등록된 이전 주기 기록이 없습니다.</p>
         )}
       </div>
+
+      {/* ── 날짜 탭 Day Detail 모달 ── */}
+      {isDayModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 flex justify-center items-end animate-fade-in"
+          onClick={e => { if (e.target === e.currentTarget) setIsDayModalOpen(false) }}
+        >
+          <div className="bg-white w-full max-w-[480px] rounded-t-3xl shadow-2xl max-h-[85vh] flex flex-col animate-slide-up">
+
+            {/* 스티키 헤더 */}
+            <div className="sticky top-0 bg-white px-6 pt-5 pb-3 border-b border-rose-50 rounded-t-3xl">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-base font-bold text-rose-950">
+                    {new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('ko-KR', {
+                      year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+                    })}
+                  </h3>
+                  {(() => {
+                    const d = cycleDaysMap[selectedDateStr]
+                    if (!d) return null
+                    if (d.isMenstruation) return <span className="text-[11px] text-red-500 font-semibold">🌷 생리 기간</span>
+                    if (d.isOvulation)    return <span className="text-[11px] text-primary font-semibold">🌸 배란 예정일</span>
+                    if (d.isFertileWindow) return <span className="text-[11px] text-rose-400 font-semibold">🥚 가임기</span>
+                    return null
+                  })()}
+                </div>
+                <button
+                  onClick={() => setIsDayModalOpen(false)}
+                  className="text-xs text-gray-400 hover:text-slate-600 mt-1"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto px-6 py-4 space-y-3">
+
+              {/* 1. 생리 기록 */}
+              <div className="bg-rose-50/40 border border-rose-100 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-rose-800">🌷 생리 기록</span>
+                  <button
+                    onClick={openPeriodRecord}
+                    className="text-[11px] font-bold text-primary bg-white border border-rose-200 px-3 py-1 rounded-full hover:bg-rose-50 transition-colors"
+                  >
+                    {selectedCycleRecord ? '수정하기' : '기록하기'}
+                  </button>
+                </div>
+                {selectedCycleRecord ? (
+                  <div className="text-xs text-slate-600 space-y-0.5">
+                    <p>시작: <b className="text-rose-800">{selectedCycleRecord.startDate}</b></p>
+                    {selectedCycleRecord.endDate && <p>종료: <b className="text-rose-800">{selectedCycleRecord.endDate}</b></p>}
+                    <p>주기: <b>{selectedCycleRecord.cycleLength}일</b></p>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-400">이 날짜의 생리 기록이 없어요</p>
+                )}
+              </div>
+
+              {/* 2. 건강 기록 (BBT / OPK / 관계) */}
+              <div className="bg-rose-50/40 border border-rose-100 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-rose-800">🌡️ 건강 기록</span>
+                  <button
+                    onClick={openHealthRecord}
+                    className="text-[11px] font-bold text-primary bg-white border border-rose-200 px-3 py-1 rounded-full hover:bg-rose-50 transition-colors"
+                  >
+                    {selectedDayHormone ? '수정하기' : '기록하기'}
+                  </button>
+                </div>
+                {selectedDayHormone ? (
+                  <div className="flex flex-wrap gap-3 text-xs text-slate-600">
+                    {selectedDayHormone.bbt !== undefined && (
+                      <span>🌡️ BBT: <b className="text-rose-700">{selectedDayHormone.bbt}°C</b></span>
+                    )}
+                    {selectedDayHormone.opkIndex !== undefined && (
+                      <span>🥚 OPK: <b className="text-rose-700">{selectedDayHormone.opkIndex}/10</b></span>
+                    )}
+                    {selectedDayHormone.intercourse !== undefined && (
+                      <span>{selectedDayHormone.intercourse ? '❤️ 관계 있음' : '🤍 관계 없음'}</span>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-400">BBT, OPK, 관계 기록이 없어요</p>
+                )}
+              </div>
+
+              {/* 3. 복용 체크리스트 */}
+              {dateMedications.length > 0 && (
+                <div className="border border-rose-100 rounded-2xl p-4">
+                  <span className="text-xs font-bold text-rose-800 block mb-2">💊 복용 체크리스트</span>
+                  <div className="space-y-2">
+                    {dateMedications.map((med, i) => {
+                      const medKey = `${med.name}_${med.dose}_${med.times.join(',')}`
+                      const isChecked = !!checkedMeds[medKey]
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => handleCheckMed(medKey)}
+                          className={`w-full flex justify-between items-center p-3 rounded-xl border text-left transition-all ${
+                            isChecked
+                              ? 'bg-slate-50 border-slate-100 text-slate-400 line-through'
+                              : 'bg-white border-rose-100/50 hover:bg-rose-50/20'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                              isChecked ? 'bg-primary border-primary' : 'border-rose-200 bg-white'
+                            }`}>
+                              {isChecked && <Check size={10} className="text-white" />}
+                            </span>
+                            <span className="text-xs font-semibold">{med.name} <span className="font-normal text-gray-400">({med.dose})</span></span>
+                          </div>
+                          <span className="text-[10px] font-bold text-primary">🕒 {med.times.join(', ')}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. 시술 일정 */}
+              <div className="border border-rose-100 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-rose-800">📅 시술 일정</span>
+                  <button
+                    onClick={() => { setMedStartDate(selectedDateStr); setIsDayModalOpen(false); setIsScheduleModalOpen(true) }}
+                    className="text-[11px] font-bold text-primary bg-white border border-rose-200 px-3 py-1 rounded-full hover:bg-rose-50 transition-colors"
+                  >
+                    + 일정 추가
+                  </button>
+                </div>
+                {dateSchedules.length > 0 ? (
+                  <div className="space-y-2">
+                    {dateSchedules.map((s, idx) => {
+                      const timeStr = new Date(s.scheduledAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+                      return (
+                        <div key={s.id || idx} className="bg-slate-50 border border-slate-100 rounded-xl p-3 space-y-1">
+                          <div className="flex justify-between items-center">
+                            <div className="text-[10px]">{getTypeBadge(s.type)}</div>
+                            <span className="text-[9px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded">{timeStr}</span>
+                          </div>
+                          <p className="text-xs font-bold text-slate-700">{s.title}</p>
+                          {s.hospitalName && <p className="text-[10px] text-gray-500">🏢 {s.hospitalName}</p>}
+                          {s.notes && <p className="text-[10px] text-gray-400 italic">{s.notes}</p>}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-gray-400">등록된 시술 일정이 없어요</p>
+                )}
+              </div>
+
+              <div className="pb-2" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 통합 기록 등록 모달 */}
       {isModalOpen && (

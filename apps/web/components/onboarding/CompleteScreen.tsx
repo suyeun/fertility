@@ -52,15 +52,6 @@ export function CompleteScreen({ data }: CompleteScreenProps) {
         averageCycleLength: data.cycleLength,
       })
 
-      const currentCycles = await cyclesApi.getAll()
-      if (currentCycles.length === 0) {
-        await cyclesApi.save({
-          startDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          cycleLength: data.cycleLength,
-          periodLength: 5,
-        })
-      }
-
       await refreshProfile()
       router.push('/')
     } catch (err) {

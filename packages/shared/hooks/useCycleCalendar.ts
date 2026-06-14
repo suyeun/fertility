@@ -35,7 +35,7 @@ export interface UseCycleCalendarReturn {
 }
 
 export function useCycleCalendar(
-  lastPeriodStart: Date,
+  lastPeriodStart: Date | null,
   cycleLength = 28,
   periodLength = 5
 ): UseCycleCalendarReturn {
@@ -50,7 +50,9 @@ export function useCycleCalendar(
   const [selectedMood, setSelectedMood] = useState<Mood | null>(null)
 
   const cycleDays = useMemo(
-    () => calculateCycleDays(lastPeriodStart, cycleLength, periodLength, 120),
+    () => lastPeriodStart
+      ? calculateCycleDays(lastPeriodStart, cycleLength, periodLength, 120)
+      : [],
     [lastPeriodStart, cycleLength, periodLength]
   )
 
@@ -117,19 +119,21 @@ export function useCycleCalendar(
   }, [viewDate, today, cycleDayMap])
 
   const nextOvulationDate = useMemo(() => {
+    if (!lastPeriodStart) return today
     const d = getNextOvulationDate(lastPeriodStart, cycleLength)
     while (d < today) d.setDate(d.getDate() + cycleLength)
     return d
   }, [lastPeriodStart, cycleLength, today])
 
   const nextPeriodDate = useMemo(() => {
+    if (!lastPeriodStart) return today
     const d = getNextPeriodDate(lastPeriodStart, cycleLength)
     while (d < today) d.setDate(d.getDate() + cycleLength)
     return d
   }, [lastPeriodStart, cycleLength, today])
 
   const currentCycleDay = useMemo(
-    () => getCurrentCycleDay(lastPeriodStart, cycleLength),
+    () => lastPeriodStart ? getCurrentCycleDay(lastPeriodStart, cycleLength) : 0,
     [lastPeriodStart, cycleLength]
   )
 

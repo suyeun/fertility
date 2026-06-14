@@ -47,14 +47,6 @@ function CompleteScreen({ data, user }: { data: OnboardingData; user: any }) {
         treatmentStage: stage,
         averageCycleLength: data.cycleLength,
       })
-      const currentCycles = await cyclesApi.getAll()
-      if (currentCycles.length === 0) {
-        await cyclesApi.save({
-          startDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          cycleLength: data.cycleLength,
-          periodLength: 5,
-        })
-      }
       router.replace('/')
     } catch (err) {
       console.error('모바일 온보딩 저장 실패:', err)

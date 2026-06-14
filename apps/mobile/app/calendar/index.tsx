@@ -11,6 +11,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native'
 import {
   useCycleCalendar, cyclesApi, hormonesApi, treatmentApi, diaryApi,
@@ -74,6 +75,14 @@ export default function CalendarScreen() {
   const [savingSchedule, setSavingSchedule] = useState(false)
   const [checkedMeds, setCheckedMeds] = useState<Record<string, boolean>>({})
 
+  // 날짜 탭 → 당일 상세 모달
+  const [isDayDetailModalOpen, setIsDayDetailModalOpen] = useState(false)
+
+  // 생리 기록 (당일 상세 모달 내)
+  const [periodStartDate, setPeriodStartDate] = useState('')
+  const [periodEndDate,   setPeriodEndDate]   = useState('')
+  const [savingPeriod, setSavingPeriod] = useState(false)
+
   // ──────────────────────────────────────────
   // 데이터 로드
   // ──────────────────────────────────────────
@@ -135,8 +144,8 @@ export default function CalendarScreen() {
   // ──────────────────────────────────────────
   // 달력 상태
   // ──────────────────────────────────────────
-  const latestCycle = cycles[0]
-  const lastPeriod  = latestCycle ? new Date(latestCycle.startDate) : new Date('2024-01-15')
+  const latestCycle  = cycles[0]
+  const lastPeriod   = latestCycle ? new Date(latestCycle.startDate) : null
   const cycleLength  = latestCycle?.cycleLength  || 28
   const periodLength = latestCycle?.periodLength || 5
 
@@ -166,6 +175,26 @@ export default function CalendarScreen() {
   // ──────────────────────────────────────────
   // 이벤트 핸들러
   // ──────────────────────────────────────────
+  const handleSavePeriod = async () => {
+    if (!periodStartDate) return
+    setSavingPeriod(true)
+    try {
+      await cyclesApi.save({
+        startDate: periodStartDate,
+        endDate: periodEndDate || undefined,
+        cycleLength,
+        periodLength: 5,
+      })
+      const updated = await cyclesApi.getAll()
+      setCycles(updated)
+      setIsDayDetailModalOpen(false)
+    } catch {
+      Alert.alert('오류', '생리 기록 저장에 실패했어요.')
+    } finally {
+      setSavingPeriod(false)
+    }
+  }
+
   const handleSelectMood = async (mood: any) => {
     selectMood(mood)
     if (user) {
@@ -275,6 +304,15 @@ export default function CalendarScreen() {
     })
   })
 
+  const selectedCycleRecord = cycles.find(c => {
+    const start = new Date(c.startDate)
+    const pLen  = c.periodLength || 5
+    const end   = c.endDate ? new Date(c.endDate) : new Date(start.getTime() + (pLen - 1) * 86400000)
+    const sel   = new Date(selectedDateStr)
+    return sel >= start && sel <= end
+  })
+  const selectedDayHormone = hormones.find(h => h.recordedAt === selectedDateStr)
+
   const getTypeBadge = (sType: string) => {
     switch (sType) {
       case 'IVF': return '🧬 시험관'
@@ -349,7 +387,13 @@ export default function CalendarScreen() {
                   day={day}
                   isSelected={selectedDate?.getTime() === day.date.getTime()}
                   hasIntercourse={dayHormone?.intercourse === true}
-                  onPress={selectDate}
+                  onPress={(date) => {
+                    selectDate(date)
+                    const ds = date.toISOString().split('T')[0]
+                    setPeriodStartDate(ds)
+                    setPeriodEndDate('')
+                    setIsDayDetailModalOpen(true)
+                  }}
                 />
               )
             })}
@@ -365,128 +409,33 @@ export default function CalendarScreen() {
             ))}
           </View>
 
-          <CycleSummary
-            nextOvulationDate={nextOvulationDate}
-            nextPeriodDate={nextPeriodDate}
-            currentCycleDay={currentCycleDay}
-            cycleLength={cycleLength}
-            formatKorDate={formatKorDate}
-          />
+          {cycles.length === 0 ? (
+            <View style={styles.noCycleBox}>
+              <Text style={styles.noCycleTitle}>🌸 생리 시작일을 기록해보세요</Text>
+              <Text style={styles.noCycleSub}>
+                첫 생리 시작일을 기록하면{'\n'}가임기·배란일 예측을 시작해드려요.
+              </Text>
+              <TouchableOpacity
+                style={styles.noCycleBtn}
+                onPress={() => setIsScheduleModalOpen(true)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.noCycleBtnTxt}>+ 첫 생리 시작일 기록하기</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <CycleSummary
+              nextOvulationDate={nextOvulationDate}
+              nextPeriodDate={nextPeriodDate}
+              currentCycleDay={currentCycleDay}
+              cycleLength={cycleLength}
+              formatKorDate={formatKorDate}
+            />
+          )}
           <MoodPicker selected={selectedMood} onSelect={handleSelectMood} />
 
-          {/* ══════════════════════════════════════
-              선택한 날짜 상세
-              ══════════════════════════════════════ */}
-          <View style={styles.dateRecordsContainer}>
-            <Text style={styles.selectedDateTitle}>🌸 {selectedDateStr} 상세 일정</Text>
-
-            {/* ── 투약 체크리스트 ── */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>💊 복용/투약 체크리스트</Text>
-
-              {/* [데이터 보존] 약물 기록 원본은 구독 상태와 무관하게 항상 표시 */}
-              {dateMedications.length > 0 ? (
-                <View style={styles.checklist}>
-                  {dateMedications.map((med, i) => {
-                    const medKey = `${med.name}_${med.dose}_${med.times.join(',')}`
-                    const isChecked = !!checkedMeds[medKey]
-                    return (
-                      <TouchableOpacity
-                        key={i}
-                        style={[styles.checkItem, isChecked && styles.checkItemDone]}
-                        onPress={() => handleCheckMed(medKey)}
-                      >
-                        <View style={styles.checkLeft}>
-                          <View style={[styles.checkbox, isChecked && styles.checkboxActive]}>
-                            {isChecked && <Text style={styles.checkTick}>✓</Text>}
-                          </View>
-                          <View>
-                            <Text style={[styles.medName, isChecked && styles.textDone]}>{med.name}</Text>
-                            <Text style={styles.medDose}>용량: {med.dose}</Text>
-                          </View>
-                        </View>
-                        <Text style={[styles.timeLabel, isChecked && styles.timeLabelDone]}>
-                          🕒 {med.times.join(', ')}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  })}
-                </View>
-              ) : (
-                <Text style={styles.emptyText}>선택된 날짜의 예정된 투약이 없습니다.</Text>
-              )}
-
-              {/* ── 약물 알림 — 프리미엄 게이트 ── */}
-              <View style={styles.reminderDivider} />
-              {isPremium ? (
-                // 프리미엄: 알림 켜기 버튼 활성
-                <TouchableOpacity
-                  style={styles.reminderBtn}
-                  onPress={handleEnableMedicationReminder}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.reminderBtnIcon}>🔔</Text>
-                  <Text style={styles.reminderBtnTxt}>약물 알림 켜기</Text>
-                </TouchableOpacity>
-              ) : (
-                // 비프리미엄: 잠긴 미리보기 — 숨기지 않고 비활성 노출
-                <TouchableOpacity
-                  style={styles.lockedBtn}
-                  onPress={() => setPaywallSource('medication_reminder')}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.lockedLeft}>
-                    <Text style={styles.lockIcon}>🔒</Text>
-                    <View>
-                      <Text style={styles.lockedTitle}>프리미엄으로 알림 켜기</Text>
-                      <Text style={styles.lockedDesc}>정시 투약 푸시 알림 활성화</Text>
-                    </View>
-                  </View>
-                  <Text style={styles.lockedArrow}>›</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* ── 시술/진료 일정 타임라인 ── */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>📋 시술 및 진료 일정</Text>
-              {dateSchedules.length > 0 ? (
-                <View style={styles.timeline}>
-                  {dateSchedules.map((sc, i) => {
-                    const dateObj = new Date(sc.scheduledAt)
-                    const timeStr = dateObj.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
-                    const badgeStyle = getBadgeStyle(sc.type)
-                    return (
-                      <View key={sc.id || i} style={styles.timelineItem}>
-                        <View style={styles.itemContent}>
-                          <View style={styles.itemHeader}>
-                            <View style={[styles.badge, { backgroundColor: badgeStyle.backgroundColor }]}>
-                              <Text style={[styles.badgeText, { color: badgeStyle.color }]}>{getTypeBadge(sc.type)}</Text>
-                            </View>
-                            <Text style={styles.itemTime}>{timeStr}</Text>
-                          </View>
-                          <Text style={styles.itemTitle}>{sc.title}</Text>
-                          {sc.hospitalName ? <Text style={styles.itemHospital}>🏢 {sc.hospitalName}</Text> : null}
-                          {sc.notes ? (
-                            <View style={styles.notesBox}>
-                              <Text style={styles.notesText}>{sc.notes}</Text>
-                            </View>
-                          ) : null}
-                        </View>
-                      </View>
-                    )
-                  })}
-                </View>
-              ) : (
-                <View style={styles.emptyScheduleContainer}>
-                  <Text style={styles.emptyText}>등록된 시술/진료 일정이 없습니다.</Text>
-                  <TouchableOpacity onPress={() => { setMedStartDate(selectedDateStr); setIsScheduleModalOpen(true) }}>
-                    <Text style={styles.addTextLink}>+ 일정 등록하기</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
-          </View>
+          {/* 날짜 탭 힌트 */}
+          <Text style={styles.tapHint}>날짜를 탭하면 기록을 확인하거나 추가할 수 있어요</Text>
         </View>
       </ScrollView>
 
@@ -665,6 +614,237 @@ export default function CalendarScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* ── 날짜 탭 Day Detail 모달 ── */}
+      <Modal
+        visible={isDayDetailModalOpen}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setIsDayDetailModalOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.dayModalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsDayDetailModalOpen(false)}
+        >
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ width: '100%' }}>
+            <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+              <View style={styles.dayModalSheet}>
+
+                {/* 헤더 */}
+                <View style={styles.dayModalHeader}>
+                  <View>
+                    <Text style={styles.dayModalDate}>
+                      {new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('ko-KR', {
+                        year: 'numeric', month: 'long', day: 'numeric', weekday: 'short',
+                      })}
+                    </Text>
+                    {(() => {
+                      if (selectedCycleRecord) return <Text style={styles.dayPhaseBadgePeriod}>🌷 생리 기간</Text>
+                      const h = selectedDayHormone
+                      if (h?.opkIndex !== undefined && h.opkIndex >= 8) return <Text style={styles.dayPhaseBadgeOvul}>🌸 배란 가능성 높음</Text>
+                      return null
+                    })()}
+                  </View>
+                  <TouchableOpacity onPress={() => setIsDayDetailModalOpen(false)}>
+                    <Text style={styles.dayModalClose}>닫기</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 520 }}>
+                  <View style={styles.dayModalBody}>
+
+                    {/* 1. 생리 기록 */}
+                    <View style={styles.daySection}>
+                      <View style={styles.daySectionRow}>
+                        <Text style={styles.daySectionTitle}>🌷 생리 기록</Text>
+                        <TouchableOpacity
+                          style={styles.daySectionBtn}
+                          onPress={() => {
+                            setPeriodStartDate(selectedDateStr)
+                            setPeriodEndDate(selectedCycleRecord?.endDate || '')
+                          }}
+                        >
+                          <Text style={styles.daySectionBtnTxt}>
+                            {selectedCycleRecord ? '수정하기' : '기록하기'}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {selectedCycleRecord ? (
+                        <View style={styles.daySectionContent}>
+                          <Text style={styles.dayInfoRow}>시작: <Text style={styles.dayInfoVal}>{selectedCycleRecord.startDate}</Text></Text>
+                          {selectedCycleRecord.endDate && (
+                            <Text style={styles.dayInfoRow}>종료: <Text style={styles.dayInfoVal}>{selectedCycleRecord.endDate}</Text></Text>
+                          )}
+                          <Text style={styles.dayInfoRow}>주기: <Text style={styles.dayInfoVal}>{selectedCycleRecord.cycleLength}일</Text></Text>
+                        </View>
+                      ) : (
+                        <View>
+                          <Text style={styles.dayEmptyTxt}>이 날짜의 생리 기록이 없어요</Text>
+                          {/* 인라인 생리 입력 */}
+                          <View style={styles.periodInputRow}>
+                            <View style={styles.periodInputGroup}>
+                              <Text style={styles.periodInputLabel}>시작일</Text>
+                              <TextInput
+                                style={styles.periodInput}
+                                value={periodStartDate}
+                                onChangeText={setPeriodStartDate}
+                                placeholder="YYYY-MM-DD"
+                                placeholderTextColor="#c4a0ae"
+                              />
+                            </View>
+                            <View style={styles.periodInputGroup}>
+                              <Text style={styles.periodInputLabel}>종료일 (선택)</Text>
+                              <TextInput
+                                style={styles.periodInput}
+                                value={periodEndDate}
+                                onChangeText={setPeriodEndDate}
+                                placeholder="YYYY-MM-DD"
+                                placeholderTextColor="#c4a0ae"
+                              />
+                            </View>
+                          </View>
+                          <TouchableOpacity
+                            style={[styles.periodSaveBtn, (!periodStartDate || savingPeriod) && styles.periodSaveBtnDisabled]}
+                            onPress={handleSavePeriod}
+                            disabled={!periodStartDate || savingPeriod}
+                            activeOpacity={0.85}
+                          >
+                            {savingPeriod
+                              ? <ActivityIndicator color="#fff" size="small" />
+                              : <Text style={styles.periodSaveBtnTxt}>생리 기록 저장</Text>
+                            }
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* 2. 건강 기록 요약 */}
+                    <View style={styles.daySection}>
+                      <View style={styles.daySectionRow}>
+                        <Text style={styles.daySectionTitle}>🌡️ 건강 기록</Text>
+                      </View>
+                      {selectedDayHormone ? (
+                        <View style={styles.healthRow}>
+                          {selectedDayHormone.bbt !== undefined && (
+                            <View style={styles.healthChip}>
+                              <Text style={styles.healthChipTxt}>🌡️ {selectedDayHormone.bbt}°C</Text>
+                            </View>
+                          )}
+                          {selectedDayHormone.opkIndex !== undefined && (
+                            <View style={styles.healthChip}>
+                              <Text style={styles.healthChipTxt}>🥚 OPK {selectedDayHormone.opkIndex}/10</Text>
+                            </View>
+                          )}
+                          {selectedDayHormone.intercourse !== undefined && (
+                            <View style={styles.healthChip}>
+                              <Text style={styles.healthChipTxt}>{selectedDayHormone.intercourse ? '❤️ 관계 있음' : '🤍 관계 없음'}</Text>
+                            </View>
+                          )}
+                        </View>
+                      ) : (
+                        <Text style={styles.dayEmptyTxt}>BBT, OPK, 관계 기록이 없어요</Text>
+                      )}
+                    </View>
+
+                    {/* 3. 복용 체크리스트 */}
+                    {dateMedications.length > 0 && (
+                      <View style={styles.daySection}>
+                        <Text style={styles.daySectionTitle}>💊 복용 체크리스트</Text>
+                        <View style={{ gap: 6, marginTop: 8 }}>
+                          {dateMedications.map((med, i) => {
+                            const medKey = `${med.name}_${med.dose}_${med.times.join(',')}`
+                            const isChecked = !!checkedMeds[medKey]
+                            return (
+                              <TouchableOpacity
+                                key={i}
+                                style={[styles.checkItem, isChecked && styles.checkItemDone]}
+                                onPress={() => handleCheckMed(medKey)}
+                              >
+                                <View style={styles.checkLeft}>
+                                  <View style={[styles.checkbox, isChecked && styles.checkboxActive]}>
+                                    {isChecked && <Text style={styles.checkTick}>✓</Text>}
+                                  </View>
+                                  <View>
+                                    <Text style={[styles.medName, isChecked && styles.textDone]}>{med.name}</Text>
+                                    <Text style={styles.medDose}>용량: {med.dose}</Text>
+                                  </View>
+                                </View>
+                                <Text style={[styles.timeLabel, isChecked && styles.timeLabelDone]}>
+                                  🕒 {med.times.join(', ')}
+                                </Text>
+                              </TouchableOpacity>
+                            )
+                          })}
+                        </View>
+                        {/* 약물 알림 게이트 */}
+                        <View style={{ marginTop: 10 }}>
+                          {isPremium ? (
+                            <TouchableOpacity style={styles.reminderBtn} onPress={handleEnableMedicationReminder} activeOpacity={0.8}>
+                              <Text style={styles.reminderBtnIcon}>🔔</Text>
+                              <Text style={styles.reminderBtnTxt}>약물 알림 켜기</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity style={styles.lockedBtn} onPress={() => { setIsDayDetailModalOpen(false); setPaywallSource('medication_reminder') }} activeOpacity={0.8}>
+                              <View style={styles.lockedLeft}>
+                                <Text style={styles.lockIcon}>🔒</Text>
+                                <View>
+                                  <Text style={styles.lockedTitle}>프리미엄으로 알림 켜기</Text>
+                                  <Text style={styles.lockedDesc}>정시 투약 푸시 알림 활성화</Text>
+                                </View>
+                              </View>
+                              <Text style={styles.lockedArrow}>›</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      </View>
+                    )}
+
+                    {/* 4. 시술 일정 */}
+                    <View style={styles.daySection}>
+                      <View style={styles.daySectionRow}>
+                        <Text style={styles.daySectionTitle}>📅 시술 일정</Text>
+                        <TouchableOpacity
+                          style={styles.daySectionBtn}
+                          onPress={() => { setMedStartDate(selectedDateStr); setIsDayDetailModalOpen(false); setIsScheduleModalOpen(true) }}
+                        >
+                          <Text style={styles.daySectionBtnTxt}>+ 일정 추가</Text>
+                        </TouchableOpacity>
+                      </View>
+                      {dateSchedules.length > 0 ? (
+                        <View style={{ gap: 8, marginTop: 8 }}>
+                          {dateSchedules.map((sc, i) => {
+                            const timeStr = new Date(sc.scheduledAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false })
+                            const badgeStyle = getBadgeStyle(sc.type)
+                            return (
+                              <View key={sc.id || i} style={styles.dayScheduleItem}>
+                                <View style={styles.dayScheduleHeader}>
+                                  <View style={[styles.badge, { backgroundColor: badgeStyle.backgroundColor }]}>
+                                    <Text style={[styles.badgeText, { color: badgeStyle.color }]}>{getTypeBadge(sc.type)}</Text>
+                                  </View>
+                                  <Text style={styles.itemTime}>{timeStr}</Text>
+                                </View>
+                                <Text style={styles.itemTitle}>{sc.title}</Text>
+                                {sc.hospitalName ? <Text style={styles.itemHospital}>🏢 {sc.hospitalName}</Text> : null}
+                              </View>
+                            )
+                          })}
+                        </View>
+                      ) : (
+                        <Text style={styles.dayEmptyTxt}>등록된 시술 일정이 없어요</Text>
+                      )}
+                    </View>
+
+                    <View style={{ height: 16 }} />
+                  </View>
+                </ScrollView>
+
+              </View>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </TouchableOpacity>
+      </Modal>
+
       {/* 페이월 모달 */}
       <PaywallModal
         visible={paywallSource !== null}
@@ -708,6 +888,25 @@ const styles = StyleSheet.create({
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
   legendLabel: { fontSize: 11, fontWeight: '600', color: '#8c5060' },
+
+  // 주기 기록 없을 때 빈 상태
+  noCycleBox: {
+    backgroundColor: '#fff8f9',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderStyle: 'dashed',
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+  },
+  noCycleTitle:  { fontSize: 14, fontWeight: '700', color: DARK_ROSE },
+  noCycleSub:    { fontSize: 12, color: MUTED, textAlign: 'center', lineHeight: 18 },
+  noCycleBtn: {
+    backgroundColor: PINK, borderRadius: 14,
+    paddingHorizontal: 18, paddingVertical: 10, marginTop: 4,
+  },
+  noCycleBtnTxt: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   // 상세 섹션
   dateRecordsContainer: { padding: 16, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#fce4f5', gap: 14 },
@@ -806,4 +1005,117 @@ const styles = StyleSheet.create({
   submitBtn: { backgroundColor: PINK, borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 16 },
   submitBtnDisabled: { opacity: 0.45 },
   submitBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+
+  // 날짜 탭 힌트
+  tapHint: { fontSize: 11, color: '#c4a0ae', textAlign: 'center', paddingVertical: 10 },
+
+  // Day Detail 모달
+  dayModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
+  dayModalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 32,
+  },
+  dayModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  dayModalDate: { fontSize: 15, fontWeight: '700', color: DARK_ROSE },
+  dayPhaseBadgePeriod: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#c0005a',
+    backgroundColor: '#ffd6e0',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  dayPhaseBadgeOvul: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#7c3aed',
+    backgroundColor: '#f3e8ff',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginTop: 4,
+    alignSelf: 'flex-start',
+  },
+  dayModalClose: { fontSize: 13, color: '#9ca3af', paddingTop: 2 },
+  dayModalBody: { gap: 14 },
+
+  // 섹션
+  daySection: {
+    backgroundColor: '#fff8f9',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER,
+    padding: 12,
+  },
+  daySectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  daySectionTitle: { fontSize: 13, fontWeight: '700', color: DARK_ROSE },
+  daySectionBtn: {
+    backgroundColor: PINK,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  daySectionBtnTxt: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  daySectionContent: { gap: 4 },
+  dayInfoRow: { fontSize: 12, color: MUTED },
+  dayInfoVal: { fontWeight: '700', color: DARK_ROSE },
+  dayEmptyTxt: { fontSize: 11, color: '#c4a0ae', marginBottom: 8 },
+
+  // 생리 입력 폼
+  periodInputRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  periodInputGroup: { flex: 1 },
+  periodInputLabel: { fontSize: 10, fontWeight: '700', color: PINK, marginBottom: 3 },
+  periodInput: {
+    borderWidth: 1,
+    borderColor: BORDER,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 7,
+    fontSize: 12,
+    color: DARK_ROSE,
+  },
+  periodSaveBtn: {
+    backgroundColor: PINK,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  periodSaveBtnDisabled: { opacity: 0.45 },
+  periodSaveBtnTxt: { fontSize: 12, fontWeight: '700', color: '#fff' },
+
+  // 건강 기록 칩
+  healthRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  healthChip: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  healthChipTxt: { fontSize: 12, color: DARK_ROSE, fontWeight: '600' },
+
+  // 시술 일정 아이템
+  dayScheduleItem: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    padding: 10,
+    gap: 4,
+  },
+  dayScheduleHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 })
