@@ -78,7 +78,7 @@ export const communityService = {
       if (index > -1) {
         const likes: string[] = posts[index].likes || []
         const ui = likes.indexOf(uid)
-        if (ui > -1) likes.splice(ui, 1) else likes.push(uid)
+        if (ui > -1) { likes.splice(ui, 1) } else { likes.push(uid) }
         posts[index].likes = likes
         mockStore.set('community_posts', posts)
         return likes

@@ -4,6 +4,34 @@ import { FirebaseService } from '../firebase/firebase.service'
 // Expo Push Token 여부 판별
 const isExpoPushToken = (token: string) => token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken[')
 
+// ──────────────────────────────────────────
+// 구독 상태 확인 (백엔드 재검증)
+// RevenueCat 웹훅이 Firestore를 업데이트하는 단일 소스 구조.
+// 클라이언트가 보낸 값을 신뢰하지 않고 Firestore에서 직접 읽어 검증.
+// ──────────────────────────────────────────
+async function checkPremiumFromFirestore(
+  firebase: FirebaseService,
+  uid: string,
+): Promise<boolean> {
+  const doc = await firebase.collection('users').doc(uid).get()
+  if (!doc.exists) return false
+  const data = doc.data() as any
+  const status: string = data?.subscriptionStatus ?? 'cancelled'
+
+  if (status === 'active') return true
+  if (status === 'trial') {
+    const trialEndsAt: string | undefined = data?.trialEndsAt
+    if (!trialEndsAt) return true
+    return new Date(trialEndsAt) > new Date()
+  }
+  // 'cancelled' — subscriptionExpiresAt이 미래이면 만료 전 유효 기간
+  if (status === 'cancelled') {
+    const expiresAt: string | undefined = data?.subscriptionExpiresAt
+    if (expiresAt) return new Date(expiresAt) > new Date()
+  }
+  return false
+}
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name)
@@ -87,6 +115,7 @@ export class NotificationsService {
 
   // ──────────────────────────────────────────
   // 시술 일정 D-1 원격 알림
+  // D-1 알림은 일반 일정 알림이므로 구독 게이트 없음.
   // ──────────────────────────────────────────
   async scheduleAppointmentNotification(uid: string, schedule: any): Promise<void> {
     const scheduledAt = new Date(schedule.scheduledAt)
@@ -114,9 +143,22 @@ export class NotificationsService {
   }
 
   // ──────────────────────────────────────────
-  // 약물 복용 원격 알림 (서버 발송 — 로컬 알림과 병행)
+  // 약물 복용 원격 알림 — 프리미엄 전용
+  // 발송 직전 Firestore에서 구독 상태를 재검증한다.
+  // 클라이언트 값을 신뢰하지 않으며, RevenueCat이 Firestore를 업데이트하는 단일 소스 구조.
+  //
+  // [데이터 보존 정책]
+  // 이 함수는 알림 발송(기능)만 게이트하며,
+  // 약물 기록 데이터 자체에 대한 읽기/쓰기는 절대 차단하지 않는다.
   // ──────────────────────────────────────────
   async sendMedicationReminder(uid: string, medicationName: string, time: string): Promise<void> {
+    const isPremium = await checkPremiumFromFirestore(this.firebase, uid)
+
+    if (!isPremium) {
+      this.logger.warn(`약물 알림 발송 거부 — 비프리미엄 사용자: ${uid}`)
+      return
+    }
+
     await this.sendToUser(uid, {
       title: '💊 약 복용 알림',
       body: `${time} — ${medicationName} 복용 시간이에요`,
@@ -126,6 +168,7 @@ export class NotificationsService {
 
   // ──────────────────────────────────────────
   // 일일 BBT 기록 독려 (Cloud Scheduler 트리거용)
+  // 구독 게이트 없음 — 기록 독려는 무료 제공.
   // ──────────────────────────────────────────
   async sendDailyReminder(uid: string): Promise<void> {
     await this.sendToUser(uid, {

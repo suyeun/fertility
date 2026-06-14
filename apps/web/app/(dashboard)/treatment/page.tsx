@@ -3,11 +3,19 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { treatmentApi } from '@fertility/shared'
-import type { TreatmentSchedule, TreatmentType, TreatmentStatus, Medication, UserMode } from '@fertility/shared'
+import {
+  canUseClinicScheduler, isPremiumProfile, ClinicFeature,
+} from '@fertility/shared'
+import type {
+  TreatmentSchedule, TreatmentType, TreatmentStatus, Medication, UserMode,
+  PaywallSource,
+} from '@fertility/shared'
 import {
   Plus, Calendar, Building2, Pill, ChevronDown, ChevronUp,
   CheckCircle2, Clock, XCircle, Trash2, AlertCircle, Syringe,
+  Lock, Bell, BellOff,
 } from 'lucide-react'
+import PaywallModal from '../../../../components/PaywallModal'
 
 // ============================
 // 모드별 일정 종류 설정
@@ -55,11 +63,26 @@ export default function TreatmentPage() {
   const mode: UserMode = (profile?.currentMode as UserMode)
     ?? (profile?.treatmentStage === 'natural' ? 'NATURAL' : 'CLINIC')
 
-  const [schedules, setSchedules] = useState<TreatmentSchedule[]>([])
-  const [loading,   setLoading]   = useState(true)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [saving,    setSaving]    = useState(false)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
+  // TODO: [RevenueCat 연동] profile.subscriptionStatus는 RevenueCat 웹훅이 동기화.
+  // isPremiumProfile은 해당 필드만 읽으며 로컬에서 임의 override하지 않는다.
+  const isPremium = profile
+    ? isPremiumProfile({
+        subscriptionStatus: profile.subscriptionStatus,
+        trialEndsAt: profile.trialEndsAt,
+        subscriptionExpiresAt: profile.subscriptionExpiresAt,
+      })
+    : false
+
+  const [schedules,    setSchedules]    = useState<TreatmentSchedule[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [isModalOpen,  setIsModalOpen]  = useState(false)
+  const [saving,       setSaving]       = useState(false)
+  const [expandedId,   setExpandedId]   = useState<string | null>(null)
+
+  // 페이월 모달 상태
+  const [paywallSource, setPaywallSource] = useState<PaywallSource | null>(null)
+
+  const showPaywall = (source: PaywallSource) => setPaywallSource(source)
 
   // 폼 상태
   const defaultType: TreatmentType = mode === 'NATURAL' ? 'monitoring' : 'monitoring'
@@ -115,6 +138,19 @@ export default function TreatmentPage() {
 
   const handleSave = async () => {
     if (!user || !title.trim()) return
+
+    // CLINIC 모드: 다회차 일정 게이트 (2건 이상 등록 시 프리미엄 필요)
+    if (mode === 'CLINIC') {
+      const canRegister = canUseClinicScheduler(ClinicFeature.REGISTER_FIRST_SCHEDULE, {
+        isPremium,
+        existingScheduleCount: schedules.length,
+      })
+      if (!canRegister) {
+        showPaywall('multi_schedule')
+        return
+      }
+    }
+
     setSaving(true)
     try {
       await treatmentApi.save({
@@ -146,6 +182,18 @@ export default function TreatmentPage() {
     setSchedules(prev => prev.filter(s => s.id !== id))
   }
 
+  // 약물 알림 켜기 — MEDICATION_REMINDER 게이트 검사
+  const handleEnableMedicationReminder = () => {
+    const canEnable = canUseClinicScheduler(ClinicFeature.MEDICATION_REMINDER, { isPremium })
+    if (!canEnable) {
+      showPaywall('medication_reminder')
+      return
+    }
+    // TODO: [알림 연동] 프리미엄 확인 후 알림 활성화 로직 구현.
+    // 백엔드 notifications.service의 sendMedicationReminder는 서버에서 subscription 재검증.
+    alert('약물 알림이 활성화됐어요 💊')
+  }
+
   const upcoming = schedules.filter(s => s.status === 'scheduled')
   const past     = schedules.filter(s => s.status !== 'scheduled')
 
@@ -160,6 +208,59 @@ export default function TreatmentPage() {
       return NATURAL_TYPE_OPTIONS.find(o => o.type === t)?.label ?? CLINIC_TYPE_LABELS[t]
     }
     return CLINIC_TYPE_LABELS[t]
+  }
+
+  // ============================
+  // 약물 알림 잠금 프리뷰 — CLINIC 전용
+  // 데이터(약물 목록) 자체는 숨기지 않음. 알림 활성화 기능만 잠금.
+  // ============================
+  const MedicationReminderSection = ({ medications }: { medications?: Medication[] }) => {
+    if (!medications || medications.length === 0) return null
+
+    return (
+      <div className="mt-3">
+        <p className="text-[11px] font-semibold text-[#b07080] mb-1.5 flex items-center gap-1">
+          <Pill size={11} />약물
+        </p>
+
+        {/* [데이터 보존] 약물 기록 원본은 구독 상태와 무관하게 항상 보여준다 */}
+        <div className="space-y-1.5 mb-2">
+          {medications.map((m, i) => (
+            <div key={i} className="bg-purple-50 rounded-xl px-3 py-2 text-xs">
+              <span className="font-semibold text-purple-800">{m.name}</span>
+              <span className="text-purple-500 ml-1">{m.dose}</span>
+              <span className="text-purple-400 ml-2">{m.times.join(' · ')}</span>
+              <span className="text-purple-300 ml-2">{m.startDate}{m.endDate ? ` ~ ${m.endDate}` : ''}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 약물 알림 — 프리미엄 게이트 */}
+        {isPremium ? (
+          // 프리미엄: 알림 켜기 버튼 활성
+          <button
+            onClick={handleEnableMedicationReminder}
+            className="flex items-center gap-1.5 text-xs text-purple-600 bg-purple-50 border border-purple-200 rounded-xl px-3 py-2 font-semibold active:scale-[0.98] transition-all w-full"
+          >
+            <Bell size={12} />
+            <span>약물 알림 켜기</span>
+          </button>
+        ) : (
+          // 비프리미엄: 잠긴 미리보기 — 숨기지 않고 비활성 상태로 노출
+          <button
+            onClick={() => showPaywall('medication_reminder')}
+            className="flex items-center gap-2 text-xs text-[#b07080] bg-[#fff0f4] border border-[#ffd6e0] rounded-xl px-3 py-2 w-full group hover:border-[#ff8fab]/60 transition-all"
+          >
+            <Lock size={12} className="text-[#ff8fab] shrink-0" />
+            <span className="flex-1 text-left">
+              <span className="font-semibold text-[#ff8fab]">프리미엄으로 알림 켜기</span>
+              <span className="text-[#c4a0ae] ml-1">— 정시 투약 알림 활성화</span>
+            </span>
+            <BellOff size={12} className="text-[#ffd6e0]" />
+          </button>
+        )}
+      </div>
+    )
   }
 
   // ============================
@@ -196,7 +297,13 @@ export default function TreatmentPage() {
           <div className="px-4 pb-4 border-t border-rose-100/60 pt-3 space-y-3">
             {s.notes && <p className="text-xs text-[#8c5060] bg-[#fff0f4] rounded-xl p-3">{s.notes}</p>}
 
-            {s.medications && s.medications.length > 0 && (
+            {/* CLINIC 모드: 약물 + 알림 영역 (데이터 열람은 항상 허용) */}
+            {mode === 'CLINIC' && (
+              <MedicationReminderSection medications={s.medications} />
+            )}
+
+            {/* NATURAL 모드: 약물 목록만 단순 표시 */}
+            {mode === 'NATURAL' && s.medications && s.medications.length > 0 && (
               <div>
                 <p className="text-[11px] font-semibold text-[#b07080] mb-1.5 flex items-center gap-1"><Pill size={11} />약물</p>
                 <div className="space-y-1.5">
@@ -472,11 +579,27 @@ export default function TreatmentPage() {
                         <input type="date" value={medEnd} onChange={e => setMedEnd(e.target.value)}
                           className="w-full border border-purple-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-purple-300/40 bg-white" />
                       </div>
-                      <div className="bg-[#fff8f9] rounded-xl p-2 border border-purple-100">
-                        <p className="text-[9px] text-purple-400 leading-relaxed">
-                          💡 정시 투약 알림은 모바일 앱 설치 후 알림 권한 허용 시 자동 설정됩니다.
-                        </p>
-                      </div>
+
+                      {/* 약물 알림 안내 — 잠금 미리보기 */}
+                      {!isPremium ? (
+                        <button
+                          onClick={() => { setIsModalOpen(false); showPaywall('medication_reminder') }}
+                          className="flex items-center gap-2 w-full bg-white border border-[#ffd6e0] rounded-xl p-2.5 text-left"
+                        >
+                          <Lock size={11} className="text-[#ff8fab] shrink-0" />
+                          <span className="text-[9px] text-[#b07080] leading-relaxed flex-1">
+                            <span className="text-[#ff8fab] font-semibold">프리미엄으로 알림 켜기</span>
+                            {' '}— 정시 투약 푸시 알림
+                          </span>
+                        </button>
+                      ) : (
+                        <div className="bg-white rounded-xl p-2 border border-purple-100">
+                          <p className="text-[9px] text-purple-400 leading-relaxed">
+                            💊 저장 후 일정 카드에서 약물 알림을 활성화하세요.
+                          </p>
+                        </div>
+                      )}
+
                       <button
                         onClick={addMedication}
                         disabled={!medName.trim() || !medDose.trim()}
@@ -502,6 +625,15 @@ export default function TreatmentPage() {
           </div>
         </div>
       )}
+
+      {/* 페이월 모달 */}
+      {paywallSource && (
+        <PaywallModal
+          source={paywallSource}
+          onClose={() => setPaywallSource(null)}
+        />
+      )}
+
     </div>
   )
 }

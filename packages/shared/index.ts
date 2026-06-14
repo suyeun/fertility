@@ -6,6 +6,7 @@ export * from './lib/cycle'
 export * from './lib/prompts'
 export * from './lib/api'
 export * from './lib/anonymousNickname'
+export * from './lib/clinicGate'
 
 // 데이터
 export * from './data/infoArticles'

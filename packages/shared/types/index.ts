@@ -141,6 +141,7 @@ export interface UserProfile {
   averagePeriodLength: number   // 기본값: 5
   subscriptionStatus: 'trial' | 'active' | 'cancelled'
   trialEndsAt?: string
+  subscriptionExpiresAt?: string  // RevenueCat CANCELLATION 이후 실제 만료일
   createdAt: string
 }
 

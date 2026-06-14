@@ -6,7 +6,10 @@
       "Bash(node node_modules/.bin/tsc --noEmit -p apps/web/tsconfig.json)",
       "Bash(node /Users/mbp2019/Downloads/fertility-app/node_modules/.bin/tsc --noEmit -p /Users/mbp2019/Downloads/fertility-app/apps/web/tsconfig.json)",
       "Bash(npm run *)",
-      "Bash(rm -f /Users/mbp2019/Downloads/fertility-app/apps/web/.next/cache/tsbuildinfo* /Users/mbp2019/Downloads/fertility-app/apps/web/tsconfig.tsbuildinfo 2>/dev/null; npx tsc --noEmit 2>&1 | head -20)"
+      "Bash(rm -f /Users/mbp2019/Downloads/fertility-app/apps/web/.next/cache/tsbuildinfo* /Users/mbp2019/Downloads/fertility-app/apps/web/tsconfig.tsbuildinfo 2>/dev/null; npx tsc --noEmit 2>&1 | head -20)",
+      "Bash(xargs basename -a)",
+      "Bash(npm install *)",
+      "Bash(npm test *)"
     ]
   }
 }

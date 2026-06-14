@@ -180,11 +180,11 @@ export default function HomeScreen() {
       <View style={s.section}>
         <View style={s.secHeader}>
           <Text style={s.secTitle}>📝 오늘의 마음</Text>
-          <TouchableOpacity onPress={() => router.push('/diary' as any)}>
+          <TouchableOpacity onPress={() => router.push('/records' as any)}>
             <Text style={s.secMore}>쓰러 가기 ›</Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity style={s.taskRow} onPress={() => router.push('/diary' as any)}>
+        <TouchableOpacity style={s.taskRow} onPress={() => router.push('/records' as any)}>
           <View style={[s.taskIconWrap, { backgroundColor: LIGHT_PINK }]}>
             <Text style={{ fontSize: 18 }}>{latestDiary ? '😊' : '📝'}</Text>
           </View>
@@ -236,6 +236,22 @@ export default function HomeScreen() {
           </Text>
         </View>
       </View>
+
+      {/* 공감 커뮤니티 배너 */}
+      <TouchableOpacity
+        style={s.communityBanner}
+        onPress={() => router.push('/community' as any)}
+        activeOpacity={0.85}
+      >
+        <View style={s.chatBannerLeft}>
+          <Text style={s.chatBannerEmoji}>👥</Text>
+          <View>
+            <Text style={[s.chatBannerTitle, { color: DARK_ROSE }]}>공감 커뮤니티</Text>
+            <Text style={[s.chatBannerSub, { color: MUTED }]}>같은 길을 걷는 분들과 마음을 나눠요 🌸</Text>
+          </View>
+        </View>
+        <Text style={[s.chatBannerArrow, { color: MUTED }]}>›</Text>
+      </TouchableOpacity>
 
       {/* AI 채팅 배너 */}
       <TouchableOpacity
@@ -316,6 +332,20 @@ const s = StyleSheet.create({
   streakDayLabel: { fontSize: 11, color: MUTED },
   streakCircle: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   streakText: { fontSize: 11, color: MUTED, textAlign: 'center' },
+
+  // Community Banner
+  communityBanner: {
+    marginHorizontal: 14,
+    marginBottom: 12,
+    backgroundColor: CARD_BG,
+    borderRadius: 18,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: BORDER,
+  },
 
   // AI Chat Banner
   chatBanner: {
