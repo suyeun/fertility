@@ -21,21 +21,34 @@ import type {
   TreatmentSchedule, Medication, TreatmentType, HormoneRecord,
   UserProfile, PaywallSource,
 } from '@fertility/shared'
-import { DayCell } from '../../components/calendar/DayCell'
-import { CycleSummary } from '../../components/calendar/CycleSummary'
-import { MoodPicker } from '../../components/calendar/MoodPicker'
-import PaywallModal from '../../components/PaywallModal'
+import { DayCell, DAY_CELL_W } from '../../../components/calendar/DayCell'
+import { CycleSummary } from '../../../components/calendar/CycleSummary'
+import PaywallModal from '../../../components/PaywallModal'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { rescheduleMedicationAlerts } from '../../lib/notifications'
-import { getSubscriptionStatus } from '../../lib/purchases'
+import { rescheduleMedicationAlerts } from '../../../lib/notifications'
+import { getSubscriptionStatus } from '../../../lib/purchases'
+import { F } from '../../../lib/fonts'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
 const LEGEND = [
-  { color: '#ffd6e0', label: '생리' },
-  { color: '#fce4f5', label: '가임기' },
+  { color: '#fecdd3', label: '생리' },
+  { color: '#ede9fe', label: '가임기' },
   { color: '#ff8fab', label: '배란일' },
-  { color: '#fda4af', label: '관계일(❤️)' },
+  { color: '#fb7185', label: '관계일(❤️)' },
+]
+
+const MOODS = [
+  { mood: 'great',   emoji: '😄', label: '최고' },
+  { mood: 'good',    emoji: '🙂', label: '좋아' },
+  { mood: 'excited', emoji: '🥰', label: '설레' },
+  { mood: 'hopeful', emoji: '🌸', label: '기대' },
+  { mood: 'neutral', emoji: '😐', label: '그냥' },
+  { mood: 'tired',   emoji: '😴', label: '피곤' },
+  { mood: 'anxious', emoji: '😟', label: '불안' },
+  { mood: 'sad',     emoji: '😢', label: '슬퍼' },
+  { mood: 'angry',   emoji: '😠', label: '화나' },
+  { mood: 'sick',    emoji: '🤒', label: '아파' },
 ]
 
 const PINK      = '#ff8fab'
@@ -75,6 +88,12 @@ export default function CalendarScreen() {
   const [savingSchedule, setSavingSchedule] = useState(false)
   const [checkedMeds, setCheckedMeds] = useState<Record<string, boolean>>({})
 
+  // 기분 & 메모 (Day Detail 모달 내)
+  const [dayMood, setDayMood] = useState<string | null>(null)
+  const [dayMemo, setDayMemo] = useState('')
+  const [savingDiary, setSavingDiary] = useState(false)
+  const [diarySaved, setDiarySaved] = useState(false)
+
   // 날짜 탭 → 당일 상세 모달
   const [isDayDetailModalOpen, setIsDayDetailModalOpen] = useState(false)
 
@@ -82,6 +101,7 @@ export default function CalendarScreen() {
   const [periodStartDate, setPeriodStartDate] = useState('')
   const [periodEndDate,   setPeriodEndDate]   = useState('')
   const [savingPeriod, setSavingPeriod] = useState(false)
+  const [isEditingPeriod, setIsEditingPeriod] = useState(false)
 
   // ──────────────────────────────────────────
   // 데이터 로드
@@ -93,9 +113,10 @@ export default function CalendarScreen() {
         hormonesApi.getAll(),
         treatmentApi.getAll(),
       ])
-      setCycles(fetchedCycles)
-      setHormones(fetchedHormones)
-      setSchedules(fetchedSchedules)
+      const unwrap = (r: any) => Array.isArray(r) ? r : (r?.data ?? [])
+      setCycles(unwrap(fetchedCycles))
+      setHormones(unwrap(fetchedHormones))
+      setSchedules(unwrap(fetchedSchedules))
     } catch (error) {
       console.error('데이터 로드 실패:', error)
     } finally {
@@ -151,11 +172,11 @@ export default function CalendarScreen() {
 
   const {
     currentYear, currentMonth, calendarDays,
-    selectedDate, selectedMood,
+    selectedDate,
     nextOvulationDate, nextPeriodDate,
     currentCycleDay, todayPhaseLabel,
     goToPrevMonth, goToNextMonth,
-    selectDate, selectMood, formatKorDate,
+    selectDate, formatKorDate,
   } = useCycleCalendar(lastPeriod, cycleLength, periodLength)
 
   const selectedDateStr = selectedDate
@@ -172,6 +193,23 @@ export default function CalendarScreen() {
     loadCheckedMeds()
   }, [selectedDateStr])
 
+  useEffect(() => {
+    if (!isDayDetailModalOpen) return
+    const loadDiary = async () => {
+      try {
+        const res = await diaryApi.getAll()
+        const diaries = Array.isArray(res) ? res : (res?.data ?? [])
+        const entry = diaries.find((d: any) => d.date === selectedDateStr)
+        setDayMood(entry?.mood ?? null)
+        setDayMemo(entry?.content ?? '')
+      } catch {
+        setDayMood(null)
+        setDayMemo('')
+      }
+    }
+    loadDiary()
+  }, [isDayDetailModalOpen, selectedDateStr])
+
   // ──────────────────────────────────────────
   // 이벤트 핸들러
   // ──────────────────────────────────────────
@@ -179,15 +217,21 @@ export default function CalendarScreen() {
     if (!periodStartDate) return
     setSavingPeriod(true)
     try {
+      const calcPeriodLength = periodEndDate
+        ? Math.max(1, Math.round((new Date(periodEndDate).getTime() - new Date(periodStartDate).getTime()) / 86400000) + 1)
+        : (selectedCycleRecord?.periodLength || periodLength)
       await cyclesApi.save({
+        id: selectedCycleRecord?.id,
         startDate: periodStartDate,
         endDate: periodEndDate || undefined,
         cycleLength,
-        periodLength: 5,
+        periodLength: calcPeriodLength,
       })
       const updated = await cyclesApi.getAll()
-      setCycles(updated)
+      const unwrap = (r: any) => Array.isArray(r) ? r : (r?.data ?? [])
+      setCycles(unwrap(updated))
       setIsDayDetailModalOpen(false)
+      setIsEditingPeriod(false)
     } catch {
       Alert.alert('오류', '생리 기록 저장에 실패했어요.')
     } finally {
@@ -195,17 +239,19 @@ export default function CalendarScreen() {
     }
   }
 
-  const handleSelectMood = async (mood: any) => {
-    selectMood(mood)
-    if (user) {
-      try {
-        const diaries = await diaryApi.getAll()
-        const todayDiary = diaries.find(d => d.date === selectedDateStr)
-        await diaryApi.save(selectedDateStr, {
-          mood,
-          content: todayDiary?.content || '오늘 기분을 캘린더에서 기록했어요.',
-        })
-      } catch {}
+  const handleSaveDiary = async () => {
+    if (!dayMood && !dayMemo.trim()) return
+    setSavingDiary(true)
+    try {
+      await diaryApi.save(selectedDateStr, {
+        mood: dayMood || 'neutral',
+        content: dayMemo.trim() || '기분을 기록했어요.',
+      })
+      setDiarySaved(true)
+      setTimeout(() => setDiarySaved(false), 2000)
+    } catch {}
+    finally {
+      setSavingDiary(false)
     }
   }
 
@@ -226,7 +272,10 @@ export default function CalendarScreen() {
 
   // 일정 저장 — 2회차 이상 일정 게이트
   const handleScheduleSubmit = async () => {
-    if (!user || !scheduleTitle.trim()) return
+    if (!scheduleTitle.trim()) {
+      Alert.alert('입력 오류', '일정 제목을 입력해 주세요.')
+      return
+    }
 
     // CLINIC 일정 2건 이상 게이트
     const canRegister = canUseClinicScheduler(ClinicFeature.REGISTER_FIRST_SCHEDULE, {
@@ -251,7 +300,8 @@ export default function CalendarScreen() {
         notes: scheduleNotes,
         medications,
       })
-      const updated = await treatmentApi.getAll()
+      const updatedRaw = await treatmentApi.getAll()
+      const updated = Array.isArray(updatedRaw) ? updatedRaw : (updatedRaw?.data ?? [])
       setSchedules(updated)
 
       // [데이터 보존] 약물 기록 데이터는 항상 저장. 알림 스케줄만 프리미엄 게이트.
@@ -267,6 +317,7 @@ export default function CalendarScreen() {
       setScheduleTime('09:00')
     } catch (err) {
       console.error(err)
+      Alert.alert('저장 실패', '일정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setSavingSchedule(false)
     }
@@ -373,7 +424,11 @@ export default function CalendarScreen() {
 
           {/* 요일 */}
           <View style={styles.weekdays}>
-            {WEEKDAYS.map(d => <Text key={d} style={styles.weekday}>{d}</Text>)}
+            {WEEKDAYS.map(d => (
+              <View key={d} style={styles.weekdayCell}>
+                <Text style={styles.weekday}>{d}</Text>
+              </View>
+            ))}
           </View>
 
           {/* 날짜 그리드 */}
@@ -387,11 +442,13 @@ export default function CalendarScreen() {
                   day={day}
                   isSelected={selectedDate?.getTime() === day.date.getTime()}
                   hasIntercourse={dayHormone?.intercourse === true}
+                  hasSchedule={schedules.some(s => s.scheduledAt.split('T')[0] === dateStr)}
                   onPress={(date) => {
                     selectDate(date)
                     const ds = date.toISOString().split('T')[0]
                     setPeriodStartDate(ds)
                     setPeriodEndDate('')
+                    setIsEditingPeriod(false)
                     setIsDayDetailModalOpen(true)
                   }}
                 />
@@ -432,8 +489,6 @@ export default function CalendarScreen() {
               formatKorDate={formatKorDate}
             />
           )}
-          <MoodPicker selected={selectedMood} onSelect={handleSelectMood} />
-
           {/* 날짜 탭 힌트 */}
           <Text style={styles.tapHint}>날짜를 탭하면 기록을 확인하거나 추가할 수 있어요</Text>
         </View>
@@ -653,6 +708,59 @@ export default function CalendarScreen() {
                 <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 520 }}>
                   <View style={styles.dayModalBody}>
 
+                    {/* 0. 기분 & 메모 */}
+                    <View style={styles.daySection}>
+                      <Text style={styles.daySectionTitle}>😊 오늘 기분 & 메모</Text>
+                      <View style={styles.moodGridRow}>
+                        {MOODS.slice(0, 5).map(({ mood, emoji, label }) => (
+                          <TouchableOpacity
+                            key={mood}
+                            style={[styles.moodGridBtn, dayMood === mood && styles.moodGridBtnActive]}
+                            onPress={() => setDayMood(mood)}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={styles.moodGridEmoji}>{emoji}</Text>
+                            <Text style={styles.moodGridLabel}>{label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <View style={[styles.moodGridRow, { marginTop: 5 }]}>
+                        {MOODS.slice(5).map(({ mood, emoji, label }) => (
+                          <TouchableOpacity
+                            key={mood}
+                            style={[styles.moodGridBtn, dayMood === mood && styles.moodGridBtnActive]}
+                            onPress={() => setDayMood(mood)}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={styles.moodGridEmoji}>{emoji}</Text>
+                            <Text style={styles.moodGridLabel}>{label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                      <TextInput
+                        style={styles.memoInput}
+                        value={dayMemo}
+                        onChangeText={setDayMemo}
+                        placeholder="오늘 하루 한 줄 메모..."
+                        placeholderTextColor="#c4a0ae"
+                        multiline
+                        numberOfLines={2}
+                      />
+                      <TouchableOpacity
+                        style={[styles.periodSaveBtn, (savingDiary || (!dayMood && !dayMemo.trim())) && styles.periodSaveBtnDisabled]}
+                        onPress={handleSaveDiary}
+                        disabled={savingDiary || (!dayMood && !dayMemo.trim())}
+                        activeOpacity={0.85}
+                      >
+                        {savingDiary
+                          ? <ActivityIndicator color="#fff" size="small" />
+                          : <Text style={styles.periodSaveBtnTxt}>
+                              {diarySaved ? '✓ 저장됐어요!' : '기분 & 메모 저장'}
+                            </Text>
+                        }
+                      </TouchableOpacity>
+                    </View>
+
                     {/* 1. 생리 기록 */}
                     <View style={styles.daySection}>
                       <View style={styles.daySectionRow}>
@@ -660,17 +768,37 @@ export default function CalendarScreen() {
                         <TouchableOpacity
                           style={styles.daySectionBtn}
                           onPress={() => {
-                            setPeriodStartDate(selectedDateStr)
-                            setPeriodEndDate(selectedCycleRecord?.endDate || '')
+                            if (selectedCycleRecord) {
+                              if (isEditingPeriod) {
+                                setIsEditingPeriod(false)
+                              } else {
+                                setPeriodStartDate(selectedCycleRecord?.startDate || selectedDateStr)
+                                const existingEnd = selectedCycleRecord?.endDate
+                                if (existingEnd) {
+                                  setPeriodEndDate(existingEnd)
+                                } else {
+                                  const start = new Date(selectedCycleRecord?.startDate || selectedDateStr)
+                                  start.setDate(start.getDate() + (selectedCycleRecord?.periodLength || periodLength) - 1)
+                                  setPeriodEndDate(start.toISOString().split('T')[0])
+                                }
+                                setIsEditingPeriod(true)
+                              }
+                            } else {
+                              setPeriodStartDate(selectedDateStr)
+                              setPeriodEndDate('')
+                              setIsEditingPeriod(true)
+                            }
                           }}
                         >
                           <Text style={styles.daySectionBtnTxt}>
-                            {selectedCycleRecord ? '수정하기' : '기록하기'}
+                            {selectedCycleRecord 
+                              ? (isEditingPeriod ? '수정 취소' : '수정하기') 
+                              : '기록하기'}
                           </Text>
                         </TouchableOpacity>
                       </View>
 
-                      {selectedCycleRecord ? (
+                      {selectedCycleRecord && !isEditingPeriod ? (
                         <View style={styles.daySectionContent}>
                           <Text style={styles.dayInfoRow}>시작: <Text style={styles.dayInfoVal}>{selectedCycleRecord.startDate}</Text></Text>
                           {selectedCycleRecord.endDate && (
@@ -680,7 +808,7 @@ export default function CalendarScreen() {
                         </View>
                       ) : (
                         <View>
-                          <Text style={styles.dayEmptyTxt}>이 날짜의 생리 기록이 없어요</Text>
+                          {!selectedCycleRecord && <Text style={styles.dayEmptyTxt}>이 날짜의 생리 기록이 없어요</Text>}
                           {/* 인라인 생리 입력 */}
                           <View style={styles.periodInputRow}>
                             <View style={styles.periodInputGroup}>
@@ -691,6 +819,7 @@ export default function CalendarScreen() {
                                 onChangeText={setPeriodStartDate}
                                 placeholder="YYYY-MM-DD"
                                 placeholderTextColor="#c4a0ae"
+                                autoFocus={isEditingPeriod}
                               />
                             </View>
                             <View style={styles.periodInputGroup}>
@@ -712,7 +841,9 @@ export default function CalendarScreen() {
                           >
                             {savingPeriod
                               ? <ActivityIndicator color="#fff" size="small" />
-                              : <Text style={styles.periodSaveBtnTxt}>생리 기록 저장</Text>
+                              : <Text style={styles.periodSaveBtnTxt}>
+                                  {selectedCycleRecord ? '기록 수정 완료' : '생리 기록 저장'}
+                                </Text>
                             }
                           </TouchableOpacity>
                         </View>
@@ -870,24 +1001,25 @@ const styles = StyleSheet.create({
   // 헤더
   header: { backgroundColor: PINK, paddingHorizontal: 20, paddingTop: 18, paddingBottom: 14 },
   monthNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 },
-  monthTitle: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  monthTitle: { fontFamily: F.bold,     fontSize: 18, color: '#fff' },
   navBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
-  navBtnText: { fontSize: 20, color: '#fff', lineHeight: 24 },
+  navBtnText: { fontFamily: F.regular,  fontSize: 20, color: '#fff', lineHeight: 24 },
   headerSubRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, alignSelf: 'flex-start' },
   statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#fff' },
-  statusText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  statusText: { fontFamily: F.bold,     fontSize: 12, color: '#fff' },
   addScheduleBtn: { backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6 },
-  addScheduleBtnText: { color: PINK, fontSize: 11, fontWeight: '700' },
+  addScheduleBtnText: { fontFamily: F.bold, color: PINK, fontSize: 11 },
 
   // 달력
-  weekdays: { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 12, paddingBottom: 4 },
-  weekday: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '700', color: PINK },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, paddingBottom: 12 },
+  weekdays:    { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 12, paddingBottom: 2 },
+  weekdayCell: { width: DAY_CELL_W, marginHorizontal: 2, alignItems: 'center' },
+  weekday:     { fontFamily: F.bold, fontSize: 11, color: PINK },
+  grid:        { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, paddingBottom: 12 },
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingBottom: 16 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendLabel: { fontSize: 11, fontWeight: '600', color: '#8c5060' },
+  legendLabel: { fontFamily: F.semiBold, fontSize: 11, color: '#8c5060' },
 
   // 주기 기록 없을 때 빈 상태
   noCycleBox: {
@@ -900,19 +1032,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  noCycleTitle:  { fontSize: 14, fontWeight: '700', color: DARK_ROSE },
-  noCycleSub:    { fontSize: 12, color: MUTED, textAlign: 'center', lineHeight: 18 },
+  noCycleTitle:  { fontFamily: F.bold,    fontSize: 14, color: DARK_ROSE },
+  noCycleSub:    { fontFamily: F.regular, fontSize: 12, color: MUTED, textAlign: 'center', lineHeight: 18 },
   noCycleBtn: {
     backgroundColor: PINK, borderRadius: 14,
     paddingHorizontal: 18, paddingVertical: 10, marginTop: 4,
   },
-  noCycleBtnTxt: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  noCycleBtnTxt: { fontFamily: F.bold, fontSize: 13, color: '#fff' },
 
   // 상세 섹션
   dateRecordsContainer: { padding: 16, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#fce4f5', gap: 14 },
-  selectedDateTitle: { fontSize: 14, fontWeight: '700', color: '#8c5060', marginBottom: 4 },
+  selectedDateTitle: { fontFamily: F.bold,    fontSize: 14, color: '#8c5060', marginBottom: 4 },
   card: { backgroundColor: '#fff8f9', borderRadius: 20, padding: 14, borderWidth: 1, borderColor: BORDER },
-  cardTitle: { fontSize: 11, fontWeight: '700', color: PINK, marginBottom: 10 },
+  cardTitle: { fontFamily: F.bold,    fontSize: 11, color: PINK, marginBottom: 10 },
 
   // 체크리스트
   checklist: { gap: 8 },
@@ -921,13 +1053,13 @@ const styles = StyleSheet.create({
   checkLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   checkbox: { width: 18, height: 18, borderRadius: 9, borderWidth: 1.5, borderColor: PINK, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
   checkboxActive: { backgroundColor: PINK, borderColor: PINK },
-  checkTick: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  medName: { fontSize: 11, fontWeight: '700', color: DARK_ROSE },
+  checkTick: { fontFamily: F.bold,    color: '#fff', fontSize: 10 },
+  medName: { fontFamily: F.bold,      fontSize: 11, color: DARK_ROSE },
   textDone: { color: '#9ca3af', textDecorationLine: 'line-through' },
-  medDose: { fontSize: 8, color: '#9ca3af', marginTop: 1 },
-  timeLabel: { fontSize: 9, fontWeight: '700', color: PINK, backgroundColor: '#ffe4e6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  medDose: { fontFamily: F.regular,   fontSize: 8, color: '#9ca3af', marginTop: 1 },
+  timeLabel: { fontFamily: F.bold,    fontSize: 9, color: PINK, backgroundColor: '#ffe4e6', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
   timeLabelDone: { color: '#9ca3af', backgroundColor: '#f3f4f6' },
-  emptyText: { fontSize: 11, color: '#9ca3af', textAlign: 'center', paddingVertical: 12 },
+  emptyText: { fontFamily: F.regular, fontSize: 11, color: '#9ca3af', textAlign: 'center', paddingVertical: 12 },
 
   // 약물 알림 게이트
   reminderDivider: { height: 1, backgroundColor: BORDER, marginVertical: 10 },
@@ -938,7 +1070,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: '#d8b4fe',
   },
   reminderBtnIcon: { fontSize: 15 },
-  reminderBtnTxt: { fontSize: 12, fontWeight: '700', color: '#7c3aed' },
+  reminderBtnTxt: { fontFamily: F.bold,     fontSize: 12, color: '#7c3aed' },
   lockedBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: LIGHT_PINK, borderRadius: 12,
@@ -947,49 +1079,49 @@ const styles = StyleSheet.create({
   },
   lockedLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   lockIcon: { fontSize: 15 },
-  lockedTitle: { fontSize: 12, fontWeight: '700', color: PINK },
-  lockedDesc: { fontSize: 10, color: MUTED, marginTop: 1 },
-  lockedArrow: { fontSize: 16, color: BORDER },
+  lockedTitle: { fontFamily: F.bold,    fontSize: 12, color: PINK },
+  lockedDesc: { fontFamily: F.regular,  fontSize: 10, color: MUTED, marginTop: 1 },
+  lockedArrow: { fontFamily: F.regular, fontSize: 16, color: BORDER },
 
   // 타임라인
   emptyScheduleContainer: { alignItems: 'center', paddingVertical: 10, gap: 6 },
-  addTextLink: { fontSize: 11, color: PINK, fontWeight: '700', textDecorationLine: 'underline' },
+  addTextLink: { fontFamily: F.bold,     fontSize: 11, color: PINK, textDecorationLine: 'underline' },
   timeline: { gap: 10 },
   timelineItem: { flexDirection: 'row' },
   itemContent: { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: BORDER, gap: 4 },
   itemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
-  badgeText: { fontSize: 8, fontWeight: '700' },
-  itemTime: { fontSize: 8, color: '#9ca3af' },
-  itemTitle: { fontSize: 11, fontWeight: '700', color: DARK_ROSE },
-  itemHospital: { fontSize: 8, color: '#9ca3af' },
+  badgeText: { fontFamily: F.bold,     fontSize: 8 },
+  itemTime: { fontFamily: F.regular,   fontSize: 8, color: '#9ca3af' },
+  itemTitle: { fontFamily: F.bold,     fontSize: 11, color: DARK_ROSE },
+  itemHospital: { fontFamily: F.regular, fontSize: 8, color: '#9ca3af' },
   notesBox: { backgroundColor: '#fff8f9', borderWidth: 0.5, borderColor: BORDER, padding: 6, borderRadius: 8 },
-  notesText: { fontSize: 9, color: '#8c5060', fontStyle: 'italic' },
+  notesText: { fontFamily: F.regular,  fontSize: 9, color: '#8c5060', fontStyle: 'italic' },
 
   // 일정 등록 모달
   modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, maxHeight: '85%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  modalTitle: { fontSize: 14, fontWeight: '700', color: DARK_ROSE },
-  closeBtnText: { fontSize: 11, color: '#9ca3af' },
+  modalTitle: { fontFamily: F.bold,    fontSize: 14, color: DARK_ROSE },
+  closeBtnText: { fontFamily: F.regular, fontSize: 11, color: '#9ca3af' },
   formContainer: { gap: 10 },
   inputGroup: { marginBottom: 8 },
-  inputLabel: { fontSize: 10, fontWeight: '700', color: PINK, marginBottom: 3 },
-  input: { borderWidth: 1, borderColor: BORDER, backgroundColor: '#fff8f9', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, fontSize: 12, color: DARK_ROSE },
+  inputLabel: { fontFamily: F.bold,    fontSize: 10, color: PINK, marginBottom: 3 },
+  input: { fontFamily: F.regular, borderWidth: 1, borderColor: BORDER, backgroundColor: '#fff8f9', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8, fontSize: 12, color: DARK_ROSE },
   gridInputs: { flexDirection: 'row', gap: 8, marginBottom: 6 },
   typeSelector: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 4 },
   typeBtn: { backgroundColor: '#fff8f9', borderWidth: 1, borderColor: BORDER, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
   activeTypeBtn: { backgroundColor: PINK, borderColor: PINK },
-  typeBtnText: { fontSize: 8, fontWeight: '700', color: PINK },
+  typeBtnText: { fontFamily: F.bold,   fontSize: 8, color: PINK },
   activeTypeBtnText: { color: '#fff' },
   subForm: { backgroundColor: '#fff8f9', borderWidth: 1, borderColor: BORDER, padding: 10, borderRadius: 14, gap: 6, marginBottom: 8 },
-  subFormTitle: { fontSize: 10, fontWeight: '700', color: PINK },
+  subFormTitle: { fontFamily: F.bold,  fontSize: 10, color: PINK },
   medTimeRow: { flexDirection: 'row', gap: 6, alignItems: 'center' },
   subAddBtn: { backgroundColor: '#ffe4e6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 10 },
-  subAddBtnText: { color: PINK, fontSize: 10, fontWeight: '700' },
+  subAddBtnText: { fontFamily: F.bold, color: PINK, fontSize: 10 },
   tempMedItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', padding: 6, borderRadius: 8, borderWidth: 0.5, borderColor: BORDER },
-  tempMedText: { fontSize: 8, color: DARK_ROSE, flex: 1 },
-  deleteText: { fontSize: 8, color: '#ef4444' },
+  tempMedText: { fontFamily: F.regular, fontSize: 8, color: DARK_ROSE, flex: 1 },
+  deleteText: { fontFamily: F.regular,  fontSize: 8, color: '#ef4444' },
 
   // 약물 알림 힌트 (모달 내)
   medReminderHint: {
@@ -999,15 +1131,49 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
   },
   lockIconSm: { fontSize: 12 },
-  medReminderHintTxtLocked: { fontSize: 10, color: MUTED, flex: 1 },
-  medReminderHintTxtPremium: { fontSize: 10, color: '#7c3aed', fontWeight: '600' },
+  medReminderHintTxtLocked: { fontFamily: F.regular,  fontSize: 10, color: MUTED, flex: 1 },
+  medReminderHintTxtPremium: { fontFamily: F.semiBold, fontSize: 10, color: '#7c3aed' },
 
   submitBtn: { backgroundColor: PINK, borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 8, marginBottom: 16 },
   submitBtnDisabled: { opacity: 0.45 },
-  submitBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  submitBtnText: { fontFamily: F.bold, color: '#fff', fontSize: 12 },
 
   // 날짜 탭 힌트
-  tapHint: { fontSize: 11, color: '#c4a0ae', textAlign: 'center', paddingVertical: 10 },
+  tapHint: { fontFamily: F.regular, fontSize: 11, color: '#c4a0ae', textAlign: 'center', paddingVertical: 10 },
+
+  // 기분 & 메모 (Day Detail 모달 내)
+  moodGridRow: { flexDirection: 'row', gap: 5, marginTop: 8 },
+  moodGridBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: '#ffd6e0',
+    backgroundColor: '#fff',
+    gap: 1,
+  },
+  moodGridBtnActive: {
+    backgroundColor: '#ffd6e0',
+    borderColor: '#ffb3c6',
+  },
+  moodGridEmoji: { fontSize: 16 },
+  moodGridLabel: { fontFamily: F.semiBold, fontSize: 9, color: '#8c5060' },
+  memoInput: {
+    fontFamily: F.regular,
+    borderWidth: 1,
+    borderColor: '#ffd6e0',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 12,
+    color: '#5a3042',
+    marginTop: 8,
+    minHeight: 56,
+    textAlignVertical: 'top',
+  },
 
   // Day Detail 모달
   dayModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.45)' },
@@ -1025,10 +1191,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 14,
   },
-  dayModalDate: { fontSize: 15, fontWeight: '700', color: DARK_ROSE },
+  dayModalDate: { fontFamily: F.bold, fontSize: 15, color: DARK_ROSE },
   dayPhaseBadgePeriod: {
+    fontFamily: F.bold,
     fontSize: 11,
-    fontWeight: '700',
     color: '#c0005a',
     backgroundColor: '#ffd6e0',
     paddingHorizontal: 8,
@@ -1038,8 +1204,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   dayPhaseBadgeOvul: {
+    fontFamily: F.bold,
     fontSize: 11,
-    fontWeight: '700',
     color: '#7c3aed',
     backgroundColor: '#f3e8ff',
     paddingHorizontal: 8,
@@ -1048,7 +1214,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
     alignSelf: 'flex-start',
   },
-  dayModalClose: { fontSize: 13, color: '#9ca3af', paddingTop: 2 },
+  dayModalClose: { fontFamily: F.regular,  fontSize: 13, color: '#9ca3af', paddingTop: 2 },
   dayModalBody: { gap: 14 },
 
   // 섹션
@@ -1060,24 +1226,25 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   daySectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  daySectionTitle: { fontSize: 13, fontWeight: '700', color: DARK_ROSE },
+  daySectionTitle: { fontFamily: F.bold,    fontSize: 13, color: DARK_ROSE },
   daySectionBtn: {
     backgroundColor: PINK,
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  daySectionBtnTxt: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  daySectionBtnTxt: { fontFamily: F.bold,    fontSize: 11, color: '#fff' },
   daySectionContent: { gap: 4 },
-  dayInfoRow: { fontSize: 12, color: MUTED },
-  dayInfoVal: { fontWeight: '700', color: DARK_ROSE },
-  dayEmptyTxt: { fontSize: 11, color: '#c4a0ae', marginBottom: 8 },
+  dayInfoRow: { fontFamily: F.regular,  fontSize: 12, color: MUTED },
+  dayInfoVal: { fontFamily: F.bold,     color: DARK_ROSE },
+  dayEmptyTxt: { fontFamily: F.regular, fontSize: 11, color: '#c4a0ae', marginBottom: 8 },
 
   // 생리 입력 폼
   periodInputRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   periodInputGroup: { flex: 1 },
-  periodInputLabel: { fontSize: 10, fontWeight: '700', color: PINK, marginBottom: 3 },
+  periodInputLabel: { fontFamily: F.bold,    fontSize: 10, color: PINK, marginBottom: 3 },
   periodInput: {
+    fontFamily: F.regular,
     borderWidth: 1,
     borderColor: BORDER,
     backgroundColor: '#fff',
@@ -1094,7 +1261,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   periodSaveBtnDisabled: { opacity: 0.45 },
-  periodSaveBtnTxt: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  periodSaveBtnTxt: { fontFamily: F.bold, fontSize: 12, color: '#fff' },
 
   // 건강 기록 칩
   healthRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
@@ -1106,7 +1273,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 5,
   },
-  healthChipTxt: { fontSize: 12, color: DARK_ROSE, fontWeight: '600' },
+  healthChipTxt: { fontFamily: F.semiBold, fontSize: 12, color: DARK_ROSE },
 
   // 시술 일정 아이템
   dayScheduleItem: {

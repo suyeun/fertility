@@ -114,7 +114,7 @@ export interface Medication {
   endDate?: string
 }
 
-export type Mood = 'great' | 'good' | 'neutral' | 'sad' | 'anxious' | 'hopeful'
+export type Mood = 'great' | 'good' | 'excited' | 'hopeful' | 'neutral' | 'tired' | 'anxious' | 'sad' | 'angry' | 'sick'
 
 export interface DiaryEntry {
   id: string

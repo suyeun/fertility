@@ -1,5 +1,5 @@
 // apps/mobile/app/chat/index.tsx
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native'
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Image } from 'react-native'
 import { router } from 'expo-router'
 
 const PINK = '#ff8fab'
@@ -19,7 +19,10 @@ export default function ChatScreen() {
 
         {/* 준비중 콘텐츠 */}
         <View style={styles.content}>
-          <Text style={styles.emoji}>🌸</Text>
+          <Image
+            source={require('../../../assets/clay_chat_bubble.png')}
+            style={styles.image}
+          />
           <Text style={styles.title}>AI 파트너 봄이</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>서비스 준비중</Text>
@@ -48,7 +51,12 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingBottom: 60,
   },
-  emoji: { fontSize: 64 },
+  image: {
+    width: 90,
+    height: 90,
+    resizeMode: 'contain',
+    marginBottom: 8,
+  },
   title: { fontSize: 22, fontWeight: '800', color: DARK_ROSE },
   badge: {
     backgroundColor: LIGHT_PINK,

@@ -50,6 +50,7 @@ export default function CalendarPage() {
   const [medStartDate, setMedStartDate] = useState('')
   const [medEndDate, setMedEndDate] = useState('')
   const [savingSchedule, setSavingSchedule] = useState(false)
+  const [scheduleError, setScheduleError] = useState('')
 
   // 약 복용 완료 상태 기록용 로컬스토리지 연동
   const [checkedMeds, setCheckedMeds] = useState<Record<string, boolean>>({})
@@ -57,11 +58,13 @@ export default function CalendarPage() {
   // 날짜 탭 → 당일 상세 모달
   const [isDayModalOpen, setIsDayModalOpen] = useState(false)
 
+  const unwrap = (r: any) => Array.isArray(r) ? r : (r?.data ?? [])
+
   const fetchCycles = async () => {
     if (!user) return
     try {
       const data = await cyclesApi.getAll()
-      setCycles(data)
+      setCycles(unwrap(data))
     } catch (err) {
       console.error(err)
     }
@@ -71,7 +74,7 @@ export default function CalendarPage() {
     if (!user) return
     try {
       const data = await hormonesApi.getAll()
-      setHormones(data)
+      setHormones(unwrap(data))
     } catch (err) {
       console.error(err)
     }
@@ -81,7 +84,7 @@ export default function CalendarPage() {
     if (!user) return
     try {
       const data = await treatmentApi.getAll()
-      setSchedules(data)
+      setSchedules(unwrap(data))
     } catch (err) {
       console.error(err)
     }
@@ -185,12 +188,15 @@ export default function CalendarPage() {
 
       // 1. 생리 기록 저장
       if (includePeriod) {
+        const calcPeriodLength = endDate
+          ? Math.max(1, Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000) + 1)
+          : periodLength
         promises.push(
           cyclesApi.save({
             startDate,
             endDate: endDate || undefined,
             cycleLength,
-            periodLength,
+            periodLength: calcPeriodLength,
             notes: notes || undefined
           })
         )
@@ -250,7 +256,7 @@ export default function CalendarPage() {
 
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    setScheduleError('')
     setSavingSchedule(true)
     try {
       const fullDateTime = `${selectedDateStr}T${scheduleTime || '09:00'}`
@@ -272,6 +278,7 @@ export default function CalendarPage() {
       setScheduleTime('09:00')
     } catch (err) {
       console.error(err)
+      setScheduleError('일정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setSavingSchedule(false)
     }
@@ -301,8 +308,14 @@ export default function CalendarPage() {
   })
 
   const openPeriodRecord = () => {
-    setStartDate(selectedDateStr)
-    setEndDate(selectedCycleRecord?.endDate || '')
+    setStartDate(selectedCycleRecord?.startDate || selectedDateStr)
+    if (selectedCycleRecord?.endDate) {
+      setEndDate(selectedCycleRecord.endDate)
+    } else {
+      const start = new Date(selectedCycleRecord?.startDate || selectedDateStr)
+      start.setDate(start.getDate() + (selectedCycleRecord?.periodLength || periodLength) - 1)
+      setEndDate(start.toISOString().split('T')[0])
+    }
     setIncludePeriod(true)
     setIncludeIntercourse(false)
     setIncludeHealth(false)
@@ -493,11 +506,11 @@ export default function CalendarPage() {
         {/* 콤팩트 범례 한 줄 */}
         <div className="flex flex-wrap justify-center items-center gap-x-5 gap-y-1.5 mt-4 pt-3.5 border-t border-slate-100/60 text-[10px] text-rose-900/50 font-medium">
           <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-red-400"></span>
+            <span className="w-2 h-2 rounded-full bg-[#fecdd3]"></span>
             <span>생리 기간</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-rose-200 border border-dashed border-rose-300"></span>
+            <span className="w-2 h-2 rounded-full bg-[#ede9fe]"></span>
             <span>가임 시기</span>
           </div>
           <div className="flex items-center gap-1">
@@ -1023,6 +1036,9 @@ export default function CalendarPage() {
                 )}
               </div>
 
+              {scheduleError && (
+                <p className="text-xs text-red-500 text-center -mb-1">{scheduleError}</p>
+              )}
               <button
                 type="submit"
                 disabled={savingSchedule}

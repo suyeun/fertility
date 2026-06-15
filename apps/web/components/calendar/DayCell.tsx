@@ -9,13 +9,13 @@ interface DayCellProps {
 }
 
 const phaseStyles: Record<string, string> = {
-  menstrual: 'bg-[#ffd6e0] text-[#c0005a]',
+  menstrual: 'bg-[#fecdd3] text-[#9f1239]',
   ovulation: 'bg-[#ff8fab] text-white rounded-full',
   follicular: '',
   luteal: '',
 }
 
-const fertileBg = 'bg-[#fce4f5] text-[#8e0070]'
+const fertileBg = 'bg-[#ede9fe] text-[#5b21b6]'
 
 export function DayCell({ day, isSelected, onClick }: DayCellProps) {
   const { date, dayNum, isCurrentMonth, isToday, cycleInfo } = day
@@ -32,17 +32,17 @@ export function DayCell({ day, isSelected, onClick }: DayCellProps) {
   if (isOvulation) {
     cellClass += 'bg-[#ff8fab] rounded-full '
   } else if (isMenstruation) {
-    cellClass += 'bg-[#ffd6e0] rounded-xl '
+    cellClass += 'bg-[#fecdd3] rounded-xl '
   } else if (isFertile) {
-    cellClass += 'bg-[#fce4f5] rounded-xl '
+    cellClass += 'bg-[#ede9fe] rounded-xl '
   }
 
   if (isSelected && !isOvulation) cellClass += 'ring-2 ring-[#ff4d7d] ring-offset-1 '
 
   let numClass = 'text-[13px] font-semibold '
   if (isOvulation) numClass += 'text-white '
-  else if (isMenstruation) numClass += 'text-[#c0005a] '
-  else if (isFertile) numClass += 'text-[#8e0070] '
+  else if (isMenstruation) numClass += 'text-[#9f1239] '
+  else if (isFertile) numClass += 'text-[#5b21b6] '
   else numClass += 'text-[#5a3042] '
 
   if (isToday) numClass += 'underline decoration-[#ff4d7d] decoration-2 underline-offset-2 '

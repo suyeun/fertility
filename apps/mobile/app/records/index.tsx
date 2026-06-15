@@ -119,10 +119,11 @@ export default function RecordsScreen() {
 
   const fetchDiaries = async (userId: string) => {
     try {
-      const data = await diaryApi.getAll()
+      const res = await diaryApi.getAll()
+      const data = Array.isArray(res) ? res : (res?.data ?? [])
       setDiaries(data)
-      
-      const todayEntry = data.find(d => d.date === todayStr)
+
+      const todayEntry = data.find((d: any) => d.date === todayStr)
       if (todayEntry) {
         setSelectedMood(todayEntry.mood)
         setDiaryContent(todayEntry.content)
@@ -286,6 +287,22 @@ export default function RecordsScreen() {
       hopeful: [
         "희망과 긍정적인 기대는 임신 준비에 가장 반짝이는 빛입니다! 다가올 따사로운 기적을 향한 기대가 당신의 온 몸에 활력 넘치는 비타민이 되어 줄 거예요.",
         "긍정적인 마음을 품고 매 단계를 성실히 밟아가는 당신의 발걸음을 힘껏 응원합니다. 바라시던 그 따사로운 봄소식이 곧 품안에 안길 것을 믿어 의심치 않습니다."
+      ],
+      excited: [
+        "설레는 마음이 온몸에 넘치는 하루네요! 두근거림과 기대감이 가득한 이 에너지가 당신의 몸에 긍정적인 활력을 불어넣고 있어요. 소중한 설렘을 오래 간직하세요.",
+        "가슴 뛰는 감정은 참 아름다운 신호예요. 임신 준비의 여정 속에서 이런 설렘을 느낀다는 것 자체가 얼마나 소중한지 몰라요. 오늘의 이 두근거림을 기억해두세요."
+      ],
+      tired: [
+        "몸도 마음도 지쳐있는 날이죠. 충분히 쉬어도 괜찮아요. 오늘은 무리하지 말고 따뜻한 차 한 잔과 함께 몸이 회복할 시간을 주세요. 내일은 더 가벼운 하루가 될 거예요.",
+        "피로함은 당신이 지금껏 얼마나 열심히 살아왔는지 보여주는 증거예요. 오늘만큼은 스스로에게 충분한 휴식을 선물하세요. 잘 쉬어야 다시 힘을 낼 수 있으니까요."
+      ],
+      angry: [
+        "화가 나는 건 당연한 감정이에요. 억누르지 말고 잠시 깊게 숨을 들이쉬어보세요. 감정을 인정하고 나면 한결 가벼워질 거예요. 당신의 감정은 모두 소중합니다.",
+        "힘든 상황에서 화가 나는 것은 자연스러운 반응이에요. 감정을 충분히 느끼고 나서, 따뜻한 물로 씻어내듯 조금씩 내려놓아 보세요. 당신 편인 봄이가 응원하고 있어요."
+      ],
+      sick: [
+        "몸이 아프면 마음도 쉽게 지치죠. 충분한 수분과 휴식이 지금 가장 중요해요. 오늘은 몸의 신호에 귀 기울이고 조심히 쉬어가세요. 빨리 나아지기를 바라요.",
+        "아픈 몸이 하루빨리 회복되기를 진심으로 바라요. 무리하지 말고 따뜻하게 지내세요. 몸이 스스로 회복할 수 있도록 충분한 쉼을 주는 것도 임신 준비의 소중한 일부예요."
       ]
     }
     const pool = defaultMessages[mood] || defaultMessages['neutral']
