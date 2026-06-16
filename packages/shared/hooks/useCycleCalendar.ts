@@ -34,6 +34,13 @@ export interface UseCycleCalendarReturn {
   formatKorDate: (date: Date) => string
 }
 
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 export function useCycleCalendar(
   lastPeriodStart: Date | null,
   cycleLength = 28,
@@ -76,7 +83,7 @@ export function useCycleCalendar(
     for (let i = startDow - 1; i >= 0; i--) {
       const date = new Date(y, m - 1, prevMonthDays - i)
       date.setHours(0, 0, 0, 0)
-      const key = date.toISOString().split('T')[0]
+      const key = toLocalDateStr(date)
       days.push({
         date,
         dayNum: date.getDate(),
@@ -90,7 +97,7 @@ export function useCycleCalendar(
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(y, m, d)
       date.setHours(0, 0, 0, 0)
-      const key = date.toISOString().split('T')[0]
+      const key = toLocalDateStr(date)
       days.push({
         date,
         dayNum: d,
@@ -105,7 +112,7 @@ export function useCycleCalendar(
     for (let i = 1; i <= remaining; i++) {
       const date = new Date(y, m + 1, i)
       date.setHours(0, 0, 0, 0)
-      const key = date.toISOString().split('T')[0]
+      const key = toLocalDateStr(date)
       days.push({
         date,
         dayNum: i,
@@ -137,7 +144,7 @@ export function useCycleCalendar(
     [lastPeriodStart, cycleLength]
   )
 
-  const todayKey = today.toISOString().split('T')[0]
+  const todayKey = toLocalDateStr(today)
   const todayInfo = cycleDayMap.get(todayKey)
   const todayPhaseLabel = todayInfo
     ? {

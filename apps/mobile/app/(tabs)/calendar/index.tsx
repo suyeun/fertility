@@ -51,6 +51,13 @@ const MOODS = [
   { mood: 'sick',    emoji: '🤒', label: '아파' },
 ]
 
+function toLocalDateStr(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
 const PINK      = '#ff8fab'
 const DARK_ROSE = '#5a3042'
 const MUTED     = '#b07080'
@@ -179,9 +186,11 @@ export default function CalendarScreen() {
     selectDate, formatKorDate,
   } = useCycleCalendar(lastPeriod, cycleLength, periodLength)
 
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
   const selectedDateStr = selectedDate
-    ? selectedDate.toISOString().split('T')[0]
-    : new Date().toISOString().split('T')[0]
+    ? toLocalDateStr(selectedDate)
+    : toLocalDateStr(today)
 
   useEffect(() => {
     const loadCheckedMeds = async () => {
@@ -434,7 +443,7 @@ export default function CalendarScreen() {
           {/* 날짜 그리드 */}
           <View style={styles.grid}>
             {calendarDays.map((day, i) => {
-              const dateStr = day.date.toISOString().split('T')[0]
+              const dateStr = toLocalDateStr(day.date)
               const dayHormone = hormones.find(h => h.recordedAt === dateStr)
               return (
                 <DayCell
@@ -445,7 +454,7 @@ export default function CalendarScreen() {
                   hasSchedule={schedules.some(s => s.scheduledAt.split('T')[0] === dateStr)}
                   onPress={(date) => {
                     selectDate(date)
-                    const ds = date.toISOString().split('T')[0]
+                    const ds = toLocalDateStr(date)
                     setPeriodStartDate(ds)
                     setPeriodEndDate('')
                     setIsEditingPeriod(false)
@@ -779,7 +788,7 @@ export default function CalendarScreen() {
                                 } else {
                                   const start = new Date(selectedCycleRecord?.startDate || selectedDateStr)
                                   start.setDate(start.getDate() + (selectedCycleRecord?.periodLength || periodLength) - 1)
-                                  setPeriodEndDate(start.toISOString().split('T')[0])
+                                  setPeriodEndDate(toLocalDateStr(start))
                                 }
                                 setIsEditingPeriod(true)
                               }

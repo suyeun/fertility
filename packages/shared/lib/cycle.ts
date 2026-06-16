@@ -19,8 +19,15 @@ export function calculateCycleDays(
   // 배란일 = 다음 생리 예정일 - 14일 (황체기 고정)
   const ovulationDay = cycleLength - 14
 
+  // 로컬 자정 기준으로 시작 (UTC 변환 시 날짜 밀림 방지)
+  const startLocal = new Date(
+    lastPeriodStart.getFullYear(),
+    lastPeriodStart.getMonth(),
+    lastPeriodStart.getDate()
+  )
+
   for (let i = 0; i < daysAhead; i++) {
-    const date = new Date(lastPeriodStart)
+    const date = new Date(startLocal)
     date.setDate(date.getDate() + i)
 
     // 현재 사이클 내 몇 번째 날인지 (1-based)
@@ -60,7 +67,11 @@ export function getNextOvulationDate(
   cycleLength: number = 28
 ): Date {
   const ovulationDay = cycleLength - 14
-  const next = new Date(lastPeriodStart)
+  const next = new Date(
+    lastPeriodStart.getFullYear(),
+    lastPeriodStart.getMonth(),
+    lastPeriodStart.getDate()
+  )
   next.setDate(next.getDate() + ovulationDay - 1)
   return next
 }
@@ -72,7 +83,11 @@ export function getNextPeriodDate(
   lastPeriodStart: Date,
   cycleLength: number = 28
 ): Date {
-  const next = new Date(lastPeriodStart)
+  const next = new Date(
+    lastPeriodStart.getFullYear(),
+    lastPeriodStart.getMonth(),
+    lastPeriodStart.getDate()
+  )
   next.setDate(next.getDate() + cycleLength)
   return next
 }
@@ -91,5 +106,8 @@ export function getCurrentCycleDay(
 }
 
 function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0]
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
