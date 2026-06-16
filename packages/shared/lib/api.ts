@@ -35,11 +35,14 @@ export const setToken = (t: string | null) => tokenSetter?.(t)
 
 type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE'
 
+const DEFAULT_TIMEOUT_MS = 10_000
+
 async function request<T = any>(
   method: Method,
   path: string,
   body?: any,
   stream = false,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
 ): Promise<T> {
   const url = `${getBaseUrl()}${path}`
   const token = getToken()
@@ -49,11 +52,23 @@ async function request<T = any>(
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+
+  let res: Response
+  try {
+    res = await fetch(url, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    })
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw new Error('요청 시간이 초과됐어요. 네트워크 상태를 확인해주세요.')
+    throw e
+  } finally {
+    clearTimeout(timer)
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: res.statusText }))
@@ -130,14 +145,25 @@ export const aiApi = {
   ) => {
     const url = `${getBaseUrl()}/ai/chat`
     const token = getToken()
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ messages, mode }),
-    })
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 30_000)
+    let res: Response
+    try {
+      res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ messages, mode }),
+        signal: controller.signal,
+      })
+    } catch (e: any) {
+      clearTimeout(timer)
+      if (e?.name === 'AbortError') throw new Error('AI 응답 시간이 초과됐어요. 다시 시도해주세요.')
+      throw e
+    }
+    clearTimeout(timer)
     if (!res.ok) throw new Error(`AI API ${res.status}`)
     const reader = res.body?.getReader()
     if (!reader) throw new Error('No reader')

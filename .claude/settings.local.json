@@ -29,7 +29,14 @@
       "Bash(unzip -j pretendard_std.zip public/static/alternative/PretendardStd-Regular.ttf public/static/alternative/PretendardStd-Medium.ttf public/static/alternative/PretendardStd-SemiBold.ttf public/static/alternative/PretendardStd-Bold.ttf -d /Users/mbp2019/Downloads/fertility-app/apps/mobile/assets/fonts/)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(npx expo *)",
+      "Bash(pod install *)",
+      "Bash(xcrun simctl *)",
+      "Bash(sudo xcrun simctl erase all)",
+      "Bash(xcodebuild -version)",
+      "Bash(sw_vers)",
+      "Bash(rm -rf ~/Library/Developer/Xcode/DerivedData && echo \"done\")"
     ]
   }
 }
