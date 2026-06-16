@@ -31,7 +31,7 @@ export class CyclesService {
 
       const hasMore = docs.length > limit
       const data = hasMore ? docs.slice(0, limit) : docs
-      const lastItem = data.at(-1) as any
+      const lastItem = data[data.length - 1] as any
       const nextCursor = hasMore ? (lastItem?.startDate ?? null) : null
 
       return { data, nextCursor, hasMore }
