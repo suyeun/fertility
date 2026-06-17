@@ -27,7 +27,6 @@ import { CycleSummary } from '../../../components/calendar/CycleSummary'
 import PaywallModal from '../../../components/PaywallModal'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { rescheduleMedicationAlerts } from '../../../lib/notifications'
-import { getSubscriptionStatus } from '../../../lib/purchases'
 import { F } from '../../../lib/fonts'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
@@ -69,9 +68,9 @@ export default function CalendarScreen() {
   const { profile: storeProfile } = useUserStore()
   const [user, setUser]         = useState<any>(null)
   const [profile, setProfile]   = useState<UserProfile | null>(null)
-  const [isPremium, setIsPremium] = useState(false)
 
   const effectiveProfile = storeProfile ?? profile
+  const isPremium = effectiveProfile ? isPremiumProfile(effectiveProfile) : false
   const treatmentMode: TreatmentMode = (effectiveProfile?.treatmentStage as TreatmentMode) ?? 'natural'
   const currentStage: CurrentStage = (effectiveProfile as any)?._currentStage ?? null
   const [cycles, setCycles]     = useState<any[]>([])
@@ -150,32 +149,15 @@ export default function CalendarScreen() {
 
         setUser(u)
 
-        // 프로필 + 구독 상태 병렬 로드
-        const [p, sub] = await Promise.all([
-          // usersApi.getProfile()은 @fertility/shared에서 import 필요
-          import('@fertility/shared').then(m => m.usersApi.getProfile()).catch(() => null),
-          getSubscriptionStatus(),
-        ])
-
-        if (p) {
-          setProfile(p)
-          // TODO: [RevenueCat 연동] RevenueCat SDK(sub.isActive)가 단일 소스.
-          // profile의 subscriptionStatus는 웹훅 동기화 지연이 있을 수 있으므로
-          // 모바일에서는 SDK 값을 우선한다.
-          setIsPremium(sub.isActive)
-        }
+        // 프로필 로드 (_layout의 addCustomerInfoListener가 isPremium을 스토어에 자동 동기화)
+        const p = await import('@fertility/shared').then(m => m.usersApi.getProfile()).catch(() => null)
+        if (p) setProfile(p)
 
         await fetchData(u.uid)
       } catch { setLoading(false) }
     }
     init()
   }, [fetchData])
-
-  // 페이월 성공 후 구독 상태 새로고침
-  const handlePaywallSuccess = async () => {
-    const sub = await getSubscriptionStatus()
-    setIsPremium(sub.isActive)
-  }
 
   // ──────────────────────────────────────────
   // 달력 상태
@@ -1047,7 +1029,7 @@ export default function CalendarScreen() {
         visible={paywallSource !== null}
         source={paywallSource ?? 'generic'}
         onClose={() => setPaywallSource(null)}
-        onSuccess={handlePaywallSuccess}
+        onSuccess={() => {}}
       />
     </>
   )

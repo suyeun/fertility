@@ -49,8 +49,13 @@ export const useUserStore = create<UserStore>((set, get) => ({
   setCurrentStage: (stage) => {
     const profile = get().profile
     if (!profile) return
-    // currentStage는 서버 스키마에 없으므로 로컬에만 보관
-    const updated = { ...profile, _currentStage: stage } as any
+    const today = new Date().toISOString().split('T')[0]
+    // _currentStage, _stageStartedAt 모두 로컬에만 보관
+    const updated = {
+      ...profile,
+      _currentStage: stage,
+      _stageStartedAt: stage ? today : null,
+    } as any
     set({ profile: updated })
     _storage?.setItem(STORAGE_KEY, JSON.stringify(updated))
   },
@@ -83,10 +88,12 @@ export const useUserStore = create<UserStore>((set, get) => ({
     try {
       const serverProfile = await usersApi.getProfile()
       if (serverProfile) {
-        // 서버는 currentStage로 반환하지만 스토어/화면은 _currentStage로 읽음
+        // 서버 프로필 병합 시 로컬 전용 필드(_currentStage, _stageStartedAt) 보존
+        const existing = get().profile as any
         const profile = {
           ...serverProfile,
-          _currentStage: (serverProfile as any).currentStage ?? null,
+          _currentStage: (serverProfile as any).currentStage ?? existing?._currentStage ?? null,
+          _stageStartedAt: existing?._stageStartedAt ?? null,
         }
         set({ profile })
         await _storage?.setItem(STORAGE_KEY, JSON.stringify(profile))

@@ -51,10 +51,10 @@ function StageBar({ mode, stage }: { mode: TreatmentMode; stage: CurrentStage })
 
 // ── 히어로 카드 ──────────────────────────────────────────────
 function HeroCard({
-  treatmentMode, currentStage, phase, phaseLabel, cycleDay, tip, dDay, isFertileWindow,
+  treatmentMode, currentStage, phase, phaseLabel, cycleDay, stageDay, tip, dDay, isFertileWindow,
 }: {
   treatmentMode: TreatmentMode; currentStage: CurrentStage
-  phase: string; phaseLabel: string; cycleDay: number
+  phase: string; phaseLabel: string; cycleDay: number; stageDay: number | null
   tip: string; dDay: string; isFertileWindow: boolean
 }) {
   // 자연임신
@@ -103,7 +103,7 @@ function HeroCard({
   return (
     <View style={[hero.card, { backgroundColor: bgColor }]}>
       <View style={hero.ddayBadge}>
-        <Text style={hero.ddayNum}>{cycleDay}일</Text>
+        <Text style={hero.ddayNum}>{stageDay ?? cycleDay}일</Text>
         <Text style={hero.ddayLabel}>치료 중</Text>
       </View>
       <Text style={hero.meta}>{modeLabel}</Text>
@@ -211,8 +211,12 @@ export default function HomeScreen() {
 
   const profile = storeProfile ?? serverProfile
 
-  const treatmentMode = (profile?.treatmentStage as TreatmentMode) ?? 'natural'
-  const currentStage  = (profile as any)?._currentStage as CurrentStage ?? null
+  const treatmentMode     = (profile?.treatmentStage as TreatmentMode) ?? 'natural'
+  const currentStage      = (profile as any)?._currentStage as CurrentStage ?? null
+  const stageStartedAt    = (profile as any)?._stageStartedAt as string | null ?? null
+  const stageDay = stageStartedAt
+    ? Math.max(1, Math.floor((Date.now() - new Date(stageStartedAt).getTime()) / 86400000) + 1)
+    : null
 
   const home = useHomeData(treatmentMode, currentStage, cycles, hormones, schedules, diaries)
 
@@ -267,6 +271,7 @@ export default function HomeScreen() {
           phase={home.todayCycleInfo?.phase ?? 'follicular'}
           phaseLabel={home.todayPhaseLabel}
           cycleDay={home.currentCycleDay}
+          stageDay={stageDay}
           tip={home.todayTip}
           dDay={home.ovulationDDay}
           isFertileWindow={home.isFertileWindow}

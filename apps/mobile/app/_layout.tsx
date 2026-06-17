@@ -2,10 +2,23 @@ import { useEffect } from 'react'
 import { Stack } from 'expo-router'
 import { useFonts } from 'expo-font'
 import * as SplashScreen from 'expo-splash-screen'
+import { initPurchases, addCustomerInfoListener, ENTITLEMENT_ID } from '../lib/purchases'
+import { useUserStore } from '@fertility/shared'
 
 SplashScreen.preventAutoHideAsync()
 
 export default function RootLayout() {
+  const setPremium = useUserStore(s => s.setPremium)
+
+  useEffect(() => {
+    initPurchases().catch(() => {})
+    const remove = addCustomerInfoListener(info => {
+      const isActive = !!info.entitlements.active[ENTITLEMENT_ID]
+      setPremium(isActive)
+    })
+    return remove
+  }, [])
+
   const [loaded, error] = useFonts({
     'Pretendard-Regular':  require('../assets/fonts/PretendardStd-Regular.ttf'),
     'Pretendard-Medium':   require('../assets/fonts/PretendardStd-Medium.ttf'),
