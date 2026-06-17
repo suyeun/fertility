@@ -30,6 +30,32 @@ export const PDF_REPORT = {
     + '진료 참고 자료로 활용하실 수 있습니다.',
 } as const
 
+// ============================
+// 치료 모드 & 단계 타입
+// ============================
+
+export type TreatmentMode = 'natural' | 'iui' | 'ivf'
+
+export type IUIStage =
+  | 'stimulation'   // 과배란 유도기
+  | 'monitoring'    // 배란 모니터링
+  | 'procedure'     // 시술일
+  | 'luteal'        // 황체기 / 착상 대기
+  | 'result'        // 판정
+
+export type IVFStage =
+  | 'stimulation'   // 과배란 유도기
+  | 'monitoring'    // 난포 모니터링
+  | 'retrieval'     // 난자 채취
+  | 'culture'       // 수정 / 배양
+  | 'transfer'      // 배아 이식
+  | 'luteal'        // 황체기 / 착상 대기
+  | 'result'        // 판정 (β-hCG)
+
+export type CurrentStage = IUIStage | IVFStage | null
+
+// ============================
+
 export type CyclePhase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal'
 
 // 캘린더 이벤트 구분 — 모드 스위칭 시 데이터 연속성 보장

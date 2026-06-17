@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { authApi, usersApi, configureTokenStore, setToken } from '@fertility/shared'
+import { authApi, usersApi, configureTokenStore, configureUserStore, setToken, useUserStore } from '@fertility/shared'
 import { UserProfile, UserMode } from '@fertility/shared'
 import { useRouter, usePathname } from 'next/navigation'
 
@@ -10,6 +10,11 @@ if (typeof window !== 'undefined') {
     () => localStorage.getItem('bom_token'),
     (t) => t ? localStorage.setItem('bom_token', t) : localStorage.removeItem('bom_token'),
   )
+  configureUserStore({
+    getItem: (key) => localStorage.getItem(key),
+    setItem: (key, value) => localStorage.setItem(key, value),
+    removeItem: (key) => localStorage.removeItem(key),
+  })
 }
 
 interface AuthContextType {
@@ -40,16 +45,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const mode: UserMode = profile?.currentMode
     ?? (profile?.treatmentStage === 'natural' ? 'NATURAL' : 'CLINIC')
 
+  const { setProfile: setStoreProfile, clearProfile } = useUserStore()
+
   const loadProfile = useCallback(async () => {
     try {
       const p = await usersApi.getProfile()
       setProfile(p)
+      setStoreProfile(p)
       return p
     } catch {
       setProfile(null)
+      setStoreProfile(null)
       return null
     }
-  }, [])
+  }, [setStoreProfile])
 
   const refreshProfile = useCallback(async () => {
     if (user) await loadProfile()
@@ -127,6 +136,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setToken(null)
     setUser(null)
     setProfile(null)
+    clearProfile()
     router.push('/login')
   }
 

@@ -1,6 +1,14 @@
 // 모바일 토큰 저장소 — expo-secure-store 사용
 import * as SecureStore from 'expo-secure-store'
-import { configureTokenStore, authApi } from '@fertility/shared'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { configureTokenStore, configureUserStore } from '@fertility/shared'
+
+// userStore AsyncStorage 어댑터 주입
+configureUserStore({
+  getItem: (key) => AsyncStorage.getItem(key),
+  setItem: (key, value) => AsyncStorage.setItem(key, value),
+  removeItem: (key) => AsyncStorage.removeItem(key),
+})
 
 const TOKEN_KEY = 'bom_access_token'
 const USER_KEY = 'bom_user'

@@ -15,6 +15,6 @@
     "moduleResolution": "node",
     "ignoreDeprecations": "6.0"
   },
-  "include": ["index.ts", "lib/**/*", "types/**/*", "hooks/**/*", "data/**/*"],
+  "include": ["index.ts", "lib/**/*", "types/**/*", "hooks/**/*", "data/**/*", "store/**/*"],
   "exclude": ["node_modules", "dist", "**/*.spec.ts"]
 }
