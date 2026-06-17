@@ -10,8 +10,8 @@ import { useState } from 'react'
 
 export default function OnboardingPage() {
   const {
-    step, data, totalSteps,
-    selectMode, setStage, setCycleLength, goBack,
+    step, displayStep, data, totalSteps,
+    selectMode, setCurrentStage, setCycleLength, goBack,
   } = useOnboarding()
   const [done, setDone] = useState(false)
 
@@ -22,7 +22,7 @@ export default function OnboardingPage() {
         {!done && (
           <div className="text-center mb-6">
             <span className="text-2xl">🌸</span>
-            <span className="text-base font-bold text-[#ff8fab] ml-1">Lunera</span>
+            <span className="text-base font-bold text-[#ff8fab] ml-1">BOM</span>
           </div>
         )}
 
@@ -30,19 +30,22 @@ export default function OnboardingPage() {
           <CompleteScreen data={data} />
         ) : (
           <>
-            <ProgressBar step={step} totalSteps={totalSteps} onBack={goBack} />
+            <ProgressBar step={displayStep} totalSteps={totalSteps} onBack={goBack} />
 
-            {/* Step 1: 모드 선택 (자연임신 / 병원 시술) */}
+            {/* Step 1: 모드 선택 (자연임신 / IUI / IVF) */}
             {step === 1 && (
               <Step1 onSelect={selectMode} />
             )}
 
-            {/* Step 2: CLINIC 모드만 — 시술 단계 선택 */}
-            {step === 2 && (
-              <Step2 onSelect={setStage} />
+            {/* Step 2: 시술 단계 선택 (iui/ivf 전용) */}
+            {step === 2 && data.treatmentMode && data.treatmentMode !== 'natural' && (
+              <Step2
+                treatmentMode={data.treatmentMode}
+                onSelect={setCurrentStage}
+              />
             )}
 
-            {/* Step 3 (NATURAL: Step 2): 주기 길이 입력 */}
+            {/* Step 3: 주기 입력 */}
             {step === 3 && (
               <Step3
                 cycleLength={data.cycleLength}

@@ -18,6 +18,14 @@ export class UpdateProfileDto {
   treatmentStage?: string
 
   @IsOptional()
+  @IsEnum([
+    'stimulation', 'monitoring', 'procedure',
+    'retrieval', 'culture', 'transfer',
+    'luteal', 'result',
+  ])
+  currentStage?: string | null
+
+  @IsOptional()
   @IsInt()
   @Min(15)
   @Max(60)

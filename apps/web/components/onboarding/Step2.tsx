@@ -1,43 +1,48 @@
 'use client'
 
-import type { TreatmentStage } from '@fertility/shared'
-import { CLINIC_STAGE_OPTIONS } from '@fertility/shared'
+import type { TreatmentMode, CurrentStage } from '@fertility/shared'
+import { IUI_STAGE_OPTIONS, IVF_STAGE_OPTIONS } from '@fertility/shared'
 
 interface Step2Props {
-  onSelect: (stage: TreatmentStage) => void
+  treatmentMode: TreatmentMode
+  onSelect: (stage: CurrentStage) => void
 }
 
-// Step 2: CLINIC 모드 전용 — 시술 단계 선택
-export function Step2({ onSelect }: Step2Props) {
+export function Step2({ treatmentMode, onSelect }: Step2Props) {
+  const options = treatmentMode === 'iui' ? IUI_STAGE_OPTIONS : IVF_STAGE_OPTIONS
+  const title = treatmentMode === 'iui' ? '인공수정(IUI)' : '시험관(IVF)'
+
   return (
     <div>
       <h2 className="text-xl font-bold text-[#5a3042] mb-1">
-        어떤 시술을<br />진행 중이세요?
+        {title} 치료<br />어느 단계인가요?
       </h2>
-      <p className="text-sm text-[#b07080] mb-6">
-        시술 단계에 맞는 기록·알림 기능을 열어드릴게요
+      <p className="text-sm text-[#b07080] mb-5">
+        단계에 맞는 기록·알림 기능을 열어드릴게요
       </p>
-      <div className="flex flex-col gap-3">
-        {CLINIC_STAGE_OPTIONS.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onSelect(opt.value)}
-            className="flex items-center gap-4 p-4 bg-white rounded-2xl border border-[#ffd6e0] hover:border-[#ff8fab] hover:bg-[#fff0f4] transition-all text-left group"
-          >
-            <span
-              className="text-2xl w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0"
-              style={{ backgroundColor: `${opt.color}18` }}
+      <div className="flex flex-col gap-2">
+        {options.map((opt, i) => {
+          const isUnknown = opt.value === null
+          return (
+            <button
+              key={i}
+              onClick={() => onSelect(opt.value)}
+              className={`flex items-center gap-3 p-4 rounded-2xl border transition-all text-left group
+                ${isUnknown
+                  ? 'border-dashed border-[#e0c0c8] hover:border-[#ff8fab] hover:bg-[#fff0f4]'
+                  : 'border border-[#ffd6e0] hover:border-[#ff8fab] hover:bg-[#fff0f4]'
+                }`}
             >
-              {opt.emoji}
-            </span>
-            <div>
-              <div className="text-sm font-semibold text-[#5a3042] group-hover:text-[#c0005a]">
+              <span className="text-xl w-9 h-9 flex items-center justify-center rounded-xl bg-[#fff0f4] flex-shrink-0">
+                {opt.emoji}
+              </span>
+              <span className={`text-sm font-semibold group-hover:text-[#c0005a]
+                ${isUnknown ? 'text-[#b07080]' : 'text-[#5a3042]'}`}>
                 {opt.label}
-              </div>
-              <div className="text-xs text-[#b07080] mt-0.5">{opt.sub}</div>
-            </div>
-          </button>
-        ))}
+              </span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

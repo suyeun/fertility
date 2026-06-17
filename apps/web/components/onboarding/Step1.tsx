@@ -1,10 +1,10 @@
 'use client'
 
-import type { UserMode } from '@fertility/shared'
+import type { TreatmentMode } from '@fertility/shared'
 import { MODE_OPTIONS } from '@fertility/shared'
 
 interface Step1Props {
-  onSelect: (mode: UserMode) => void
+  onSelect: (mode: TreatmentMode) => void
 }
 
 export function Step1({ onSelect }: Step1Props) {

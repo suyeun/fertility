@@ -96,9 +96,19 @@ export const authApi = {
   me: () => request('GET', '/auth/me'),
 }
 
+export interface UpdateProfilePayload {
+  name?: string
+  partnerName?: string
+  currentMode?: 'NATURAL' | 'CLINIC'
+  treatmentStage?: 'natural' | 'iui' | 'ivf' | 'fet' | 'pregnant'
+  currentStage?: string | null
+  averageCycleLength?: number
+  averagePeriodLength?: number
+}
+
 export const usersApi = {
   getProfile: () => request('GET', '/users/profile'),
-  updateProfile: (data: any) => request('PATCH', '/users/profile', data),
+  updateProfile: (data: UpdateProfilePayload) => request('PATCH', '/users/profile', data),
 }
 
 export const cyclesApi = {
