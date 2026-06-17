@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsEnum, IsNumber, Min, Max, IsInt } from 'class-validator'
+import { IsString, IsOptional, IsEnum, IsNumber, Min, Max, IsInt, ValidateIf } from 'class-validator'
 
 export class UpdateProfileDto {
   @IsOptional()
@@ -18,6 +18,7 @@ export class UpdateProfileDto {
   treatmentStage?: string
 
   @IsOptional()
+  @ValidateIf((o) => o.currentStage !== null)
   @IsEnum([
     'stimulation', 'monitoring', 'procedure',
     'retrieval', 'culture', 'transfer',

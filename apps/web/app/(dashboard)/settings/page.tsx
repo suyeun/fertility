@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { usersApi } from '@fertility/shared'
+import { usersApi, useModeChange, useUserStore, MODE_OPTIONS, IUI_STAGE_OPTIONS, IVF_STAGE_OPTIONS, getStageLabelKo } from '@fertility/shared'
 import { useRouter } from 'next/navigation'
 import {
   Settings, ChevronRight, X, Minus, Plus, AlertTriangle,
@@ -18,7 +18,7 @@ const STAGE_OPTIONS = [
   { value: 'pregnant', emoji: '🌸', label: '임신 성공 🎉',        sub: '소중한 생명을 품고 있어요' },
 ] as const
 
-type ModalType = 'profile' | 'nickname' | 'stage' | 'cycle' | 'terms' | 'privacy' | 'delete' | null
+type ModalType = 'profile' | 'nickname' | 'stage' | 'cycle' | 'terms' | 'privacy' | 'delete' | 'mode_change' | 'stage_change' | 'confirm_nat' | null
 
 // ─── 재사용 소형 컴포넌트 ────────────────────────────────────────────
 
@@ -108,8 +108,22 @@ function ModalSheet({
 // ─── 주 컴포넌트 ─────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const { user, profile, logout, refreshProfile } = useAuth()
+  const { user, profile: authProfile, logout, refreshProfile } = useAuth()
+  const { profile: storeProfile, syncProfile } = useUserStore()
+  const profile = storeProfile ?? authProfile
   const router = useRouter()
+
+  const {
+    sheet: modeSheet, saving: modeSaving, pendingMode,
+    currentMode, currentStage,
+    openModeSheet, openStageSheet, closeSheet: closeModeSheet,
+    handleModeSelect, confirmToNatural, handleStageSelect,
+  } = useModeChange()
+
+  const handleModeChangeComplete = async () => {
+    await syncProfile()
+    await refreshProfile()
+  }
 
   const [modal, setModal] = useState<ModalType>(null)
   const [saving, setSaving] = useState(false)
@@ -238,6 +252,27 @@ export default function SettingsPage() {
             수정
           </button>
         </div>
+      </div>
+
+      {/* 나의 치료 정보 */}
+      <div className="space-y-1.5">
+        <SectionTitle label="나의 치료 정보" />
+        <SectionCard>
+          <SettingRow
+            emoji={MODE_OPTIONS.find(m => m.value === currentMode)?.emoji ?? '🌱'}
+            label="현재 모드"
+            value={MODE_OPTIONS.find(m => m.value === currentMode)?.label}
+            onClick={openModeSheet}
+          />
+          {currentMode !== 'natural' && (
+            <SettingRow
+              emoji="📍"
+              label="현재 단계"
+              value={currentStage ? getStageLabelKo(currentMode, currentStage) : '미설정'}
+              onClick={openStageSheet}
+            />
+          )}
+        </SectionCard>
       </div>
 
       {/* 계정 설정 */}
@@ -508,6 +543,84 @@ export default function SettingsPage() {
             <p className="text-gray-400 text-[10px] pt-2 border-t border-slate-100">
               시행일: 2025년 1월 1일 | 개인정보보호 책임자: privacy@fertilitybom.com
             </p>
+          </div>
+        </ModalSheet>
+      )}
+
+      {/* 8. 모드 변경 */}
+      {modeSheet === 'mode' && (
+        <ModalSheet title="치료 모드 변경" subtitle="현재 상황에 맞는 모드를 선택해주세요" onClose={closeModeSheet}>
+          <div className="space-y-2.5">
+            {MODE_OPTIONS.map(opt => {
+              const isSelected = currentMode === opt.value
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => handleModeSelect(opt.value)}
+                  disabled={modeSaving}
+                  className={`w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl border transition-all ${
+                    isSelected ? 'border-[#ff8fab] bg-[#fff0f4]' : 'border-slate-100 hover:border-rose-100'
+                  }`}
+                >
+                  <span className="text-xl w-9 h-9 flex items-center justify-center rounded-xl flex-shrink-0"
+                    style={{ backgroundColor: opt.color + '18' }}>
+                    {opt.emoji}
+                  </span>
+                  <div className="text-left flex-1">
+                    <p className={`text-sm font-semibold ${isSelected ? 'text-[#c0005a]' : 'text-slate-700'}`}>{opt.label}</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">{opt.sub}</p>
+                  </div>
+                  {isSelected && <div className="w-4 h-4 rounded-full bg-[#ff8fab] flex items-center justify-center"><div className="w-1.5 h-1.5 rounded-full bg-white" /></div>}
+                </button>
+              )
+            })}
+          </div>
+        </ModalSheet>
+      )}
+
+      {/* 9. 시술 단계 변경 */}
+      {modeSheet === 'stage' && (
+        <ModalSheet
+          title={`${pendingMode === 'iui' || (!pendingMode && currentMode === 'iui') ? '인공수정(IUI)' : '시험관(IVF)'} 단계 선택`}
+          subtitle="현재 진행 중인 단계를 선택해주세요"
+          onClose={closeModeSheet}
+        >
+          <div className="space-y-2">
+            {(pendingMode === 'iui' || (!pendingMode && currentMode === 'iui') ? IUI_STAGE_OPTIONS : IVF_STAGE_OPTIONS).map((opt, i) => {
+              const isUnknown = opt.value === null
+              const isSelected = currentStage === opt.value && !pendingMode
+              return (
+                <button
+                  key={i}
+                  onClick={async () => { await handleStageSelect(opt.value); await handleModeChangeComplete() }}
+                  disabled={modeSaving}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl border transition-all text-left
+                    ${isSelected ? 'border-[#ff8fab] bg-[#fff0f4]' : isUnknown ? 'border-dashed border-slate-200 hover:border-rose-100' : 'border-slate-100 hover:border-rose-100'}`}
+                >
+                  <span className="text-lg w-8 h-8 flex items-center justify-center rounded-xl bg-[#fff0f4] flex-shrink-0">{opt.emoji}</span>
+                  <span className={`text-sm font-semibold ${isUnknown ? 'text-gray-400' : isSelected ? 'text-[#c0005a]' : 'text-slate-700'}`}>{opt.label}</span>
+                </button>
+              )
+            })}
+          </div>
+        </ModalSheet>
+      )}
+
+      {/* 10. 시술 → 자연임신 확인 */}
+      {modeSheet === 'confirm_nat' && (
+        <ModalSheet title="자연임신 모드로 변경" onClose={closeModeSheet}>
+          <div className="space-y-4">
+            <div className="bg-[#fff0f4] border border-[#ffd6e0] rounded-2xl p-4 text-sm text-[#8c5060] leading-relaxed">
+              🌸 시술 관련 기록은 모두 유지됩니다.<br />모드만 자연임신 준비로 변경할게요.
+            </div>
+            <button
+              onClick={async () => { await confirmToNatural(); await handleModeChangeComplete() }}
+              disabled={modeSaving}
+              className="w-full py-3.5 bg-[#22c55e] text-white rounded-2xl text-sm font-semibold disabled:opacity-50"
+            >
+              {modeSaving ? '변경 중...' : '자연임신 모드로 변경'}
+            </button>
+            <button onClick={closeModeSheet} className="w-full py-3 text-sm text-gray-400">취소</button>
           </div>
         </ModalSheet>
       )}

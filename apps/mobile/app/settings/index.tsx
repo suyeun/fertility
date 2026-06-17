@@ -1,36 +1,54 @@
-// apps/mobile/app/settings/index.tsx
 import { useState, useEffect } from 'react'
 import {
-  View, Text, ScrollView, TouchableOpacity,
-  StyleSheet, Switch, SafeAreaView, Alert, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  Switch, SafeAreaView, Alert, ActivityIndicator, Modal,
 } from 'react-native'
 import { router } from 'expo-router'
 import * as Notifications from 'expo-notifications'
-import { usersApi, canUseClinicScheduler, ClinicFeature } from '@fertility/shared'
-import type { UserProfile, PaywallSource } from '@fertility/shared'
+import {
+  usersApi, canUseClinicScheduler, ClinicFeature,
+  useModeChange, useUserStore, MODE_OPTIONS,
+  IUI_STAGE_OPTIONS, IVF_STAGE_OPTIONS, getStageLabelKo,
+} from '@fertility/shared'
+import type { PaywallSource } from '@fertility/shared'
 import { clearAuth } from '../../lib/auth'
 import {
-  requestNotificationPermissions,
-  registerPushToken,
-  scheduleDailyBBTReminder,
-  cancelDailyBBTReminder,
-  rescheduleMedicationAlerts,
+  requestNotificationPermissions, registerPushToken,
+  scheduleDailyBBTReminder, cancelDailyBBTReminder, rescheduleMedicationAlerts,
 } from '../../lib/notifications'
 import { getSubscriptionStatus } from '../../lib/purchases'
 import { treatmentApi } from '@fertility/shared'
 import PaywallModal from '../../components/PaywallModal'
+import { F } from '../../lib/fonts'
 
-const PINK      = '#ff8fab'
-const DARK_ROSE = '#5a3042'
-const MUTED     = '#b07080'
-const BORDER    = '#ffd6e0'
+const PINK       = '#ff8fab'
+const DARK_ROSE  = '#5a3042'
+const MUTED      = '#b07080'
+const BORDER     = '#ffd6e0'
 const LIGHT_PINK = '#fff0f4'
 
-export default function SettingsScreen() {
-  const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [loading, setLoading] = useState(true)
+// ── 바텀시트 공통 래퍼 ──────────────────────────────────
+function BottomSheet({ visible, title, subtitle, onClose, children }: {
+  visible: boolean; title: string; subtitle?: string
+  onClose: () => void; children: React.ReactNode
+}) {
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <TouchableOpacity style={bs.overlay} activeOpacity={1} onPress={onClose} />
+      <View style={bs.sheet}>
+        <View style={bs.handle} />
+        <Text style={bs.title}>{title}</Text>
+        {subtitle && <Text style={bs.subtitle}>{subtitle}</Text>}
+        <ScrollView showsVerticalScrollIndicator={false}>{children}</ScrollView>
+      </View>
+    </Modal>
+  )
+}
 
-  // 알림 토글 상태
+export default function SettingsScreen() {
+  const { profile: storeProfile, syncProfile } = useUserStore()
+
+  // 알림
   const [notifPermission, setNotifPermission] = useState(false)
   const [dailyBBT,        setDailyBBT]        = useState(false)
   const [medReminder,     setMedReminder]      = useState(false)
@@ -38,17 +56,29 @@ export default function SettingsScreen() {
   const [subStatus, setSubStatus] = useState<{ isActive: boolean; expiresAt: string | null }>({
     isActive: false, expiresAt: null,
   })
-
-  // 페이월 모달
+  const [loading, setLoading] = useState(true)
   const [paywallSource, setPaywallSource] = useState<PaywallSource | null>(null)
-
   const isPremium = subStatus.isActive
+
+  // 모드/단계 변경 훅
+  const {
+    sheet: modeSheet, saving: modeSaving, pendingMode,
+    currentMode, currentStage,
+    openModeSheet, openStageSheet, closeSheet,
+    handleModeSelect, confirmToNatural, handleStageSelect,
+  } = useModeChange()
+
+  const closeModeSheet = async () => {
+    closeSheet()
+    await syncProfile()
+  }
+
+  const profile = storeProfile
 
   useEffect(() => {
     const init = async () => {
       try {
-        const p = await usersApi.getProfile()
-        setProfile(p)
+        await syncProfile()
       } catch {}
 
       const { status } = await Notifications.getPermissionsAsync()
@@ -56,25 +86,20 @@ export default function SettingsScreen() {
 
       const scheduled = await Notifications.getAllScheduledNotificationsAsync()
       setDailyBBT(scheduled.some(n => n.identifier === 'bom_daily_bbt'))
-
-      // 약물 알림 활성 여부 확인
       setMedReminder(scheduled.some(n => (n.content.data as any)?.tag === 'medication'))
 
       const sub = await getSubscriptionStatus()
       setSubStatus(sub)
-
       setLoading(false)
     }
     init()
   }, [])
 
-  // 구독 성공 후 상태 갱신
   const handlePaywallSuccess = async () => {
     const sub = await getSubscriptionStatus()
     setSubStatus(sub)
   }
 
-  // ── 앱 알림 권한 토글 ──
   const handleNotifToggle = async (value: boolean) => {
     setCheckingPermission(true)
     if (value) {
@@ -84,11 +109,7 @@ export default function SettingsScreen() {
         await registerPushToken()
         if (dailyBBT) await scheduleDailyBBTReminder()
       } else {
-        Alert.alert(
-          '알림 권한 필요',
-          '기기 설정에서 BOM 앱의 알림을 허용해 주세요.',
-          [{ text: '확인' }],
-        )
+        Alert.alert('알림 권한 필요', '기기 설정에서 BOM 앱의 알림을 허용해 주세요.')
       }
     } else {
       await Notifications.cancelAllScheduledNotificationsAsync()
@@ -99,44 +120,26 @@ export default function SettingsScreen() {
     setCheckingPermission(false)
   }
 
-  // ── 일일 BBT 알림 토글 ──
   const handleDailyBBTToggle = async (value: boolean) => {
-    if (!notifPermission) {
-      Alert.alert('알림 권한 필요', '먼저 알림을 활성화해 주세요.')
-      return
-    }
+    if (!notifPermission) { Alert.alert('알림 권한 필요', '먼저 알림을 활성화해 주세요.'); return }
     setDailyBBT(value)
     if (value) await scheduleDailyBBTReminder()
     else await cancelDailyBBTReminder()
   }
 
-  // ── 약물 알림 토글 — MEDICATION_REMINDER 게이트 ──
   const handleMedReminderToggle = async (value: boolean) => {
-    if (!notifPermission) {
-      Alert.alert('알림 권한 필요', '먼저 알림을 활성화해 주세요.')
-      return
+    if (!notifPermission) { Alert.alert('알림 권한 필요', '먼저 알림을 활성화해 주세요.'); return }
+    if (!canUseClinicScheduler(ClinicFeature.MEDICATION_REMINDER, { isPremium })) {
+      setPaywallSource('medication_reminder'); return
     }
-
-    const canEnable = canUseClinicScheduler(ClinicFeature.MEDICATION_REMINDER, { isPremium })
-    if (!canEnable) {
-      setPaywallSource('medication_reminder')
-      return
-    }
-
     setMedReminder(value)
     if (value) {
-      // 현재 등록된 모든 시술 일정의 약물 알림 재스케줄
-      try {
-        const schedules = await treatmentApi.getAll()
-        await rescheduleMedicationAlerts(schedules)
-      } catch {}
+      try { const schedules = await treatmentApi.getAll(); await rescheduleMedicationAlerts(schedules) } catch {}
     } else {
-      // 약물 알림만 취소 (appointment D-1은 유지)
       const scheduled = await Notifications.getAllScheduledNotificationsAsync()
       for (const n of scheduled) {
-        if ((n.content.data as any)?.tag === 'medication') {
+        if ((n.content.data as any)?.tag === 'medication')
           await Notifications.cancelScheduledNotificationAsync(n.identifier)
-        }
       }
     }
   }
@@ -144,166 +147,231 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     Alert.alert('로그아웃', '로그아웃 하시겠어요?', [
       { text: '취소', style: 'cancel' },
-      {
-        text: '로그아웃',
-        style: 'destructive',
-        onPress: async () => {
-          await clearAuth()
-          router.replace('/login' as any)
-        },
-      },
+      { text: '로그아웃', style: 'destructive', onPress: async () => { await clearAuth(); router.replace('/login' as any) } },
     ])
   }
 
+  const stageOptions = (pendingMode ?? currentMode) === 'iui' ? IUI_STAGE_OPTIONS : IVF_STAGE_OPTIONS
+  const modeLabel = MODE_OPTIONS.find(m => m.value === currentMode)?.label ?? '자연임신 준비 중이에요'
+
   if (loading) {
-    return (
-      <SafeAreaView style={styles.safe}>
-        <ActivityIndicator color={PINK} style={{ marginTop: 40 }} />
-      </SafeAreaView>
-    )
+    return <SafeAreaView style={s.safe}><ActivityIndicator color={PINK} style={{ marginTop: 40 }} /></SafeAreaView>
   }
 
   return (
     <>
-      <SafeAreaView style={styles.safe}>
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <SafeAreaView style={s.safe}>
+        <ScrollView style={s.scroll} contentContainerStyle={s.content}>
 
           {/* 헤더 */}
-          <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backText}>{'<'}</Text>
+          <View style={s.header}>
+            <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
+              <Text style={s.backText}>{'<'}</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>설정</Text>
+            <Text style={s.headerTitle}>설정</Text>
             <View style={{ width: 32 }} />
           </View>
 
-          {/* 프로필 */}
+          {/* 프로필 카드 */}
           {profile && (
-            <View style={styles.profileCard}>
-              <Text style={styles.profileName}>{profile.name}</Text>
-              <Text style={styles.profileEmail}>{profile.email}</Text>
-              <View style={styles.stageBadge}>
-                <Text style={styles.stageText}>{STAGE_LABEL[profile.treatmentStage || 'natural']}</Text>
-              </View>
+            <View style={s.profileCard}>
+              <Text style={s.profileName}>{profile.name}</Text>
+              <Text style={s.profileEmail}>{profile.email}</Text>
             </View>
           )}
 
-          {/* 알림 설정 */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>🔔 알림 설정</Text>
+          {/* ── 나의 치료 정보 ── */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>🌸 나의 치료 정보</Text>
 
-            {/* 앱 알림 */}
-            <View style={styles.row}>
-              <View style={styles.rowLeft}>
-                <Text style={styles.rowLabel}>앱 알림 활성화</Text>
-                <Text style={styles.rowDesc}>시술 일정·약물·기록 독려 알림</Text>
+            <TouchableOpacity style={s.row} onPress={openModeSheet} activeOpacity={0.8}>
+              <View style={s.rowLeft}>
+                <Text style={s.rowLabel}>현재 모드</Text>
+                <Text style={s.rowDesc}>{modeLabel}</Text>
+              </View>
+              <Text style={s.chevron}>변경 ›</Text>
+            </TouchableOpacity>
+
+            {currentMode !== 'natural' && (
+              <TouchableOpacity style={s.row} onPress={openStageSheet} activeOpacity={0.8}>
+                <View style={s.rowLeft}>
+                  <Text style={s.rowLabel}>현재 단계</Text>
+                  <Text style={s.rowDesc}>
+                    {currentStage ? getStageLabelKo(currentMode, currentStage) : '아직 미설정 — 탭해서 설정'}
+                  </Text>
+                </View>
+                <Text style={s.chevron}>변경 ›</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* 알림 설정 */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>🔔 알림 설정</Text>
+            <View style={s.row}>
+              <View style={s.rowLeft}>
+                <Text style={s.rowLabel}>앱 알림 활성화</Text>
+                <Text style={s.rowDesc}>시술 일정·약물·기록 독려 알림</Text>
               </View>
               {checkingPermission
                 ? <ActivityIndicator color={PINK} size="small" />
-                : <Switch
-                    value={notifPermission}
-                    onValueChange={handleNotifToggle}
-                    trackColor={{ false: BORDER, true: PINK }}
-                    thumbColor="#fff"
-                  />
+                : <Switch value={notifPermission} onValueChange={handleNotifToggle}
+                    trackColor={{ false: BORDER, true: PINK }} thumbColor="#fff" />
               }
             </View>
-
-            {/* 일일 BBT */}
-            <View style={[styles.row, !notifPermission && styles.rowDisabled]}>
-              <View style={styles.rowLeft}>
-                <Text style={styles.rowLabel}>매일 아침 기초체온 알림</Text>
-                <Text style={styles.rowDesc}>매일 오전 7시 BBT 기록 독려</Text>
+            <View style={[s.row, !notifPermission && s.rowDisabled]}>
+              <View style={s.rowLeft}>
+                <Text style={s.rowLabel}>매일 아침 기초체온 알림</Text>
+                <Text style={s.rowDesc}>매일 오전 7시 BBT 기록 독려</Text>
               </View>
-              <Switch
-                value={dailyBBT}
-                onValueChange={handleDailyBBTToggle}
-                disabled={!notifPermission}
-                trackColor={{ false: BORDER, true: PINK }}
-                thumbColor="#fff"
-              />
+              <Switch value={dailyBBT} onValueChange={handleDailyBBTToggle} disabled={!notifPermission}
+                trackColor={{ false: BORDER, true: PINK }} thumbColor="#fff" />
             </View>
-
-            {/* ── 약물 복용 알림 — 프리미엄 게이트 ── */}
             {isPremium ? (
-              // 프리미엄: 활성 스위치
-              <View style={[styles.row, !notifPermission && styles.rowDisabled]}>
-                <View style={styles.rowLeft}>
-                  <Text style={styles.rowLabel}>💊 약물 복용 알림</Text>
-                  <Text style={styles.rowDesc}>등록된 약물 정시 투약 알림</Text>
+              <View style={[s.row, !notifPermission && s.rowDisabled]}>
+                <View style={s.rowLeft}>
+                  <Text style={s.rowLabel}>💊 약물 복용 알림</Text>
+                  <Text style={s.rowDesc}>등록된 약물 정시 투약 알림</Text>
                 </View>
-                <Switch
-                  value={medReminder}
-                  onValueChange={handleMedReminderToggle}
-                  disabled={!notifPermission}
-                  trackColor={{ false: BORDER, true: PINK }}
-                  thumbColor="#fff"
-                />
+                <Switch value={medReminder} onValueChange={handleMedReminderToggle} disabled={!notifPermission}
+                  trackColor={{ false: BORDER, true: PINK }} thumbColor="#fff" />
               </View>
             ) : (
-              // 비프리미엄: 잠긴 미리보기 — 숨기지 않고 비활성 노출
-              <TouchableOpacity
-                style={styles.lockedRow}
-                onPress={() => setPaywallSource('medication_reminder')}
-                activeOpacity={0.8}
-              >
-                <View style={styles.lockedRowLeft}>
-                  <View style={styles.lockBadge}>
-                    <Text style={styles.lockBadgeTxt}>🔒</Text>
-                  </View>
-                  <View style={styles.rowLeft}>
-                    <Text style={[styles.rowLabel, { color: PINK }]}>약물 복용 알림</Text>
-                    <Text style={styles.rowDesc}>프리미엄으로 정시 투약 알림 활성화</Text>
-                  </View>
+              <TouchableOpacity style={s.lockedRow} onPress={() => setPaywallSource('medication_reminder')} activeOpacity={0.8}>
+                <View style={s.rowLeft}>
+                  <Text style={[s.rowLabel, { color: PINK }]}>🔒 약물 복용 알림</Text>
+                  <Text style={s.rowDesc}>프리미엄으로 정시 투약 알림 활성화</Text>
                 </View>
-                <Text style={styles.lockedCta}>켜기 ›</Text>
+                <Text style={s.chevron}>켜기 ›</Text>
               </TouchableOpacity>
             )}
-
-            {/* 시술 D-1 알림 안내 (무료) */}
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
-                🌸 시술 D-1 알림은 시술 일정을 등록하면 자동으로 스케줄링돼요.
-              </Text>
+            <View style={s.infoBox}>
+              <Text style={s.infoText}>🌸 시술 D-1 알림은 시술 일정을 등록하면 자동으로 스케줄링돼요.</Text>
             </View>
           </View>
 
           {/* 구독 */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💎 구독</Text>
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>💎 구독</Text>
             {subStatus.isActive ? (
-              <View style={styles.subActiveBox}>
-                <Text style={styles.subActiveTitle}>✅ 프리미엄 구독 중</Text>
+              <View style={s.subActiveBox}>
+                <Text style={s.subActiveTitle}>✅ 프리미엄 구독 중</Text>
                 {subStatus.expiresAt && (
-                  <Text style={styles.subActiveDesc}>
-                    {new Date(subStatus.expiresAt).toLocaleDateString('ko-KR')} 자동 갱신
-                  </Text>
+                  <Text style={s.subActiveDesc}>{new Date(subStatus.expiresAt).toLocaleDateString('ko-KR')} 자동 갱신</Text>
                 )}
               </View>
             ) : (
-              <TouchableOpacity
-                style={styles.subBtn}
-                onPress={() => router.push('/subscription' as any)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.subBtnText}>🌸 프리미엄 구독하기</Text>
-                <Text style={styles.subBtnArrow}>›</Text>
+              <TouchableOpacity style={s.subBtn} onPress={() => router.push('/subscription' as any)} activeOpacity={0.85}>
+                <Text style={s.subBtnText}>🌸 프리미엄 구독하기</Text>
+                <Text style={s.subBtnArrow}>›</Text>
               </TouchableOpacity>
             )}
           </View>
 
           {/* 계정 */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>👤 계정</Text>
-            <TouchableOpacity style={styles.dangerRow} onPress={handleLogout}>
-              <Text style={styles.dangerText}>로그아웃</Text>
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>👤 계정</Text>
+            <TouchableOpacity style={s.dangerRow} onPress={handleLogout}>
+              <Text style={s.dangerText}>로그아웃</Text>
             </TouchableOpacity>
           </View>
 
         </ScrollView>
       </SafeAreaView>
 
-      {/* 페이월 모달 */}
+      {/* ── 모드 변경 바텀시트 ── */}
+      <BottomSheet
+        visible={modeSheet === 'mode'}
+        title="치료 모드 변경"
+        subtitle="현재 상황에 맞는 모드를 선택해주세요"
+        onClose={closeModeSheet}
+      >
+        <View style={{ gap: 8, paddingBottom: 24 }}>
+          {MODE_OPTIONS.map(opt => {
+            const isSelected = currentMode === opt.value
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                style={[bs.optionBtn, isSelected && bs.optionBtnActive]}
+                onPress={() => handleModeSelect(opt.value)}
+                disabled={modeSaving}
+                activeOpacity={0.8}
+              >
+                <View style={[bs.optionIcon, { backgroundColor: opt.color + '18' }]}>
+                  <Text style={{ fontSize: 22 }}>{opt.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[bs.optionLabel, isSelected && { color: '#c0005a' }]}>{opt.label}</Text>
+                  <Text style={bs.optionSub}>{opt.sub}</Text>
+                </View>
+                {isSelected && <View style={bs.selectedDot}><View style={bs.selectedDotInner} /></View>}
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+      </BottomSheet>
+
+      {/* ── 시술 단계 변경 바텀시트 ── */}
+      <BottomSheet
+        visible={modeSheet === 'stage'}
+        title={`${(pendingMode ?? currentMode) === 'iui' ? '인공수정(IUI)' : '시험관(IVF)'} 단계 선택`}
+        subtitle="현재 진행 중인 단계를 선택해주세요"
+        onClose={closeModeSheet}
+      >
+        <View style={{ gap: 8, paddingBottom: 24 }}>
+          {stageOptions.map((opt, i) => {
+            const isUnknown = opt.value === null
+            const isSelected = currentStage === opt.value && !pendingMode
+            return (
+              <TouchableOpacity
+                key={i}
+                style={[bs.optionBtn, isSelected && bs.optionBtnActive, isUnknown && bs.optionBtnDashed]}
+                onPress={async () => { await handleStageSelect(opt.value); await syncProfile() }}
+                disabled={modeSaving}
+                activeOpacity={0.8}
+              >
+                <View style={[bs.optionIcon, { backgroundColor: LIGHT_PINK }]}>
+                  <Text style={{ fontSize: 20 }}>{opt.emoji}</Text>
+                </View>
+                <Text style={[bs.optionLabel, isUnknown && { color: MUTED }, isSelected && { color: '#c0005a' }]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            )
+          })}
+        </View>
+      </BottomSheet>
+
+      {/* ── 시술 → 자연임신 확인 바텀시트 ── */}
+      <BottomSheet
+        visible={modeSheet === 'confirm_nat'}
+        title="자연임신 모드로 변경"
+        onClose={closeModeSheet}
+      >
+        <View style={{ paddingBottom: 24, gap: 12 }}>
+          <View style={bs.confirmNotice}>
+            <Text style={bs.confirmNoticeText}>
+              🌸 시술 관련 기록은 모두 유지됩니다.{'\n'}모드만 자연임신 준비로 변경할게요.
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[bs.confirmBtn, { backgroundColor: '#22c55e' }]}
+            onPress={async () => { await confirmToNatural(); await syncProfile() }}
+            disabled={modeSaving}
+            activeOpacity={0.85}
+          >
+            {modeSaving
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={bs.confirmBtnText}>자연임신 모드로 변경</Text>
+            }
+          </TouchableOpacity>
+          <TouchableOpacity style={bs.cancelBtn} onPress={closeModeSheet}>
+            <Text style={bs.cancelBtnText}>취소</Text>
+          </TouchableOpacity>
+        </View>
+      </BottomSheet>
+
+      {/* 페이월 */}
       <PaywallModal
         visible={paywallSource !== null}
         source={paywallSource ?? 'medication_reminder'}
@@ -314,78 +382,77 @@ export default function SettingsScreen() {
   )
 }
 
-const STAGE_LABEL: Record<string, string> = {
-  natural: '🌱 자연임신 준비',
-  iui:     '🧪 인공수정(IUI)',
-  ivf:     '🧬 시험관(IVF)',
-  fet:     '❄️ 동결이식(FET)',
-  pregnant:'🌸 임신 성공',
-}
-
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   safe:    { flex: 1, backgroundColor: '#fffbfc' },
   scroll:  { flex: 1 },
   content: { padding: 20, paddingBottom: 40 },
-
   header:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 },
   backBtn:     { width: 32 },
   backText:    { fontSize: 20, color: MUTED },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: DARK_ROSE },
-
+  headerTitle: { fontSize: 17, fontFamily: F.bold, color: DARK_ROSE },
   profileCard: {
     backgroundColor: '#fff', borderRadius: 20, padding: 20,
-    borderWidth: 1, borderColor: BORDER, marginBottom: 24,
-    alignItems: 'center', gap: 4,
+    borderWidth: 1, borderColor: BORDER, marginBottom: 24, alignItems: 'center', gap: 4,
   },
-  profileName:  { fontSize: 18, fontWeight: '700', color: DARK_ROSE },
+  profileName:  { fontSize: 18, fontFamily: F.bold, color: DARK_ROSE },
   profileEmail: { fontSize: 12, color: MUTED },
-  stageBadge:   { backgroundColor: LIGHT_PINK, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 5, marginTop: 6 },
-  stageText:    { fontSize: 12, color: PINK, fontWeight: '600' },
-
   section:      { marginBottom: 28 },
-  sectionTitle: { fontSize: 13, fontWeight: '700', color: DARK_ROSE, marginBottom: 12 },
-
+  sectionTitle: { fontSize: 13, fontFamily: F.bold, color: DARK_ROSE, marginBottom: 12 },
   row: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: '#fff', borderRadius: 16, padding: 16,
     borderWidth: 1, borderColor: BORDER, marginBottom: 8,
   },
   rowDisabled: { opacity: 0.4 },
-  rowLeft:     { flex: 1, marginRight: 12 },
-  rowLabel:    { fontSize: 14, fontWeight: '600', color: DARK_ROSE },
-  rowDesc:     { fontSize: 11, color: MUTED, marginTop: 2 },
-
-  // 잠긴 약물 알림 행
+  rowLeft:  { flex: 1, marginRight: 12 },
+  rowLabel: { fontSize: 14, fontFamily: F.semiBold, color: DARK_ROSE },
+  rowDesc:  { fontSize: 11, color: MUTED, marginTop: 2 },
+  chevron:  { fontSize: 12, fontFamily: F.semiBold, color: PINK },
   lockedRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: LIGHT_PINK, borderRadius: 16, padding: 16,
     borderWidth: 1, borderColor: BORDER, marginBottom: 8,
   },
-  lockedRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  lockBadge:     { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,143,171,0.15)', alignItems: 'center', justifyContent: 'center' },
-  lockBadgeTxt:  { fontSize: 14 },
-  lockedCta:     { fontSize: 13, fontWeight: '700', color: PINK },
-
   infoBox:  { backgroundColor: LIGHT_PINK, borderRadius: 14, padding: 14, marginTop: 4 },
   infoText: { fontSize: 12, color: MUTED, lineHeight: 18 },
-
   dangerRow: {
     backgroundColor: '#fff0f0', borderRadius: 16, padding: 16,
     borderWidth: 1, borderColor: '#fecaca', alignItems: 'center',
   },
-  dangerText: { fontSize: 14, fontWeight: '600', color: '#ef4444' },
-
-  subActiveBox: {
-    backgroundColor: '#d1fae5', borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: '#a7f3d0',
-  },
-  subActiveTitle: { fontSize: 14, fontWeight: '700', color: '#065f46' },
+  dangerText:     { fontSize: 14, fontFamily: F.semiBold, color: '#ef4444' },
+  subActiveBox:   { backgroundColor: '#d1fae5', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#a7f3d0' },
+  subActiveTitle: { fontSize: 14, fontFamily: F.bold, color: '#065f46' },
   subActiveDesc:  { fontSize: 11, color: '#047857', marginTop: 4 },
+  subBtn:         { backgroundColor: PINK, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  subBtnText:     { fontSize: 14, fontFamily: F.bold, color: '#fff' },
+  subBtnArrow:    { fontSize: 18, color: 'rgba(255,255,255,0.7)' },
+})
 
-  subBtn: {
-    backgroundColor: PINK, borderRadius: 16, padding: 16,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+const bs = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: 24, paddingBottom: 40, maxHeight: '85%',
   },
-  subBtnText:  { fontSize: 14, fontWeight: '700', color: '#fff' },
-  subBtnArrow: { fontSize: 18, color: 'rgba(255,255,255,0.7)' },
+  handle:   { width: 40, height: 4, backgroundColor: '#e0d0d8', borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  title:    { fontSize: 17, fontFamily: F.bold, color: DARK_ROSE, marginBottom: 4 },
+  subtitle: { fontSize: 12, color: MUTED, marginBottom: 16 },
+  optionBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    padding: 14, borderRadius: 16, borderWidth: 1.5, borderColor: BORDER,
+  },
+  optionBtnActive: { borderColor: PINK, backgroundColor: LIGHT_PINK },
+  optionBtnDashed: { borderStyle: 'dashed', borderColor: '#e0c0c8' },
+  optionIcon:    { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  optionLabel:   { fontSize: 14, fontFamily: F.semiBold, color: DARK_ROSE },
+  optionSub:     { fontSize: 11, color: MUTED, marginTop: 2 },
+  selectedDot:   { width: 20, height: 20, borderRadius: 10, backgroundColor: PINK, alignItems: 'center', justifyContent: 'center' },
+  selectedDotInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
+  confirmNotice: { backgroundColor: LIGHT_PINK, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER },
+  confirmNoticeText: { fontSize: 14, color: DARK_ROSE, lineHeight: 22 },
+  confirmBtn:    { borderRadius: 18, paddingVertical: 15, alignItems: 'center' },
+  confirmBtnText:{ fontSize: 15, fontFamily: F.bold, color: '#fff' },
+  cancelBtn:     { alignItems: 'center', paddingVertical: 12 },
+  cancelBtnText: { fontSize: 14, color: MUTED },
 })
