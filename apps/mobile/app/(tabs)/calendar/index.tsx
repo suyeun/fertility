@@ -16,10 +16,11 @@ import {
 import {
   useCycleCalendar, cyclesApi, hormonesApi, treatmentApi, diaryApi,
   canUseClinicScheduler, isPremiumProfile, ClinicFeature,
+  useUserStore, getScheduleChips, getNextStageSuggestion, getScheduleMarkerStyle, usersApi,
 } from '@fertility/shared'
 import type {
   TreatmentSchedule, Medication, TreatmentType, HormoneRecord,
-  UserProfile, PaywallSource,
+  UserProfile, PaywallSource, TreatmentMode, CurrentStage, StageSuggestion,
 } from '@fertility/shared'
 import { DayCell, DAY_CELL_W } from '../../../components/calendar/DayCell'
 import { CycleSummary } from '../../../components/calendar/CycleSummary'
@@ -65,9 +66,14 @@ const BORDER    = '#ffd6e0'
 const LIGHT_PINK = '#fff0f4'
 
 export default function CalendarScreen() {
+  const { profile: storeProfile } = useUserStore()
   const [user, setUser]         = useState<any>(null)
   const [profile, setProfile]   = useState<UserProfile | null>(null)
   const [isPremium, setIsPremium] = useState(false)
+
+  const effectiveProfile = storeProfile ?? profile
+  const treatmentMode: TreatmentMode = (effectiveProfile?.treatmentStage as TreatmentMode) ?? 'natural'
+  const currentStage: CurrentStage = (effectiveProfile as any)?._currentStage ?? null
   const [cycles, setCycles]     = useState<any[]>([])
   const [schedules, setSchedules] = useState<TreatmentSchedule[]>([])
   const [hormones, setHormones] = useState<HormoneRecord[]>([])
@@ -79,6 +85,8 @@ export default function CalendarScreen() {
   // 일정 등록 폼 상태
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false)
   const [scheduleType,  setScheduleType]  = useState<TreatmentType>('IVF')
+  const [scheduleChipValue, setScheduleChipValue] = useState<string | null>(null)
+  const [stageSuggestion, setStageSuggestion] = useState<StageSuggestion | null>(null)
   const [scheduleTitle, setScheduleTitle] = useState('')
   const [scheduleTime,  setScheduleTime]  = useState('09:00')
   const [hospitalName,  setHospitalName]  = useState('')
@@ -299,9 +307,13 @@ export default function CalendarScreen() {
 
     setSavingSchedule(true)
     try {
+      const { chips, defaultValue } = getScheduleChips(treatmentMode)
+      const activeChip = chips.find(c => c.value === (scheduleChipValue ?? defaultValue))
+      const resolvedType: TreatmentType = (activeChip?.backendType as TreatmentType) ?? scheduleType
+
       const fullDateTime = `${selectedDateStr}T${scheduleTime || '09:00'}`
       await treatmentApi.save({
-        type: scheduleType,
+        type: resolvedType,
         title: scheduleTitle,
         scheduledAt: fullDateTime,
         status: 'scheduled',
@@ -313,17 +325,19 @@ export default function CalendarScreen() {
       const updated = Array.isArray(updatedRaw) ? updatedRaw : (updatedRaw?.data ?? [])
       setSchedules(updated)
 
-      // [데이터 보존] 약물 기록 데이터는 항상 저장. 알림 스케줄만 프리미엄 게이트.
-      // 비프리미엄: 약물 데이터는 저장되지만 로컬 알림은 스케줄하지 않는다.
       const schedulesForAlerts = isPremium
         ? updated
         : updated.map(s => ({ ...s, medications: undefined }))
       rescheduleMedicationAlerts(schedulesForAlerts).catch(() => {})
 
+      // 다음 단계 제안
+      const suggestion = getNextStageSuggestion(scheduleChipValue ?? defaultValue ?? '', currentStage, treatmentMode)
+      if (suggestion) setStageSuggestion(suggestion)
+
       setIsScheduleModalOpen(false)
       setScheduleTitle(''); setHospitalName('')
       setScheduleNotes(''); setMedications([])
-      setScheduleTime('09:00')
+      setScheduleTime('09:00'); setScheduleChipValue(null)
     } catch (err) {
       console.error(err)
       Alert.alert('저장 실패', '일정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
@@ -445,13 +459,18 @@ export default function CalendarScreen() {
             {calendarDays.map((day, i) => {
               const dateStr = toLocalDateStr(day.date)
               const dayHormone = hormones.find(h => h.recordedAt === dateStr)
+              const daySchedule = schedules.find(s => s.scheduledAt.split('T')[0] === dateStr)
+              const markerColor = treatmentMode !== 'natural' && daySchedule
+                ? getScheduleMarkerStyle(daySchedule.type).color
+                : undefined
               return (
                 <DayCell
                   key={i}
                   day={day}
                   isSelected={selectedDate?.getTime() === day.date.getTime()}
                   hasIntercourse={dayHormone?.intercourse === true}
-                  hasSchedule={schedules.some(s => s.scheduledAt.split('T')[0] === dateStr)}
+                  hasSchedule={!!daySchedule}
+                  scheduleColor={markerColor}
                   onPress={(date) => {
                     selectDate(date)
                     const ds = toLocalDateStr(date)
@@ -521,27 +540,29 @@ export default function CalendarScreen() {
 
             <ScrollView style={styles.formContainer} keyboardShouldPersistTaps="handled">
 
-              {/* 일정 종류 */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>일정 종류</Text>
-                <View style={styles.typeSelector}>
-                  {(['IVF', 'IUI', 'FET', 'monitoring', 'other'] as TreatmentType[]).map(t => (
-                    <TouchableOpacity
-                      key={t}
-                      style={[styles.typeBtn, scheduleType === t && styles.activeTypeBtn]}
-                      onPress={() => setScheduleType(t)}
-                    >
-                      <Text style={[styles.typeBtnText, scheduleType === t && styles.activeTypeBtnText]}>
-                        {t === 'IVF' && '시험관'}
-                        {t === 'IUI' && '인공수정'}
-                        {t === 'FET' && '동결이식'}
-                        {t === 'monitoring' && '초음파'}
-                        {t === 'other' && '기타'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
+              {/* 일정 종류 칩 */}
+              {(() => {
+                const { chips, defaultValue } = getScheduleChips(treatmentMode)
+                const activeValue = scheduleChipValue ?? defaultValue
+                return (
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>일정 종류</Text>
+                    <View style={styles.typeSelector}>
+                      {chips.map(chip => (
+                        <TouchableOpacity
+                          key={chip.value}
+                          style={[styles.typeBtn, activeValue === chip.value && styles.activeTypeBtn]}
+                          onPress={() => setScheduleChipValue(chip.value)}
+                        >
+                          <Text style={[styles.typeBtnText, activeValue === chip.value && styles.activeTypeBtnText]}>
+                            {chip.emoji} {chip.label}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                )
+              })()}
 
               {/* 시간 */}
               <View style={styles.inputGroup}>
@@ -983,6 +1004,42 @@ export default function CalendarScreen() {
             </TouchableOpacity>
           </KeyboardAvoidingView>
         </TouchableOpacity>
+      </Modal>
+
+      {/* 단계 전환 제안 모달 */}
+      <Modal visible={stageSuggestion !== null} transparent animationType="slide">
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, gap: 12 }}>
+            <Text style={{ fontFamily: F.bold, fontSize: 16, color: DARK_ROSE }}>단계 이동 제안</Text>
+            <Text style={{ fontFamily: F.regular, fontSize: 13, color: MUTED, lineHeight: 20 }}>
+              {stageSuggestion?.message}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: '#ffeef2', alignItems: 'center' }}
+                onPress={() => setStageSuggestion(null)}
+              >
+                <Text style={{ fontFamily: F.semiBold, fontSize: 13, color: MUTED }}>나중에</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 16, backgroundColor: PINK, alignItems: 'center' }}
+                onPress={async () => {
+                  if (!stageSuggestion) return
+                  try {
+                    const { useUserStore: _store } = await import('@fertility/shared')
+                    _store.getState().setCurrentStage(stageSuggestion.nextStage)
+                    await usersApi.updateProfile({ currentStage: stageSuggestion.nextStage })
+                  } catch {}
+                  setStageSuggestion(null)
+                }}
+              >
+                <Text style={{ fontFamily: F.semiBold, fontSize: 13, color: '#fff' }}>
+                  {stageSuggestion?.label}(으)로 이동
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* 페이월 모달 */}

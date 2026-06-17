@@ -12,16 +12,20 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native'
-import { hormonesApi, diaryApi, usersApi } from '@fertility/shared'
-import type { HormoneRecord, DiaryEntry, Mood, UserProfile } from '@fertility/shared'
+import { hormonesApi, diaryApi, usersApi, useUserStore, getRecordTabs, getHospitalFields } from '@fertility/shared'
+import type { HormoneRecord, DiaryEntry, Mood, UserProfile, TreatmentMode, CurrentStage } from '@fertility/shared'
 
 type HormoneType = 'amh' | 'fsh' | 'lh' | 'estradiol' | 'progesterone' | 'bbt' | 'opkIndex'
 
 export default function RecordsScreen() {
+  const { profile: storeProfile } = useUserStore()
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [activeTab, setActiveTab] = useState<'hormone' | 'diary'>('hormone')
-  const [subTab, setSubTab] = useState<'daily' | 'medical' | 'procedure'>('daily')
+  const effectiveProfile = storeProfile ?? profile
+  const treatmentMode: TreatmentMode = (effectiveProfile?.treatmentStage as TreatmentMode) ?? 'natural'
+  const currentStage: CurrentStage = (effectiveProfile as any)?._currentStage ?? null
+  const recordTabs = getRecordTabs(treatmentMode)
+  const [activeTab, setActiveTab] = useState<string>('daily')
 
   // 호르몬 관련 상태
   const [records, setRecords] = useState<HormoneRecord[]>([])
@@ -62,7 +66,7 @@ export default function RecordsScreen() {
       })
       const p = await usersApi.getProfile()
       setProfile(p)
-      setSubTab(targetStage === 'iui' ? 'medical' : 'procedure')
+      setActiveTab(targetStage === 'iui' ? 'hospital' : 'procedure')
     } catch (err) {
       console.error('단계 업그레이드 실패:', err)
     } finally {
@@ -383,7 +387,7 @@ export default function RecordsScreen() {
     { value: 'hopeful', icon: '💫', label: '기대' }
   ]
 
-  const loadingAny = activeTab === 'hormone' ? loadingHormones : loadingDiaries
+  const loadingAny = activeTab === 'diary' ? loadingDiaries : loadingHormones
 
   if (loadingAny) {
     return (
@@ -401,78 +405,28 @@ export default function RecordsScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         {/* 상단 탭 스위처 */}
         <View style={styles.tabSwitcher}>
-          <TouchableOpacity
-            style={[styles.switcherTab, activeTab === 'hormone' && styles.activeSwitcherTab]}
-            onPress={() => setActiveTab('hormone')}
-          >
-            <Text style={[styles.switcherTabText, activeTab === 'hormone' && styles.activeSwitcherTabText]}>
-              🧪 신체 수치 기록
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.switcherTab, activeTab === 'diary' && styles.activeSwitcherTab]}
-            onPress={() => setActiveTab('diary')}
-          >
-            <Text style={[styles.switcherTabText, activeTab === 'diary' && styles.activeSwitcherTabText]}>
-              💌 마음 일기 기록
-            </Text>
-          </TouchableOpacity>
+          {recordTabs.map(tab => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[styles.switcherTab, activeTab === tab.key && styles.activeSwitcherTab]}
+              onPress={() => setActiveTab(tab.key)}
+            >
+              <Text style={[styles.switcherTabText, activeTab === tab.key && styles.activeSwitcherTabText]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {activeTab === 'hormone' ? (
-          // 🧪 신체 수치 기록 탭 내용
+        {/* ── 일반 기록 탭 ── */}
+        {activeTab === 'daily' && (
           <View style={styles.tabContent}>
             <View style={styles.header}>
-              <View>
-                <Text style={styles.title}>오늘의 신체 기록 📊</Text>
-                <Text style={styles.subtitle}>매일의 신체 변화와 시기별 검사·시술 수치를 기록합니다</Text>
-              </View>
-              {subTab !== 'daily' && (
-                <TouchableOpacity style={styles.addBtn} onPress={() => setIsHormoneModalOpen(true)}>
-                  <Text style={styles.addBtnText}>수치 상세 등록</Text>
-                </TouchableOpacity>
-              )}
+              <Text style={styles.title}>오늘의 신체 기록 📊</Text>
+              <Text style={styles.subtitle}>매일의 신체 변화를 기록합니다</Text>
             </View>
-
-            {/* 대분류 서브 탭 */}
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
-              <TouchableOpacity
-                onPress={() => setSubTab('daily')}
-                style={[
-                  styles.subTabButton,
-                  subTab === 'daily' && styles.activeSubTabButton
-                ]}
-              >
-                <Text style={[styles.subTabButtonText, subTab === 'daily' && styles.activeSubTabButtonText]}>일상 기록</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                onPress={() => setSubTab('medical')}
-                style={[
-                  styles.subTabButton,
-                  subTab === 'medical' && styles.activeSubTabButton
-                ]}
-              >
-                <Text style={[styles.subTabButtonText, subTab === 'medical' && styles.activeSubTabButtonText]}>
-                  검사 수치 {profile?.treatmentStage === 'natural' && '🔒'}
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                onPress={() => setSubTab('procedure')}
-                style={[
-                  styles.subTabButton,
-                  subTab === 'procedure' && styles.activeSubTabButton
-                ]}
-              >
-                <Text style={[styles.subTabButtonText, subTab === 'procedure' && styles.activeSubTabButtonText]}>
-                  시술 수치 {(profile?.treatmentStage === 'natural' || profile?.treatmentStage === 'iui') && '🔒'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* 서브 탭 컨텐츠 분기 */}
-            {subTab === 'daily' && (
+            {/* daily 탭 내용 */}
+            {(true) && (
               // [1] 일상 기록 탭
               <View style={{ gap: 12 }}>
                 {(() => {
@@ -577,8 +531,9 @@ export default function RecordsScreen() {
               </View>
             )}
 
-            {subTab === 'medical' && (
-              // [2] 검사 수치 탭
+            {/* 병원 수치는 hospital 탭으로 이동됨 */}
+            {(false) && (
+              // [2] (deprecated) 검사 수치 탭
               <View>
                 {profile?.treatmentStage === 'natural' ? (
                   // 잠금 상태 (🔒)
@@ -674,69 +629,8 @@ export default function RecordsScreen() {
               </View>
             )}
 
-            {subTab === 'procedure' && (
-              // [3] 시술 수치 탭
-              <View>
-                {(profile?.treatmentStage === 'natural' || profile?.treatmentStage === 'iui') ? (
-                  // 잠금 상태 (🔒)
-                  <View style={styles.lockOverlay}>
-                    <Text style={styles.lockIcon}>🔒</Text>
-                    <Text style={styles.lockTitle}>
-                      난포 크기, 자궁내막 두께 등 시술 과정을 기록하고 싶으신가요?
-                    </Text>
-                    <Text style={styles.lockDesc}>
-                      본격적인 시술(시험관/인공수정)을 준비하거나 진행 중이라면 이 기능이 도움이 돼요.{"\n"}
-                      이식, 채취 데이터와 약물 일정을 빈틈없이 케어합니다.
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => handleUpgradeStage('ivf')}
-                      disabled={isUpgrading}
-                      style={[styles.upgradeBtn, { backgroundColor: '#4f46e5' }]}
-                    >
-                      {isUpgrading ? (
-                        <ActivityIndicator color="#fff" size="small" />
-                      ) : (
-                        <Text style={styles.upgradeBtnText}>시술 수치 기록 활성화 ✨</Text>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  // 시술 수치 활성화 상태
-                  <View style={styles.chartCard}>
-                    <Text style={[styles.cardTitle, { color: '#312e81', marginBottom: 12 }]}>💉 시험관 & 인공수정 핵심 지표 관리</Text>
-                    {(() => {
-                      const procedureRecord = records.find(r => r.follicleSize !== undefined || r.endometriumThickness !== undefined || r.hcgLevel !== undefined)
-                      return procedureRecord ? (
-                        <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-                          {procedureRecord.follicleSize !== undefined && (
-                            <View style={styles.procedureInfoBox}>
-                              <Text style={styles.procedureInfoLabel}>난포 크기</Text>
-                              <Text style={styles.procedureInfoVal}>{procedureRecord.follicleSize} mm</Text>
-                            </View>
-                          )}
-                          {procedureRecord.endometriumThickness !== undefined && (
-                            <View style={styles.procedureInfoBox}>
-                              <Text style={styles.procedureInfoLabel}>자궁내막 두께</Text>
-                              <Text style={styles.procedureInfoVal}>{procedureRecord.endometriumThickness} mm</Text>
-                            </View>
-                          )}
-                          {procedureRecord.hcgLevel !== undefined && (
-                            <View style={styles.procedureInfoBox}>
-                              <Text style={styles.procedureInfoLabel}>hCG 수치</Text>
-                              <Text style={styles.procedureInfoVal}>{procedureRecord.hcgLevel} mIU/mL</Text>
-                            </View>
-                          )}
-                        </View>
-                      ) : (
-                        <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                          <Text style={styles.emptyText}>아직 기록된 시술 데이터가 없습니다.</Text>
-                        </View>
-                      )
-                    })()}
-                  </View>
-                )}
-              </View>
-            )}
+            {/* 시술 지표는 procedure 탭으로 이동됨 */}
+            {(false) && null}
 
             {/* 과거 기록 히스토리 */}
             <View style={styles.historyCard}>
@@ -840,8 +734,93 @@ export default function RecordsScreen() {
               )}
             </View>
           </View>
-        ) : (
-          // 💌 마음 일기 기록 탭 내용
+        )}
+
+        {/* ── 병원 수치 탭 ── */}
+        {activeTab === 'hospital' && (
+          <View style={styles.tabContent}>
+            <View style={styles.header}>
+              <Text style={styles.title}>🏥 병원 수치 기록</Text>
+              <Text style={styles.subtitle}>현재 단계의 주요 검사 수치를 입력합니다</Text>
+            </View>
+            {!currentStage ? (
+              <View style={[styles.lockOverlay]}>
+                <Text style={styles.lockIcon}>⚙️</Text>
+                <Text style={styles.lockTitle}>치료 단계가 설정되지 않았습니다</Text>
+                <Text style={styles.lockDesc}>설정 화면에서 현재 단계를 선택해 주세요</Text>
+              </View>
+            ) : (() => {
+              const fields = getHospitalFields(treatmentMode, currentStage)
+              if (fields.length === 0) return <Text style={styles.emptyText}>이 단계에서 기록할 항목이 없습니다.</Text>
+              return (
+                <View style={styles.card}>
+                  {fields.map(f => (
+                    <View key={f.key} style={{ marginBottom: 16 }}>
+                      <Text style={styles.inputLabel}>{f.label}{f.unit ? ` (${f.unit})` : ''}</Text>
+                      {f.type === 'select' ? (
+                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                          {f.options?.map(o => (
+                            <TouchableOpacity key={o.value} style={styles.typeBtn}>
+                              <Text style={styles.typeBtnText}>{o.label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : f.type === 'multiselect' ? (
+                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                          {f.options?.map(o => (
+                            <TouchableOpacity key={o.value} style={styles.typeBtn}>
+                              <Text style={styles.typeBtnText}>{o.label}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : (
+                        <TextInput
+                          style={styles.dailyInput}
+                          keyboardType="numeric"
+                          placeholder={f.placeholder ?? f.unit ?? ''}
+                          placeholderTextColor="#fda4af"
+                          onChangeText={(val) => {
+                            if (f.warning) {
+                              const warn = f.warning(val)
+                              // Inline warning — displayed below
+                            }
+                          }}
+                        />
+                      )}
+                    </View>
+                  ))}
+                </View>
+              )
+            })()}
+          </View>
+        )}
+
+        {/* ── 시술 지표 탭 ── */}
+        {activeTab === 'procedure' && (
+          <View style={styles.tabContent}>
+            <View style={styles.header}>
+              <Text style={styles.title}>💉 시술 지표 기록</Text>
+              <Text style={styles.subtitle}>채취, 이식 등 주요 시술 결과를 기록합니다</Text>
+            </View>
+            <View style={styles.historyCard}>
+              <Text style={styles.historyTitle}>📋 최근 기록</Text>
+              {records.filter(r => r.follicleSize !== undefined || r.hcgLevel !== undefined).length > 0 ? (
+                records.filter(r => r.follicleSize !== undefined || r.hcgLevel !== undefined).map((r, i) => (
+                  <View key={i} style={{ marginBottom: 8 }}>
+                    <Text style={styles.historyDate}>{r.recordedAt}</Text>
+                    <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                      {r.follicleSize !== undefined && <View style={styles.valPill}><Text style={styles.valPillLabel}>난포</Text><Text style={styles.valPillVal}>{r.follicleSize}mm</Text></View>}
+                      {r.hcgLevel !== undefined && <View style={styles.valPill}><Text style={styles.valPillLabel}>hCG</Text><Text style={styles.valPillVal}>{r.hcgLevel}</Text></View>}
+                    </View>
+                  </View>
+                ))
+              ) : <Text style={styles.emptyText}>아직 기록된 시술 데이터가 없습니다.</Text>}
+            </View>
+          </View>
+        )}
+
+        {/* ── 감정 일기 탭 ── */}
+        {activeTab === 'diary' && (
           <View style={styles.tabContent}>
             <View style={styles.header}>
               <View>

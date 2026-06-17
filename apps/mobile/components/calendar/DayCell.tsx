@@ -7,6 +7,7 @@ interface DayCellProps {
   isSelected: boolean
   hasIntercourse?: boolean
   hasSchedule?: boolean
+  scheduleColor?: string
   onPress: (date: Date) => void
 }
 
@@ -15,7 +16,7 @@ const { width: SCREEN_W } = Dimensions.get('window')
 // 7 cells * marginHorizontal 2*2=4px = 28px gap total
 export const DAY_CELL_W = Math.floor((SCREEN_W - 48 - 28) / 7)
 
-export function DayCell({ day, isSelected, hasIntercourse, hasSchedule, onPress }: DayCellProps) {
+export function DayCell({ day, isSelected, hasIntercourse, hasSchedule, scheduleColor, onPress }: DayCellProps) {
   const { date, dayNum, isCurrentMonth, isToday, cycleInfo } = day
 
   const isOvulation    = cycleInfo?.isOvulation
@@ -43,7 +44,7 @@ export function DayCell({ day, isSelected, hasIntercourse, hasSchedule, onPress 
       <Text style={numStyle}>{dayNum}</Text>
       {hasIntercourse && <Text style={styles.heart}>❤️</Text>}
       {isToday && <View style={styles.todayDot} />}
-      {hasSchedule && <View style={styles.scheduleDot} />}
+      {hasSchedule && <View style={[styles.scheduleDot, scheduleColor ? { backgroundColor: scheduleColor } : undefined]} />}
     </TouchableOpacity>
   )
 }

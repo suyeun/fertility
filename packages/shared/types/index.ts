@@ -105,15 +105,53 @@ export interface HormoneRecord {
   weight?: number     // 몸무게 (kg)
   sleepHours?: number // 수면 시간 (hours)
   
-  // 시술 수치 추가
-  follicleSize?: number          // 난포 크기 (mm)
-  endometriumThickness?: number  // 자궁내막 두께 (mm)
-  retrievedOocytesCount?: number // 채취 난자 수 (개)
-  embryoGrade?: string           // 수정란 등급 (예: A, 1등급)
-  hcgLevel?: number              // hCG 임신 수치 (mIU/mL)
-  
+  // 시술 수치 (기존)
+  follicleSize?: number          // 난포 크기 (mm) — 레거시
+  endometriumThickness?: number  // 자궁내막 두께 (mm) — 레거시
+  retrievedOocytesCount?: number // 채취 난자 수 (개) — 레거시
+  embryoGrade?: string           // 수정란 등급 — 레거시
+  hcgLevel?: number              // β-hCG 수치 (mIU/mL)
+
+  // IUI 자극기
+  injectionDrug?: string         // 주사 종류
+  injectionDose?: number         // 주사 용량 (IU)
+  follicleCount?: number         // 난포 개수 (IUI 자극)
+
+  // IUI 모니터링
+  maxFollicle?: number           // 최대 난포 크기 (mm)
+  opkResult?: string             // OPK 결과 (negative/positive/strong)
+
+  // IUI 황체기
+  suppType?: string              // 황체 보강제 종류
+  symptoms?: string              // 증상 (쉼표 구분 또는 JSON)
+
+  // IUI 결과
+  judgmentResult?: string        // 판정 결과
+
+  // IVF 자극기
+  follicleRight?: number         // 우측 난포 수
+  follicleLeft?: number          // 좌측 난포 수
+
+  // IVF 모니터링
+  mature18Plus?: number          // 18mm 이상 난포 수
+
+  // IVF 채취
+  totalOocytes?: number          // 채취 총 난자 수
+  matureOocytes?: number         // 성숙 난자 수 (MII)
+  condition?: number             // 당일 컨디션 (1-10 슬라이더)
+
+  // IVF 배양
+  twoPN?: number                 // 2PN 수 (정상 수정)
+  day3Embryo?: number            // Day3 배아 수
+  blastocyst?: number            // 배반포 수
+  frozenEmbryo?: number          // 냉동 배아 수
+
+  // IVF 이식
+  transferredEmbryos?: number    // 이식 배아 수
+  transferMethod?: string        // 이식 방법 (fresh/frozen)
+
   intercourse?: boolean          // 부부 관계 여부
-  
+
   notes?: string
 }
 

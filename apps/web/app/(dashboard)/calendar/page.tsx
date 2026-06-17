@@ -3,14 +3,31 @@
 
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { calculateCycleDays, cyclesApi, hormonesApi, treatmentApi } from '@fertility/shared'
-import { MenstrualCycle, TreatmentSchedule, Medication, HormoneRecord } from '@fertility/shared'
+import {
+  calculateCycleDays, cyclesApi, hormonesApi, treatmentApi,
+  useUserStore, getScheduleChips, getNextStageSuggestion, getScheduleMarkerStyle,
+  usersApi,
+} from '@fertility/shared'
+import type { MenstrualCycle, TreatmentSchedule, Medication, HormoneRecord, TreatmentMode, CurrentStage } from '@fertility/shared'
 import { Plus, ChevronLeft, ChevronRight, Info, CalendarDays, Bell, ClipboardList, Check, Trash2, Calendar as LucideCalendar, Heart as HeartIcon } from 'lucide-react'
 
 type TreatmentType = 'IVF' | 'IUI' | 'FET' | 'monitoring' | 'other'
 
 export default function CalendarPage() {
-  const { user, profile } = useAuth()
+  const { user, profile: authProfile } = useAuth()
+  const { profile: storeProfile, setCurrentStage } = useUserStore()
+  const profile = storeProfile ?? authProfile
+
+  const treatmentMode = (profile?.treatmentStage as TreatmentMode) ?? 'natural'
+  const currentStage  = (profile as any)?._currentStage as CurrentStage ?? null
+
+  // 저장 후 단계 전환 제안 상태
+  const [stageSuggestion, setStageSuggestion] = useState<{ nextStage: CurrentStage; message: string } | null>(null)
+
+  const { chips: schedChips, defaultValue: schedDefault } = getScheduleChips(treatmentMode)
+
+  // 현재 선택된 칩 값 (value key)
+  const [scheduleChipValue, setScheduleChipValue] = useState<string | null>(null)
   const [cycles, setCycles] = useState<MenstrualCycle[]>([])
   const [schedules, setSchedules] = useState<TreatmentSchedule[]>([])
   const [hormones, setHormones] = useState<HormoneRecord[]>([])
@@ -256,12 +273,16 @@ export default function CalendarPage() {
 
   const handleScheduleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!scheduleTitle.trim()) return
     setScheduleError('')
     setSavingSchedule(true)
+    const chipValue = scheduleChipValue ?? schedDefault
+    const chip = schedChips.find(c => c.value === chipValue)
+    const backendType = chip?.backendType ?? 'other'
     try {
       const fullDateTime = `${selectedDateStr}T${scheduleTime || '09:00'}`
       await treatmentApi.save({
-        type: scheduleType,
+        type: backendType,
         title: scheduleTitle,
         scheduledAt: fullDateTime,
         status: 'scheduled',
@@ -276,12 +297,26 @@ export default function CalendarPage() {
       setScheduleNotes('')
       setMedications([])
       setScheduleTime('09:00')
+      setScheduleChipValue(null)
+
+      // 단계 전환 제안
+      const suggestion = getNextStageSuggestion(chipValue ?? '', currentStage, treatmentMode)
+      if (suggestion) setStageSuggestion(suggestion)
     } catch (err) {
       console.error(err)
       setScheduleError('일정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setSavingSchedule(false)
     }
+  }
+
+  const handleConfirmStageTransition = async () => {
+    if (!stageSuggestion) return
+    try {
+      setCurrentStage(stageSuggestion.nextStage)
+      await usersApi.updateProfile({ currentStage: stageSuggestion.nextStage })
+    } catch {}
+    setStageSuggestion(null)
   }
 
   // 선택된 날짜에 대한 필터링
@@ -476,8 +511,20 @@ export default function CalendarPage() {
                   {isFertileWindow && !isOvulation && !isMenstruation && (
                     <span className="text-[7px] text-primary bg-rose-50 px-1 py-0.2 rounded">가임</span>
                   )}
-                  {hasSchedule && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-0.5" title="병원/내원 일정 있음"></span>
+                  {treatmentMode === 'natural' ? (
+                    hasSchedule && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-0.5" />
+                  ) : (
+                    schedules
+                      .filter(s => s.scheduledAt.split('T')[0] === cDay.dateStr)
+                      .slice(0, 2)
+                      .map((s, si) => {
+                        const m = getScheduleMarkerStyle(s.type)
+                        return (
+                          <span key={si} style={{ color: m.color, fontSize: 8, lineHeight: 1 }}>
+                            {m.emoji}
+                          </span>
+                        )
+                      })
                   )}
                 </div>
               </div>
@@ -901,35 +948,40 @@ export default function CalendarPage() {
             </div>
 
             <form onSubmit={handleScheduleSubmit} className="space-y-3.5 text-xs">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-rose-900/60 mb-1 ml-1">
-                    일정 종류
-                  </label>
-                  <select
-                    value={scheduleType}
-                    onChange={(e) => setScheduleType(e.target.value as TreatmentType)}
-                    className="w-full px-4 py-3 rounded-2xl border border-rose-100 bg-rose-50/20 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm transition-all"
-                  >
-                    <option value="IVF">🧬 시험관 (IVF)</option>
-                    <option value="IUI">🧪 인공수정 (IUI)</option>
-                    <option value="FET">❄️ 동결배아이식 (FET)</option>
-                    <option value="monitoring">🩺 초음파/모니터링</option>
-                    <option value="other">📅 기타 진료/일반</option>
-                  </select>
+              {/* 일정 종류 칩 */}
+              <div>
+                <label className="block font-semibold text-rose-900/60 mb-1.5 ml-1">일정 종류</label>
+                <div className="flex flex-wrap gap-2">
+                  {schedChips.map(chip => {
+                    const active = (scheduleChipValue ?? schedDefault) === chip.value
+                    return (
+                      <button
+                        key={chip.value}
+                        type="button"
+                        onClick={() => setScheduleChipValue(chip.value)}
+                        className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all ${
+                          active
+                            ? 'bg-primary text-white border-primary'
+                            : 'bg-white text-rose-800 border-rose-200 hover:bg-rose-50'
+                        }`}
+                      >
+                        {chip.emoji} {chip.label}
+                      </button>
+                    )
+                  })}
                 </div>
-                <div>
-                  <label className="block font-semibold text-rose-900/60 mb-1 ml-1">
-                    일정 시간
-                  </label>
-                  <input
-                    type="time"
-                    value={scheduleTime}
-                    onChange={(e) => setScheduleTime(e.target.value)}
-                    required
-                    className="w-full px-4 py-3 rounded-2xl border border-rose-100 bg-rose-50/20 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm transition-all"
-                  />
-                </div>
+              </div>
+              <div>
+                <label className="block font-semibold text-rose-900/60 mb-1 ml-1">
+                  일정 시간
+                </label>
+                <input
+                  type="time"
+                  value={scheduleTime}
+                  onChange={(e) => setScheduleTime(e.target.value)}
+                  required
+                  className="w-full px-4 py-3 rounded-2xl border border-rose-100 bg-rose-50/20 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm transition-all"
+                />
               </div>
 
               <div>
@@ -1041,12 +1093,37 @@ export default function CalendarPage() {
               )}
               <button
                 type="submit"
-                disabled={savingSchedule}
-                className="w-full py-3.5 bg-primary text-white rounded-2xl text-sm font-semibold hover:bg-rose-500 active-press transition-all"
+                disabled={savingSchedule || !scheduleTitle.trim()}
+                className="w-full py-3.5 bg-primary text-white rounded-2xl text-sm font-semibold hover:bg-rose-500 active-press transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {savingSchedule ? '저장 중...' : '전체 일정 저장하기'}
+                {savingSchedule ? '저장 중...' : '일정 저장하기'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 단계 전환 제안 바텀시트 */}
+      {stageSuggestion && (
+        <div className="fixed inset-0 z-[60] bg-black/40 flex justify-center items-end animate-fade-in">
+          <div className="bg-white w-full max-w-[480px] rounded-t-3xl p-6 space-y-4 shadow-2xl animate-slide-up">
+            <div className="w-10 h-1 bg-rose-100 rounded-full mx-auto" />
+            <p className="text-[15px] font-bold text-rose-950 text-center">{stageSuggestion.message}</p>
+            <p className="text-[12px] text-rose-700/70 text-center">홈 화면이 새 단계에 맞게 자동으로 갱신돼요.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setStageSuggestion(null)}
+                className="flex-1 py-3 rounded-2xl border border-rose-200 text-rose-700 text-sm font-semibold hover:bg-rose-50"
+              >
+                나중에
+              </button>
+              <button
+                onClick={handleConfirmStageTransition}
+                className="flex-1 py-3 rounded-2xl bg-primary text-white text-sm font-semibold hover:bg-rose-500"
+              >
+                단계 변경
+              </button>
+            </div>
           </div>
         </div>
       )}

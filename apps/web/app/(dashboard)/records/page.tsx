@@ -3,16 +3,145 @@
 
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { hormonesApi, diaryApi, usersApi } from '@fertility/shared'
+import { hormonesApi, diaryApi, usersApi, useUserStore, getRecordTabs, getHospitalFields, getDailyFields } from '@fertility/shared'
+import type { TreatmentMode, CurrentStage } from '@fertility/shared'
 import { HormoneRecord, DiaryEntry, Mood } from '@fertility/shared'
 import { Plus, Info, TrendingUp, Calendar, Trash2, BookOpen, Sparkles, AlertCircle } from 'lucide-react'
 
 type HormoneType = 'amh' | 'fsh' | 'lh' | 'estradiol' | 'progesterone' | 'bbt' | 'opkIndex'
 
+function HospitalFieldsForm({
+  mode,
+  stage,
+  todayRecord,
+  onSave,
+}: {
+  mode: TreatmentMode
+  stage: CurrentStage
+  todayRecord: any
+  onSave: (field: any, value: any) => Promise<void>
+}) {
+  const fields = getHospitalFields(mode, stage)
+  const [values, setValues] = React.useState<Record<string, string>>({})
+  const [warnings, setWarnings] = React.useState<Record<string, string | null>>({})
+  const [saving, setSaving] = React.useState(false)
+
+  if (fields.length === 0) {
+    return (
+      <div className="bg-rose-50 rounded-3xl p-6 text-center border border-rose-100/60">
+        <p className="text-xs text-rose-900/50">이 단계에서 기록할 항목이 없습니다.</p>
+      </div>
+    )
+  }
+
+  const handleChange = (key: string, val: string, warning?: (v: string | number) => string | null) => {
+    setValues(prev => ({ ...prev, [key]: val }))
+    if (warning) setWarnings(prev => ({ ...prev, [key]: warning(val) }))
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      for (const [key, val] of Object.entries(values)) {
+        if (val !== '') await onSave(key as any, isNaN(Number(val)) ? val : Number(val))
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-3xl p-5 shadow-sm border border-rose-100/40 space-y-4">
+      {fields.map((f) => (
+        <div key={f.key} className="space-y-1">
+          <label className="text-xs font-semibold text-rose-900/70 flex items-center gap-1">
+            {f.label} {f.unit && <span className="text-rose-400 font-normal">({f.unit})</span>}
+          </label>
+          {f.type === 'select' ? (
+            <select
+              value={values[f.key] ?? ''}
+              onChange={(e) => handleChange(f.key, e.target.value, f.warning)}
+              className="w-full px-3 py-2.5 rounded-xl border border-rose-100 text-xs bg-white focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">선택</option>
+              {f.options?.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          ) : f.type === 'multiselect' ? (
+            <div className="flex flex-wrap gap-1.5">
+              {f.options?.map(o => {
+                const selected = (values[f.key] ?? '').split(',').filter(Boolean).includes(o.value)
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => {
+                      const cur = (values[f.key] ?? '').split(',').filter(Boolean)
+                      const next = selected ? cur.filter(x => x !== o.value) : [...cur, o.value]
+                      handleChange(f.key, next.join(','), f.warning)
+                    }}
+                    className={`px-3 py-1.5 rounded-full text-[10px] font-semibold border transition-colors ${
+                      selected ? 'bg-primary text-white border-primary' : 'bg-white border-rose-100 text-rose-700'
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                )
+              })}
+              {f.key === 'symptoms' && (values[f.key] ?? '').includes('ohss') && (
+                <div className="w-full mt-1 bg-orange-50 border border-orange-200 rounded-xl p-2.5 text-[10px] text-orange-700 font-semibold">
+                  ⚠️ OHSS 증상이 심하면 즉시 병원에 연락하세요
+                </div>
+              )}
+            </div>
+          ) : f.type === 'slider' ? (
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={1}
+                max={10}
+                value={values[f.key] ?? 5}
+                onChange={(e) => handleChange(f.key, e.target.value)}
+                className="flex-1 accent-primary"
+              />
+              <span className="text-xs font-bold text-primary w-6 text-center">{values[f.key] ?? 5}</span>
+            </div>
+          ) : (
+            <input
+              type="number"
+              step="0.1"
+              placeholder={f.placeholder ?? `예: ${f.unit}`}
+              value={values[f.key] ?? ''}
+              onChange={(e) => handleChange(f.key, e.target.value, f.warning)}
+              className="w-full px-3 py-2.5 rounded-xl border border-rose-100 text-xs focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          )}
+          {warnings[f.key] && (
+            <div className="flex items-center gap-1 text-[10px] text-amber-600 font-semibold bg-amber-50 px-2.5 py-1.5 rounded-lg border border-amber-100">
+              ⚠️ {warnings[f.key]}
+            </div>
+          )}
+        </div>
+      ))}
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full py-3 bg-primary text-white rounded-2xl text-xs font-semibold hover:bg-rose-500 active-press transition-colors"
+      >
+        {saving ? '저장 중...' : '수치 저장'}
+      </button>
+    </div>
+  )
+}
+
 export default function RecordsPage() {
-  const { user, profile, refreshProfile } = useAuth()
-  const [activeTab, setActiveTab] = useState<'hormone' | 'diary'>('hormone')
-  const [subTab, setSubTab] = useState<'daily' | 'medical' | 'procedure'>('daily')
+  const { user, profile: authProfile, refreshProfile } = useAuth()
+  const { profile: storeProfile } = useUserStore()
+  const profile = storeProfile ?? authProfile
+  const treatmentMode: TreatmentMode = (profile?.treatmentStage as TreatmentMode) ?? 'natural'
+  const currentStage: CurrentStage = (profile as any)?._currentStage ?? null
+
+  const recordTabs = getRecordTabs(treatmentMode)
+  const [activeTab, setActiveTab] = useState<string>('daily')
 
   // 호르몬 관련 상태
   const [records, setRecords] = useState<HormoneRecord[]>([])
@@ -167,7 +296,7 @@ export default function RecordsPage() {
         treatmentStage: targetStage
       })
       await refreshProfile()
-      setSubTab(targetStage === 'iui' ? 'medical' : 'procedure')
+      setActiveTab(targetStage === 'iui' ? 'hospital' : 'procedure')
     } catch (err) {
       console.error('단계 업그레이드 실패:', err)
     } finally {
@@ -391,87 +520,30 @@ export default function RecordsPage() {
   return (
     <div className="space-y-5">
       {/* 상단 탭 스위처 */}
-      <div className="flex bg-rose-50/50 p-1.5 rounded-2xl border border-rose-100/40">
-        <button
-          onClick={() => setActiveTab('hormone')}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active-press ${
-            activeTab === 'hormone'
-              ? 'bg-white text-primary shadow-sm'
-              : 'text-rose-900/50 hover:text-rose-800'
-          }`}
-        >
-          🧪 신체 수치 기록
-        </button>
-        <button
-          onClick={() => setActiveTab('diary')}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active-press ${
-            activeTab === 'diary'
-              ? 'bg-white text-primary shadow-sm'
-              : 'text-rose-900/50 hover:text-rose-800'
-          }`}
-        >
-          💌 마음 일기 기록
-        </button>
+      <div className="flex bg-rose-50/50 p-1.5 rounded-2xl border border-rose-100/40 gap-0.5">
+        {recordTabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`flex-1 py-2.5 rounded-xl text-xs font-bold transition-all active-press ${
+              activeTab === tab.key
+                ? 'bg-white text-primary shadow-sm'
+                : 'text-rose-900/50 hover:text-rose-800'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      {activeTab === 'hormone' ? (
-        // 🧪 신체 수치 기록 탭
+      {/* ── 일반 기록 탭 ── */}
+      {activeTab === 'daily' && (
         <div className="space-y-5 animate-fade-in">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-lg font-bold text-rose-950 flex items-center gap-1.5">
-                📊 오늘의 신체 기록
-              </h2>
-              <p className="text-[11px] text-rose-900/50 mt-0.5">매일의 신체 변화와 시기별 검사 수치를 기록합니다</p>
-            </div>
-            {subTab !== 'daily' && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="bg-primary hover:bg-rose-500 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center gap-1 active-press transition-colors shadow-sm"
-              >
-                <Plus size={14} /> 수치 상세 등록
-              </button>
-            )}
+          <div>
+            <h2 className="text-lg font-bold text-rose-950 flex items-center gap-1.5">📊 오늘의 신체 기록</h2>
+            <p className="text-[11px] text-rose-900/50 mt-0.5">매일의 신체 변화를 기록합니다</p>
           </div>
-
-          {/* 대분류 서브 탭 */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setSubTab('daily')}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all active-press border ${
-                subTab === 'daily'
-                  ? 'bg-rose-500 text-white border-rose-500 shadow-sm shadow-rose-200'
-                  : 'bg-white border-rose-100/50 text-rose-900/60 hover:text-rose-500'
-              }`}
-            >
-              일상 기록
-            </button>
-            <button
-              onClick={() => setSubTab('medical')}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all active-press border flex items-center gap-1 ${
-                subTab === 'medical'
-                  ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
-                  : 'bg-white border-rose-100/50 text-rose-900/60 hover:text-rose-500'
-              }`}
-            >
-              검사 수치 {profile?.treatmentStage === 'natural' && '🔒'}
-            </button>
-            <button
-              onClick={() => setSubTab('procedure')}
-              className={`px-4 py-2 rounded-full text-xs font-bold transition-all active-press border flex items-center gap-1 ${
-                subTab === 'procedure'
-                  ? 'bg-rose-500 text-white border-rose-500 shadow-sm'
-                  : 'bg-white border-rose-100/50 text-rose-900/60 hover:text-rose-500'
-              }`}
-            >
-              검사 수치 {(profile?.treatmentStage === 'natural' || profile?.treatmentStage === 'iui') && '🔒'}
-            </button>
-          </div>
-
-          {/* 서브 탭 컨텐츠 분기 */}
-          {subTab === 'daily' && (
-            // [1] 일상 기록 탭 (활성)
-            <div className="space-y-4">
+          <div className="space-y-4">
               {(() => {
                 const todayRecord = records.find(r => r.recordedAt === todayStr)
                 return (
@@ -588,288 +660,93 @@ export default function RecordsPage() {
                 </p>
               </div>
             </div>
-          )}
+        </div>
+      )}
 
-          {subTab === 'medical' && (
-            // [2] 검사 수치 탭
-            <div className="relative min-h-[350px]">
-              {profile?.treatmentStage === 'natural' ? (
-                // 잠금 상태 (🔒)
-                <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-[3px] rounded-3xl flex flex-col items-center justify-center text-center p-6 space-y-4 border border-rose-100/40">
-                  <div className="w-14 h-14 bg-rose-100/60 rounded-full flex items-center justify-center text-2xl">
-                    🔒
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-rose-950">
-                      AMH, FSH 등 병원 검사 결과를 기록하고 싶으신가요?
-                    </h3>
-                    <p className="text-xs text-rose-900/50 mt-1.5 leading-relaxed">
-                      6개월 이상 임신 준비 중이라면 이 기능이 도움이 돼요.<br />
-                      의사 소견 및 호르몬 트렌드 모니터링을 지원합니다.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleUpgradeStage('iui')}
-                    disabled={isUpgrading}
-                    className="bg-[#c026d3] text-white text-xs font-semibold py-3 px-5 rounded-2xl hover:bg-fuchsia-700 active-press transition-colors shadow-md shadow-fuchsia-100 flex items-center gap-1.5"
-                  >
-                    {isUpgrading ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    ) : (
-                      '병원 검사 수치 기록 활성화 ✨'
-                    )}
-                  </button>
-                </div>
-              ) : null}
-
-              {/* 실제 컨텐츠 영역 (잠금 시 블러) */}
-              <div className={`space-y-5 ${profile?.treatmentStage === 'natural' ? 'filter blur-[2px] opacity-40 select-none pointer-events-none' : ''}`}>
-                {/* 기존 호르몬 셀렉터 탭 */}
-                <div className="flex gap-1.5 overflow-x-auto pb-1.5 -mx-1 px-1">
-                  {['amh', 'fsh', 'lh', 'estradiol', 'progesterone'].map((h) => (
-                    <button
-                      key={h}
-                      onClick={() => setSelectedHormone(h as any)}
-                      className={`px-3 py-2 rounded-2xl text-[10px] font-bold tracking-tight whitespace-nowrap active-press transition-all ${
-                        selectedHormone === h
-                          ? 'bg-primary text-white shadow-md shadow-rose-200'
-                          : 'bg-white border border-rose-100/50 text-rose-900/60 hover:text-primary'
-                      }`}
-                    >
-                      {h.toUpperCase()}
-                    </button>
-                  ))}
-                </div>
-
-                {/* 차트 */}
-                <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-xs font-bold text-slate-800">
-                      {hormoneMeta[selectedHormone]?.name || '호르몬'} 추이 그래프
-                    </h3>
-                    <span className="text-[9px] bg-rose-50 text-primary font-bold px-2 py-0.5 rounded-full">
-                      단위: {hormoneMeta[selectedHormone]?.unit}
-                    </span>
-                  </div>
-
-                  {chartData.length > 0 ? (
-                    <div className="w-full flex justify-center mt-3">
-                      <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-auto overflow-visible">
-                        <defs>
-                          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="hsl(345, 75%, 65%)" stopOpacity="0.25" />
-                            <stop offset="100%" stopColor="hsl(345, 75%, 65%)" stopOpacity="0" />
-                          </linearGradient>
-                        </defs>
-                        <line x1={paddingLeft} y1={paddingTop} x2={width - paddingRight} y2={paddingTop} stroke="hsl(345, 30%, 96%)" strokeDasharray="3 3" />
-                        <line x1={paddingLeft} y1={(height - paddingBottom - paddingTop) / 2 + paddingTop} x2={width - paddingRight} y2={(height - paddingBottom - paddingTop) / 2 + paddingTop} stroke="hsl(345, 30%, 96%)" strokeDasharray="3 3" />
-                        <line x1={paddingLeft} y1={height - paddingBottom} x2={width - paddingRight} y2={height - paddingBottom} stroke="hsl(345, 30%, 90%)" />
-                        {chartData.length > 1 && <path d={areaPath} fill="url(#areaGradient)" />}
-                        {chartData.length > 1 && <path d={linePath} fill="none" stroke="hsl(345, 75%, 65%)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
-                        {chartData.map((d, i) => {
-                          const x = getX(i)
-                          const y = getY(d.value)
-                          return (
-                            <g key={i}>
-                              <circle cx={x} cy={y} r="4" fill="white" stroke="hsl(345, 75%, 65%)" strokeWidth="2.5" />
-                              <text x={x} y={y - 8} textAnchor="middle" className="text-[9px] font-bold fill-rose-950">
-                                {d.value}
-                              </text>
-                              <text x={x} y={height - 8} textAnchor="middle" className="text-[8px] fill-gray-400">
-                                {d.date}
-                              </text>
-                            </g>
-                          )
-                        })}
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="text-center py-10 border border-dashed border-slate-100 rounded-2xl">
-                      <p className="text-xs text-gray-400">그래프를 렌더링하기에 충분한 수치 기록이 없습니다.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+      {/* ── 병원 수치 탭 ── */}
+      {activeTab === 'hospital' && (
+        <div className="space-y-5 animate-fade-in">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-lg font-bold text-rose-950">🏥 병원 수치 기록</h2>
+              <p className="text-[11px] text-rose-900/50 mt-0.5">현재 단계({currentStage ?? '미설정'})의 주요 검사 수치를 입력합니다</p>
             </div>
-          )}
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="bg-primary hover:bg-rose-500 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center gap-1 active-press transition-colors shadow-sm"
+            >
+              <Plus size={14} /> 수치 등록
+            </button>
+          </div>
 
-          {subTab === 'procedure' && (
-            // [3] 검사 수치 탭
-            <div className="relative min-h-[350px]">
-              {(profile?.treatmentStage === 'natural' || profile?.treatmentStage === 'iui') ? (
-                // 잠금 상태 (🔒)
-                <div className="absolute inset-0 z-10 bg-white/70 backdrop-blur-[3px] rounded-3xl flex flex-col items-center justify-center text-center p-6 space-y-4 border border-rose-100/40">
-                  <div className="w-14 h-14 bg-rose-100/60 rounded-full flex items-center justify-center text-2xl">
-                    🔒
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-rose-950">
-                      난포 크기, 자궁내막 두께 등 검사 결과를 기록하고 싶으신가요?
-                    </h3>
-                    <p className="text-xs text-rose-900/50 mt-1.5 leading-relaxed">
-                      IVF나 IUI와 함께 나아가고 있다면 이 기능이 도움이 돼요.<br />
-                      이식, 채취 데이터와 약물 일정을 빈틈없이 케어합니다.
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleUpgradeStage('ivf')}
-                    disabled={isUpgrading}
-                    className="bg-[#4f46e5] text-white text-xs font-semibold py-3 px-5 rounded-2xl hover:bg-indigo-700 active-press transition-colors shadow-md shadow-indigo-100 flex items-center gap-1.5"
-                  >
-                    {isUpgrading ? (
-                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    ) : (
-                      '검사 수치 기록 활성화 ✨'
-                    )}
-                  </button>
-                </div>
-              ) : null}
-
-              {/* 실제 컨텐츠 영역 (잠금 시 블러) */}
-              <div className={`space-y-4 ${(!profile?.treatmentStage || profile.treatmentStage === 'natural' || profile.treatmentStage === 'iui') ? 'filter blur-[2px] opacity-40 select-none pointer-events-none' : ''}`}>
-                <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-3">
-                  <h3 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
-                    💉 시험관 & 인공수정 핵심 지표 관리
-                  </h3>
-                  
-                  {/* 최신 기록 검사 수치 요약 */}
-                  {(() => {
-                    const procedureRecord = records.find(r => r.follicleSize !== undefined || r.endometriumThickness !== undefined || r.hcgLevel !== undefined)
-                    return procedureRecord ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs mt-2">
-                        {procedureRecord.follicleSize && (
-                          <div className="bg-indigo-50/40 border border-indigo-100/50 rounded-2xl p-3.5 text-center">
-                            <span className="text-[10px] text-indigo-900/50 block font-semibold">난포 크기</span>
-                            <span className="text-base font-extrabold text-indigo-700 block mt-1">{procedureRecord.follicleSize} mm</span>
-                          </div>
-                        )}
-                        {procedureRecord.endometriumThickness && (
-                          <div className="bg-indigo-50/40 border border-indigo-100/50 rounded-2xl p-3.5 text-center">
-                            <span className="text-[10px] text-indigo-900/50 block font-semibold">자궁내막 두께</span>
-                            <span className="text-base font-extrabold text-indigo-700 block mt-1">{procedureRecord.endometriumThickness} mm</span>
-                          </div>
-                        )}
-                        {procedureRecord.hcgLevel && (
-                          <div className="bg-indigo-50/40 border border-indigo-100/50 rounded-2xl p-3.5 text-center col-span-2 sm:col-span-1">
-                            <span className="text-[10px] text-indigo-900/50 block font-semibold">hCG 수치</span>
-                            <span className="text-base font-extrabold text-indigo-700 block mt-1">{procedureRecord.hcgLevel} mIU/mL</span>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="p-5 text-center border border-dashed border-slate-100 rounded-2xl">
-                        <p className="text-xs text-gray-400">아직 기록된 시술 데이터가 없습니다.</p>
-                      </div>
-                    )
-                  })()}
-                </div>
-              </div>
+          {!currentStage ? (
+            <div className="bg-rose-50 rounded-3xl p-6 text-center space-y-3 border border-rose-100/60">
+              <p className="text-sm font-bold text-rose-950">현재 치료 단계가 설정되지 않았습니다</p>
+              <p className="text-xs text-rose-900/50">설정 화면에서 현재 단계를 선택하면 단계별 수치 필드가 표시됩니다</p>
+              <a href="/settings" className="inline-block text-xs font-semibold text-primary underline">설정으로 이동</a>
             </div>
+          ) : (
+            <HospitalFieldsForm
+              mode={treatmentMode}
+              stage={currentStage}
+              todayRecord={records.find(r => r.recordedAt === todayStr)}
+              onSave={saveDailyField}
+            />
           )}
+        </div>
+      )}
 
-        {/* 과거 기록 내역 리스트 */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-          <h3 className="text-xs font-bold text-slate-800 mb-3.5 flex items-center gap-1.5">
-            <Calendar size={14} className="text-primary" />
-            과거 수치 기록 내역
-          </h3>
-          {records.length > 0 ? (
-            <div className="space-y-3.5 max-h-[400px] overflow-y-auto pr-1">
-              {records.map((r, i) => (
-                <div key={r.id || i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-rose-950">{r.recordedAt}</span>
-                    <button
-                      onClick={async () => {
-                        if (confirm('이 기록을 삭제하시겠습니까?')) {
-                          await hormonesApi.delete(r.id!)
-                          await fetchRecords()
-                        }
-                      }}
-                      className="text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px]">
-                    {r.bbt !== undefined && (
-                      <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                        <p className="text-rose-900/60 font-semibold">체온</p>
-                        <p className="font-bold text-rose-950 mt-0.5">{r.bbt} °C</p>
-                      </div>
-                    )}
-                    {r.opkIndex !== undefined && (
-                      <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                        <p className="text-rose-900/60 font-semibold">배테기</p>
-                        <p className="font-bold text-rose-950 mt-0.5">{r.opkIndex === 10 ? '양성(피크)' : '음성'}</p>
-                      </div>
-                    )}
-                    {r.weight !== undefined && (
-                      <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                        <p className="text-rose-900/60 font-semibold">몸무게</p>
-                        <p className="font-bold text-rose-950 mt-0.5">{r.weight} kg</p>
-                      </div>
-                    )}
-                    {r.sleepHours !== undefined && (
-                      <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                        <p className="text-rose-900/60 font-semibold">수면</p>
-                        <p className="font-bold text-rose-950 mt-0.5">{r.sleepHours} 시간</p>
-                      </div>
-                    )}
-                    {r.cervicalMucus && (
-                      <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                        <p className="text-rose-900/60 font-semibold">CM(점액)</p>
-                          <p className="font-bold text-rose-950 mt-0.5">
-                            {r.cervicalMucus === 'dry' && '건조함'}
-                            {r.cervicalMucus === 'sticky' && '끈적함'}
-                            {r.cervicalMucus === 'creamy' && '크림상태'}
-                            {r.cervicalMucus === 'eggwhite' && '계란흰자'}
-                          </p>
-                        </div>
-                      )}
-                      {r.amh !== undefined && (
-                        <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                          <p className="text-gray-400 font-semibold">AMH</p>
-                          <p className="font-bold text-slate-700 mt-0.5">{r.amh}</p>
-                        </div>
-                      )}
-                      {r.fsh !== undefined && (
-                        <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                          <p className="text-gray-400 font-semibold">FSH</p>
-                          <p className="font-bold text-slate-700 mt-0.5">{r.fsh}</p>
-                        </div>
-                      )}
-                      {r.lh !== undefined && (
-                        <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                          <p className="text-gray-400 font-semibold">LH</p>
-                          <p className="font-bold text-slate-700 mt-0.5">{r.lh}</p>
-                        </div>
-                      )}
-                      {r.estradiol !== undefined && (
-                        <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                          <p className="text-gray-400 font-semibold">E2</p>
-                          <p className="font-bold text-slate-700 mt-0.5">{r.estradiol}</p>
-                        </div>
-                      )}
-                      {r.progesterone !== undefined && (
-                        <div className="bg-white rounded-lg p-1.5 border border-slate-100">
-                          <p className="text-gray-400 font-semibold">PROG</p>
-                          <p className="font-bold text-slate-700 mt-0.5">{r.progesterone}</p>
-                        </div>
-                      )}
+      {/* ── 시술 지표 탭 (clinic 전용) ── */}
+      {activeTab === 'procedure' && (
+        <div className="space-y-5 animate-fade-in">
+          <div>
+            <h2 className="text-lg font-bold text-rose-950">💉 시술 지표 기록</h2>
+            <p className="text-[11px] text-rose-900/50 mt-0.5">채취, 이식 등 주요 시술 결과를 기록합니다</p>
+          </div>
+
+          {/* 과거 기록 내역 */}
+          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
+            <h3 className="text-xs font-bold text-slate-800 mb-3.5 flex items-center gap-1.5">
+              <Calendar size={14} className="text-primary" />
+              과거 수치 기록 내역
+            </h3>
+            {records.length > 0 ? (
+              <div className="space-y-3.5 max-h-[350px] overflow-y-auto pr-1">
+                {records.map((r, i) => (
+                  <div key={r.id || i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold text-rose-950">{r.recordedAt}</span>
+                      <button
+                        onClick={async () => {
+                          if (confirm('이 기록을 삭제하시겠습니까?')) {
+                            await hormonesApi.delete(r.id!)
+                            await fetchRecords()
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px]">
+                      {r.bbt !== undefined && <div className="bg-white rounded-lg p-1.5 border border-slate-100"><p className="text-rose-900/60 font-semibold">체온</p><p className="font-bold text-rose-950 mt-0.5">{r.bbt} °C</p></div>}
+                      {r.opkIndex !== undefined && <div className="bg-white rounded-lg p-1.5 border border-slate-100"><p className="text-rose-900/60 font-semibold">배테기</p><p className="font-bold text-rose-950 mt-0.5">{r.opkIndex === 10 ? '양성(피크)' : '음성'}</p></div>}
+                      {r.weight !== undefined && <div className="bg-white rounded-lg p-1.5 border border-slate-100"><p className="text-rose-900/60 font-semibold">몸무게</p><p className="font-bold text-rose-950 mt-0.5">{r.weight} kg</p></div>}
+                      {r.sleepHours !== undefined && <div className="bg-white rounded-lg p-1.5 border border-slate-100"><p className="text-rose-900/60 font-semibold">수면</p><p className="font-bold text-rose-950 mt-0.5">{r.sleepHours} 시간</p></div>}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-400 text-center py-6">등록된 검사 기록이 없습니다.</p>
+              <p className="text-xs text-gray-400 text-center py-6">등록된 기록이 없습니다.</p>
             )}
           </div>
         </div>
-      ) : (
-        // 💌 마음 일기 기록 탭
-        <div className="space-y-5">
+      )}
+
+      {/* ── 감정 일기 탭 ── */}
+      {activeTab === 'diary' && (
+        <div className="space-y-5 animate-fade-in">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold text-rose-950 flex items-center gap-1.5">
