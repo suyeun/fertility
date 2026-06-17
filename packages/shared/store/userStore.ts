@@ -81,8 +81,13 @@ export const useUserStore = create<UserStore>((set, get) => ({
 
   syncProfile: async () => {
     try {
-      const profile = await usersApi.getProfile()
-      if (profile) {
+      const serverProfile = await usersApi.getProfile()
+      if (serverProfile) {
+        // 서버는 currentStage로 반환하지만 스토어/화면은 _currentStage로 읽음
+        const profile = {
+          ...serverProfile,
+          _currentStage: (serverProfile as any).currentStage ?? null,
+        }
         set({ profile })
         await _storage?.setItem(STORAGE_KEY, JSON.stringify(profile))
       }

@@ -188,7 +188,7 @@ export default function SettingsPage() {
     }
   }
 
-  const currentStage = STAGE_OPTIONS.find(s => s.value === profile?.treatmentStage)
+  const stageOption = STAGE_OPTIONS.find(s => s.value === profile?.treatmentStage)
 
   const StepInput = ({
     value, onChange, min, max, unit,
@@ -239,9 +239,9 @@ export default function SettingsPage() {
             <p className="text-[11px] text-rose-900/50 truncate mt-0.5">
               {profile?.email || (user as any)?.email || ''}
             </p>
-            {currentStage && (
+            {stageOption && (
               <span className="inline-block mt-1.5 text-[10px] bg-white/70 text-rose-700 font-semibold px-2.5 py-0.5 rounded-full border border-rose-100">
-                {currentStage.emoji} {currentStage.label}
+                {stageOption.emoji} {stageOption.label}
               </span>
             )}
           </div>
@@ -286,7 +286,7 @@ export default function SettingsPage() {
           />
           <SettingRow
             emoji="🌱" label="나의 준비 단계"
-            value={currentStage?.label}
+            value={stageOption?.label}
             onClick={() => setModal('stage')}
           />
         </SectionCard>

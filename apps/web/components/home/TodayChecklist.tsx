@@ -13,7 +13,8 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { CheckCircle2, Circle } from 'lucide-react'
-import type { HormoneRecord, TreatmentSchedule, UserMode } from '@fertility/shared'
+import type { HormoneRecord, TreatmentSchedule, UserMode, TreatmentMode, CurrentStage } from '@fertility/shared'
+import { getTodayTasksByMode } from '@fertility/shared'
 import SupplementModal from './SupplementModal'
 
 // ============================
@@ -214,26 +215,19 @@ export function NaturalChecklist({ todayHormone, phase }: NaturalChecklistProps)
 interface ClinicChecklistProps {
   schedules: TreatmentSchedule[]
   todayHormone?: HormoneRecord
+  mode: TreatmentMode
+  stage: CurrentStage
 }
 
-export function ClinicChecklist({ schedules, todayHormone }: ClinicChecklistProps) {
+export function ClinicChecklist({ schedules, todayHormone, mode, stage }: ClinicChecklistProps) {
   const today = new Date().toISOString().split('T')[0]
-  const todaySchedules = schedules.filter(
-    s => s.scheduledAt.startsWith(today) && s.status === 'scheduled'
-  )
 
-  const [symptomDone,  setSymptomDone]  = useState(false)
-  const [checkedMeds,  setCheckedMeds]  = useState<Record<string, boolean>>({})
   const supplement = useSupplementCheck('CLINIC')
+  const [checkedIds, setCheckedIds] = useState<Record<string, boolean>>({})
 
-  const todayMeds: { id: string; name: string; dose: string; time: string }[] = []
-  todaySchedules.forEach(s => {
-    s.medications?.forEach(med => {
-      med.times.forEach(time => {
-        todayMeds.push({ id: `${s.id}-${med.name}-${time}`, name: med.name, dose: med.dose, time })
-      })
-    })
-  })
+  const tasks = getTodayTasksByMode(mode, stage, schedules, todayHormone ? [todayHormone] : [], today)
+
+  const toggle = (id: string) => setCheckedIds(prev => ({ ...prev, [id]: !prev[id] }))
 
   return (
     <>
@@ -241,33 +235,28 @@ export function ClinicChecklist({ schedules, todayHormone }: ClinicChecklistProp
 
       <div className="flex flex-col gap-2">
 
-        {todayMeds.length > 0 ? (
-          todayMeds.map(med => (
-            <CheckItem
-              key={med.id}
-              emoji="💉" label={`${med.name} ${med.dose}`}
-              sub={`${med.time} · 알림 설정됨 🔔`}
-              done={checkedMeds[med.id] ?? false}
-              onToggle={() => setCheckedMeds(prev => ({ ...prev, [med.id]: !prev[med.id] }))}
-            />
-          ))
-        ) : (
+        {tasks.map(task => (
           <CheckItem
-            emoji="💉" label="오늘 투약 일정 없음"
-            sub="캘린더 탭에서 약물을 등록하세요"
-            done={false} onToggle={() => {}}
-          />
-        )}
-
-        {todaySchedules.map(s => (
-          <CheckItem
-            key={s.id} emoji="🏥" label={s.title}
-            sub={s.hospitalName ?? '병원 방문'}
-            done={s.status === 'completed'} onToggle={() => {}}
-          />
+            key={task.id}
+            emoji={task.emoji}
+            label={task.title}
+            sub={task.subtitle}
+            done={task.done || (checkedIds[task.id] ?? false)}
+            onToggle={() => toggle(task.id)}
+          >
+            {task.route === '/chat' && (
+              <Link
+                href="/chat"
+                className="flex items-center gap-2 mx-4 px-3 py-2 rounded-xl bg-[#f5f3ff] border border-[#ddd6fe]"
+              >
+                <span className="text-sm">✨</span>
+                <span className="text-[10px] text-[#6d28d9] font-semibold">AI 봄이에게 이야기하기 →</span>
+              </Link>
+            )}
+          </CheckItem>
         ))}
 
-        {/* 영양제 — 동일한 토스트 + Bottom Sheet 흐름 */}
+        {/* 영양제 — 토스트 + Bottom Sheet */}
         <CheckItem
           emoji="💊" label="영양제 챙기기"
           sub={supplement.done ? '오늘 복용 완료 ✓' : '코큐텐 · 비타민D'}
@@ -280,22 +269,6 @@ export function ClinicChecklist({ schedules, todayHormone }: ClinicChecklistProp
           >
             ✨ BOM 시술 맞춤 영양제 가이드 보기 →
           </button>
-        </CheckItem>
-
-        <CheckItem
-          emoji="📝" label="오늘 증상 기록하기"
-          sub="복부 팽만, 복통 등"
-          done={symptomDone} onToggle={() => setSymptomDone(v => !v)}
-        >
-          <Link
-            href="/chat"
-            className="flex items-center gap-2 mx-4 px-3 py-2 rounded-xl bg-[#f5f3ff] border border-[#ddd6fe]"
-          >
-            <span className="text-sm">✨</span>
-            <span className="text-[10px] text-[#6d28d9] font-semibold">
-              증상이 심하면 AI 봄이에게 물어보세요 →
-            </span>
-          </Link>
         </CheckItem>
 
       </div>
