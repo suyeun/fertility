@@ -15,10 +15,10 @@ const MOOD_EMOJI: Record<string, string> = {
 }
 
 interface DiaryPromptProps {
-  latestDiary?: DiaryEntry
+  todayDiary?: DiaryEntry
 }
 
-export default function DiaryPrompt({ latestDiary }: DiaryPromptProps) {
+export default function DiaryPrompt({ todayDiary: latestDiary }: DiaryPromptProps) {
   return (
     <div>
       {/* 섹션 헤더 */}
@@ -70,7 +70,7 @@ export default function DiaryPrompt({ latestDiary }: DiaryPromptProps) {
           ) : (
             <>
               <div className="text-[13px]" style={{ color: '#b07080' }}>
-                오늘 감정을 기록해보세요
+                오늘 기분을 기록해봐요 💭
               </div>
               <div className="text-[11px] mt-0.5" style={{ color: '#c4a0ae' }}>
                 AI가 따뜻하게 응원해드려요

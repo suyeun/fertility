@@ -32,6 +32,7 @@ export interface WeekDay {
   label: string
   isToday: boolean
   recorded: boolean
+  recordIcon?: string  // '🏥' | '💉' | undefined
 }
 
 export interface HomeData {
@@ -40,6 +41,7 @@ export interface HomeData {
   nextOvulationDate: Date
   nextPeriodDate: Date
   ovulationDDay: string
+  periodDDay: string
   todayPhaseLabel: string
   todayTip: string
   isFertileWindow: boolean
@@ -60,6 +62,24 @@ const PHASE_TIP: Record<string, string> = {
   follicular: '자궁 내막이 자라는 시기예요. 균형 잡힌 영양을 챙겨요.',
   ovulation:  '지금은 가임기예요. 배란 테스트기를 체크하고 기초체온을 기록해보세요.',
   luteal:     '착상을 돕는 황체호르몬이 분비돼요. 편안한 마음을 유지해요.',
+}
+
+const IUI_STAGE_TIP: Record<string, string> = {
+  stimulation: '몸을 따뜻하게 하고 충분히 쉬어요 💛',
+  monitoring:  '배란 신호를 놓치지 마세요 🥚',
+  procedure:   '오늘 시술 당일이에요. 긴장하지 마세요 💪',
+  luteal:      '착상을 기다리는 소중한 시간이에요 🙏',
+  result:      '오늘 판정일이에요. 어떤 결과든 함께할게요 🌸',
+}
+
+const IVF_STAGE_TIP: Record<string, string> = {
+  stimulation: '약 잘 챙기고 무리하지 마세요 💛',
+  monitoring:  '난포가 잘 자라고 있어요. 수분 충분히 드세요 💧',
+  retrieval:   '채취 당일이에요. 공복 꼭 지켜주세요 ⚠️',
+  culture:     '배아들이 열심히 자라는 중이에요 🌱',
+  transfer:    '이식 당일이에요. 긴장 풀고 편안하게 💆',
+  luteal:      '착상을 기다리는 소중한 2주예요 🙏',
+  result:      '판정일이에요. 어떤 결과든 혼자가 아니에요 🌸',
 }
 
 // ── IUI/IVF 단계 순서 ──────────────────────────────────────
@@ -276,6 +296,18 @@ function buildWeekStreak(
     diaries.forEach(d => recordedSet.add(d.date))
   }
 
+  // 아이콘 감지: 시술 일정 → 🏥, 주사 기록 → 💉
+  const scheduleIconMap = new Map<string, string>()
+  schedules
+    .filter(s => s.status === 'completed')
+    .forEach(s => scheduleIconMap.set(s.scheduledAt.split('T')[0], '🏥'))
+  hormones.forEach(h => {
+    const d = h.recordedAt.split('T')[0]
+    if ((h.injectionDrug || h.injectionDose) && !scheduleIconMap.has(d)) {
+      scheduleIconMap.set(d, '💉')
+    }
+  })
+
   const weekDays: WeekDay[] = []
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday)
@@ -283,10 +315,12 @@ function buildWeekStreak(
     const dateStr = d.toISOString().split('T')[0]
     const isToday = dateStr === today.toISOString().split('T')[0]
     const isFuture = d.getTime() > today.getTime()
+    const hasRecord = !isFuture && recordedSet.has(dateStr)
     weekDays.push({
       label: isToday ? '오늘' : DAY_LABELS[d.getDay()],
       isToday,
-      recorded: !isFuture && recordedSet.has(dateStr),
+      recorded: hasRecord,
+      recordIcon: hasRecord ? scheduleIconMap.get(dateStr) : undefined,
     })
   }
 
@@ -360,14 +394,19 @@ export function useHomeData(
     [treatmentMode, hormones, diaries, schedules, today],
   )
 
+  const stageTip = treatmentMode !== 'natural' && currentStage
+    ? (treatmentMode === 'iui' ? IUI_STAGE_TIP[currentStage] : IVF_STAGE_TIP[currentStage]) ?? ''
+    : ''
+
   return {
     todayCycleInfo,
     currentCycleDay,
     nextOvulationDate,
     nextPeriodDate,
     ovulationDDay: getDDayText(nextOvulationDate, today),
+    periodDDay: getDDayText(nextPeriodDate, today),
     todayPhaseLabel: PHASE_LABEL[phase] ?? '난포기',
-    todayTip: PHASE_TIP[phase] ?? PHASE_TIP.follicular,
+    todayTip: stageTip || PHASE_TIP[phase] || PHASE_TIP.follicular,
     isFertileWindow: todayCycleInfo?.isFertileWindow ?? false,
     todayTasks,
     weekStreak: weekDays,

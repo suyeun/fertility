@@ -6,17 +6,16 @@ interface DayCellProps {
   day: CalendarDay
   isSelected: boolean
   hasIntercourse?: boolean
-  hasSchedule?: boolean
-  scheduleColor?: string
+  markers?: Array<{ color: string; icon?: string }>
   onPress: (date: Date) => void
 }
 
 const { width: SCREEN_W } = Dimensions.get('window')
-// container margin 12*2=24 + grid paddingHorizontal 12*2=24 = 48px inset
+// container margin 12*2=24 + grid paddingLeft 12 + paddingRight 16 = 52px inset
 // 7 cells * marginHorizontal 2*2=4px = 28px gap total
-export const DAY_CELL_W = Math.floor((SCREEN_W - 48 - 28) / 7)
+export const DAY_CELL_W = Math.floor((SCREEN_W - 52 - 28) / 7)
 
-export function DayCell({ day, isSelected, hasIntercourse, hasSchedule, scheduleColor, onPress }: DayCellProps) {
+export function DayCell({ day, isSelected, hasIntercourse, markers, onPress }: DayCellProps) {
   const { date, dayNum, isCurrentMonth, isToday, cycleInfo } = day
 
   const isOvulation    = cycleInfo?.isOvulation
@@ -44,7 +43,20 @@ export function DayCell({ day, isSelected, hasIntercourse, hasSchedule, schedule
       <Text style={numStyle}>{dayNum}</Text>
       {hasIntercourse && <Text style={styles.heart}>❤️</Text>}
       {isToday && <View style={styles.todayDot} />}
-      {hasSchedule && <View style={[styles.scheduleDot, scheduleColor ? { backgroundColor: scheduleColor } : undefined]} />}
+      {markers && markers.length > 0 && (
+        <View style={styles.markersRow}>
+          {(markers.length <= 3 ? markers : markers.slice(0, 3)).map((marker, idx) =>
+            marker.icon ? (
+              <Text key={idx} style={[styles.markerIcon, { color: marker.color }]}>{marker.icon}</Text>
+            ) : (
+              <View key={idx} style={[styles.markerDot, { backgroundColor: marker.color }]} />
+            )
+          )}
+          {markers.length > 3 && (
+            <Text style={styles.markerMore}>{markers.length - 3}+</Text>
+          )}
+        </View>
+      )}
     </TouchableOpacity>
   )
 }
@@ -99,13 +111,26 @@ const styles = StyleSheet.create({
     right: 2,
     fontSize: 7,
   },
-  scheduleDot: {
+  markersRow: {
+    flexDirection: 'row',
+    gap: 2,
     position: 'absolute',
-    bottom: 3,
-    right: 4,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#6366f1',
+    bottom: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  markerDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  markerIcon: {
+    fontSize: 6,
+    lineHeight: 7,
+  },
+  markerMore: {
+    fontSize: 5,
+    color: '#9ca3af',
+    lineHeight: 7,
   },
 })

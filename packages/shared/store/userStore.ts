@@ -50,14 +50,15 @@ export const useUserStore = create<UserStore>((set, get) => ({
     const profile = get().profile
     if (!profile) return
     const today = new Date().toISOString().split('T')[0]
-    // _currentStage, _stageStartedAt 모두 로컬에만 보관
+    const stageStartedAt = stage ? today : null
     const updated = {
       ...profile,
       _currentStage: stage,
-      _stageStartedAt: stage ? today : null,
+      _stageStartedAt: stageStartedAt,
     } as any
     set({ profile: updated })
     _storage?.setItem(STORAGE_KEY, JSON.stringify(updated))
+    usersApi.updateProfile({ currentStage: stage, stageStartedAt }).catch(() => {})
   },
 
   setPremium: (value) => {
@@ -93,7 +94,7 @@ export const useUserStore = create<UserStore>((set, get) => ({
         const profile = {
           ...serverProfile,
           _currentStage: (serverProfile as any).currentStage ?? existing?._currentStage ?? null,
-          _stageStartedAt: existing?._stageStartedAt ?? null,
+          _stageStartedAt: (serverProfile as any).stageStartedAt ?? existing?._stageStartedAt ?? null,
         }
         set({ profile })
         await _storage?.setItem(STORAGE_KEY, JSON.stringify(profile))

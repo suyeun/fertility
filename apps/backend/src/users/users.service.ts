@@ -14,6 +14,7 @@ const ALLOWED_UPDATE_FIELDS = [
   'currentMode',
   'treatmentStage',
   'currentStage',
+  'stageStartedAt',
   'averageCycleLength',
   'averagePeriodLength',
 ] as const

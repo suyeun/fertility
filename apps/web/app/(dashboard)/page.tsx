@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   useHomeData, cyclesApi, treatmentApi, hormonesApi, diaryApi,
@@ -49,14 +49,26 @@ export default function DashboardPage() {
   // 프로필: 스토어 우선 (설정 변경 즉시 반영)
   const profile = storeProfile ?? authProfile
 
-  const treatmentMode = (profile?.treatmentStage as TreatmentMode) ?? 'natural'
-  const currentStage  = (profile as any)?._currentStage as CurrentStage ?? null
+  const treatmentMode  = (profile?.treatmentStage as TreatmentMode) ?? 'natural'
+  const currentStage   = (profile as any)?._currentStage as CurrentStage ?? null
+  const stageStartedAt = (profile as any)?._stageStartedAt as string | null ?? null
+  const stageDay = stageStartedAt
+    ? Math.max(1, Math.floor((Date.now() - new Date(stageStartedAt).getTime()) / 86400000) + 1)
+    : null
 
   const home = useHomeData(treatmentMode, currentStage, cycles, hormones, schedules, diaries)
 
   const todayStr     = new Date().toISOString().split('T')[0]
   const todayHormone = hormones.find(h => h.recordedAt.split('T')[0] === todayStr)
-  const latestDiary  = diaries[0]
+  const todayDiary   = diaries.find(d => d.date === todayStr) ?? undefined
+
+  const hasCycleData = cycles.length > 0
+
+  const upcomingSchedule = useMemo(() => {
+    return schedules
+      .filter(s => s.scheduledAt.split('T')[0] >= todayStr && s.status !== 'cancelled')
+      .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))[0] ?? null
+  }, [schedules, todayStr])
 
   const quickActions = getQuickActions(treatmentMode, currentStage)
 
@@ -75,7 +87,7 @@ export default function DashboardPage() {
       <div className="pt-1 flex items-start justify-between">
         <div>
           <h2 className="text-[18px] font-semibold text-[#5a3042]">
-            🌸 봄 &nbsp;|&nbsp; {profile?.name || '사용자'}님, 안녕하세요
+            🌸 봄 &nbsp;|&nbsp; {profile?.name || '테스터'}님, 안녕하세요
           </h2>
           <p className="text-[12px] text-[#b07080] mt-0.5">오늘도 따뜻하게 함께할게요</p>
         </div>
@@ -93,10 +105,14 @@ export default function DashboardPage() {
         phase={home.todayCycleInfo?.phase ?? 'follicular'}
         phaseLabel={home.todayPhaseLabel}
         cycleDay={home.currentCycleDay}
+        stageDay={stageDay}
         tip={home.todayTip}
         dDay={home.ovulationDDay}
+        periodDDay={home.periodDDay}
         ovulationDate={home.nextOvulationDate}
         isFertileWindow={home.isFertileWindow}
+        hasCycleData={hasCycleData}
+        upcomingSchedule={upcomingSchedule}
       />
 
       {/* 섹션 C — 빠른 기록 버튼 */}
@@ -129,6 +145,18 @@ export default function DashboardPage() {
         </div>
         {treatmentMode === 'natural' ? (
           <NaturalChecklist todayHormone={todayHormone} phase={home.todayCycleInfo?.phase} />
+        ) : currentStage === null ? (
+          <Link
+            href="/settings"
+            className="flex items-center gap-3 py-3 px-4 rounded-2xl bg-white border border-[#ffd6e0] text-left"
+            style={{ boxShadow: '0 1px 4px -1px rgba(255,143,171,0.1)' }}
+          >
+            <span className="text-[18px]">🗓️</span>
+            <div className="flex-1">
+              <div className="text-sm font-semibold text-[#5a3042]">치료 단계를 설정하면 맞춤 할 일이 나와요</div>
+              <div className="text-[11px] text-[#ff8fab] mt-0.5">지금 설정하러 가기 →</div>
+            </div>
+          </Link>
         ) : (
           <ClinicChecklist
             schedules={schedules}
@@ -140,7 +168,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 섹션 E — 오늘의 마음 */}
-      <DiaryPrompt latestDiary={latestDiary} />
+      <DiaryPrompt todayDiary={todayDiary} />
 
       {/* 섹션 F — 이번 주 기록 스트릭 */}
       <WeekStreakCard weekDays={home.weekStreak} streakCount={home.streakCount} />

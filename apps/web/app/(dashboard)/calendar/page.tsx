@@ -468,10 +468,19 @@ export default function CalendarPage() {
             const isFertileWindow = data?.isFertileWindow
             const isToday = cDay.dateStr === new Date().toISOString().split('T')[0]
             const isSelected = selectedDateStr === cDay.dateStr
-            const hasSchedule = schedules.some(s => s.scheduledAt.split('T')[0] === cDay.dateStr)
-            
             const dayHormone = hormones.find(h => h.recordedAt === cDay.dateStr)
             const hasIntercourse = dayHormone?.intercourse === true
+
+            const daySchedules = schedules.filter(s => s.scheduledAt.split('T')[0] === cDay.dateStr)
+            const hasInjection = !!(dayHormone?.injectionDrug || dayHormone?.injectionDose)
+            const markers = [
+              ...daySchedules.map(s => {
+                const m = getScheduleMarkerStyle(s.type)
+                return { color: m.color, emoji: m.emoji }
+              }),
+              ...(hasInjection ? [{ color: '#60a5fa', emoji: '●' }] : []),
+            ]
+            const visibleMarkers = markers.slice(0, 3)
 
             return (
               <div
@@ -496,7 +505,7 @@ export default function CalendarPage() {
                 <div className="w-full flex justify-between items-start px-1">
                   <span className="text-[11px] font-medium">{cDay.day}</span>
                   {hasIntercourse && (
-                    <span className="text-[9px] leading-none text-rose-500 fill-rose-500 animate-pulse-glow" title="관계일">❤️</span>
+                    <span className="text-[9px] leading-none text-rose-500" title="관계일">❤️</span>
                   )}
                 </div>
 
@@ -506,25 +515,20 @@ export default function CalendarPage() {
                     <span className="text-[7px] text-red-500 bg-red-100 px-1 py-0.2 rounded">생리</span>
                   )}
                   {isOvulation && (
-                    <span className="text-[8px] animate-pulse">🌸</span>
+                    <span className="text-[8px]">🌸</span>
                   )}
                   {isFertileWindow && !isOvulation && !isMenstruation && (
                     <span className="text-[7px] text-primary bg-rose-50 px-1 py-0.2 rounded">가임</span>
                   )}
-                  {treatmentMode === 'natural' ? (
-                    hasSchedule && <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-0.5" />
-                  ) : (
-                    schedules
-                      .filter(s => s.scheduledAt.split('T')[0] === cDay.dateStr)
-                      .slice(0, 2)
-                      .map((s, si) => {
-                        const m = getScheduleMarkerStyle(s.type)
-                        return (
-                          <span key={si} style={{ color: m.color, fontSize: 8, lineHeight: 1 }}>
-                            {m.emoji}
-                          </span>
-                        )
-                      })
+                  {visibleMarkers.length > 0 && (
+                    <div className="flex gap-0.5 items-center">
+                      {visibleMarkers.map((m, mi) => (
+                        <span key={mi} style={{ color: m.color, fontSize: 8, lineHeight: 1 }}>{m.emoji}</span>
+                      ))}
+                      {markers.length > 3 && (
+                        <span style={{ fontSize: 6, color: '#9ca3af' }}>{markers.length - 3}+</span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -532,8 +536,8 @@ export default function CalendarPage() {
           })}
         </div>
 
-        {/* 주기 기록 없을 때 안내 배너 */}
-        {cycles.length === 0 && (
+        {/* 빈 상태 CTA */}
+        {treatmentMode === 'natural' && cycles.length === 0 && (
           <div className="mt-4 pt-3.5 border-t border-slate-100/60">
             <div className="bg-rose-50/60 border border-dashed border-rose-200 rounded-2xl px-4 py-3 text-center space-y-1.5">
               <p className="text-xs font-bold text-rose-800">🌸 생리 시작일을 기록해보세요</p>
@@ -549,29 +553,77 @@ export default function CalendarPage() {
             </div>
           </div>
         )}
+        {treatmentMode !== 'natural' && schedules.length === 0 && (
+          <div className="mt-4 pt-3.5 border-t border-slate-100/60">
+            <div className="bg-rose-50/60 border border-dashed border-rose-200 rounded-2xl px-4 py-3 text-center space-y-1.5">
+              <p className="text-xs font-bold text-rose-800">📅 시술 일정을 등록해보세요</p>
+              <p className="text-[10px] text-rose-900/60 leading-relaxed">
+                병원 방문·시술 일정을 등록하면 D-Day와 함께 홈 화면에서 확인할 수 있어요.
+              </p>
+              <button
+                onClick={() => { setMedStartDate(new Date().toISOString().split('T')[0]); setIsScheduleModalOpen(true) }}
+                className="text-[11px] font-bold text-primary hover:underline"
+              >
+                + 첫 일정 등록하기
+              </button>
+            </div>
+          </div>
+        )}
 
-        {/* 콤팩트 범례 한 줄 */}
-        <div className="flex flex-wrap justify-center items-center gap-x-5 gap-y-1.5 mt-4 pt-3.5 border-t border-slate-100/60 text-[10px] text-rose-900/50 font-medium">
+        {/* 모드별 범례 */}
+        <div className="flex flex-wrap justify-center items-center gap-x-4 gap-y-1.5 mt-4 pt-3.5 border-t border-slate-100/60 text-[10px] text-rose-900/50 font-medium overflow-x-auto">
           <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-[#fecdd3]"></span>
-            <span>생리 기간</span>
+            <span className="w-2 h-2 rounded-full bg-[#fecdd3]" />
+            <span>생리</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-[#ede9fe]"></span>
-            <span>가임 시기</span>
+            <span className="w-2 h-2 rounded-full bg-[#ede9fe]" />
+            <span>가임기</span>
           </div>
           <div className="flex items-center gap-1">
             <span>🌸</span>
-            <span>배란 예정일</span>
+            <span>배란일</span>
           </div>
-          <div className="flex items-center gap-1">
-            <span>❤️</span>
-            <span>관계일</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-indigo-400"></span>
-            <span>병원/내원 일정</span>
-          </div>
+          {treatmentMode === 'natural' ? (
+            <div className="flex items-center gap-1">
+              <span>❤️</span>
+              <span>관계일</span>
+            </div>
+          ) : treatmentMode === 'iui' ? (
+            <>
+              <div className="flex items-center gap-1">
+                <span style={{ color: '#ff8fab', fontSize: 10 }}>★</span>
+                <span>인공수정</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span style={{ color: '#a855f7', fontSize: 10 }}>●</span>
+                <span>초음파/채혈</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span style={{ color: '#60a5fa', fontSize: 10 }}>●</span>
+                <span>주사</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-center gap-1">
+                <span style={{ color: '#2dd4bf', fontSize: 10 }}>♥</span>
+                <span>이식</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span style={{ color: '#f97316', fontSize: 10 }}>◎</span>
+                <span>채취</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span style={{ color: '#a855f7', fontSize: 10 }}>●</span>
+                <span>초음파/채혈</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span style={{ color: '#60a5fa', fontSize: 10 }}>●</span>
+                <span>주사</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -695,36 +747,46 @@ export default function CalendarPage() {
               </div>
 
               {/* 3. 복용 체크리스트 */}
-              {dateMedications.length > 0 && (
-                <div className="border border-rose-100 rounded-2xl p-4">
+              {(dateMedications.length > 0 || treatmentMode !== 'natural') && (
+                <div className="border border-rose-100 rounded-2xl p-4 relative overflow-hidden">
                   <span className="text-xs font-bold text-rose-800 block mb-2">💊 복용 체크리스트</span>
-                  <div className="space-y-2">
-                    {dateMedications.map((med, i) => {
-                      const medKey = `${med.name}_${med.dose}_${med.times.join(',')}`
-                      const isChecked = !!checkedMeds[medKey]
-                      return (
-                        <button
-                          key={i}
-                          onClick={() => handleCheckMed(medKey)}
-                          className={`w-full flex justify-between items-center p-3 rounded-xl border text-left transition-all ${
-                            isChecked
-                              ? 'bg-slate-50 border-slate-100 text-slate-400 line-through'
-                              : 'bg-white border-rose-100/50 hover:bg-rose-50/20'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-                              isChecked ? 'bg-primary border-primary' : 'border-rose-200 bg-white'
-                            }`}>
-                              {isChecked && <Check size={10} className="text-white" />}
-                            </span>
-                            <span className="text-xs font-semibold">{med.name} <span className="font-normal text-gray-400">({med.dose})</span></span>
-                          </div>
-                          <span className="text-[10px] font-bold text-primary">🕒 {med.times.join(', ')}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
+                  {dateMedications.length > 0 ? (
+                    <div className="space-y-2">
+                      {dateMedications.map((med, i) => {
+                        const medKey = `${med.name}_${med.dose}_${med.times.join(',')}`
+                        const isChecked = !!checkedMeds[medKey]
+                        return (
+                          <button
+                            key={i}
+                            onClick={() => handleCheckMed(medKey)}
+                            className={`w-full flex justify-between items-center p-3 rounded-xl border text-left transition-all ${
+                              isChecked
+                                ? 'bg-slate-50 border-slate-100 text-slate-400 line-through'
+                                : 'bg-white border-rose-100/50 hover:bg-rose-50/20'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                                isChecked ? 'bg-primary border-primary' : 'border-rose-200 bg-white'
+                              }`}>
+                                {isChecked && <Check size={10} className="text-white" />}
+                              </span>
+                              <span className="text-xs font-semibold">{med.name} <span className="font-normal text-gray-400">({med.dose})</span></span>
+                            </div>
+                            <span className="text-[10px] font-bold text-primary">🕒 {med.times.join(', ')}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-gray-400">복용 약물이 없어요</p>
+                  )}
+                  {treatmentMode !== 'natural' && dateMedications.length === 0 && (
+                    <div className="absolute inset-0 bg-white/85 backdrop-blur-[2px] rounded-2xl flex flex-col items-center justify-center gap-1.5">
+                      <p className="text-xs font-bold text-rose-800">💊 복용 알림은 프리미엄 기능이에요</p>
+                      <button className="text-[11px] font-bold text-primary hover:underline">지금 구독하기 →</button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -758,6 +820,41 @@ export default function CalendarPage() {
                   </div>
                 ) : (
                   <p className="text-[11px] text-gray-400">등록된 시술 일정이 없어요</p>
+                )}
+              </div>
+
+              {/* 모드별 하단 액션 버튼 */}
+              <div className="flex gap-2 pt-1">
+                {treatmentMode === 'natural' ? (
+                  <>
+                    <button
+                      onClick={openHealthRecord}
+                      className="flex-1 py-2.5 rounded-2xl border border-rose-200 text-rose-700 text-xs font-semibold hover:bg-rose-50 transition-colors"
+                    >
+                      🌡️ 기록 추가
+                    </button>
+                    <button
+                      onClick={() => { setMedStartDate(selectedDateStr); setIsDayModalOpen(false); setIsScheduleModalOpen(true) }}
+                      className="flex-1 py-2.5 rounded-2xl bg-primary text-white text-xs font-semibold hover:bg-rose-500 transition-colors"
+                    >
+                      📅 일정 등록
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => { setMedStartDate(selectedDateStr); setIsDayModalOpen(false); setIsScheduleModalOpen(true) }}
+                      className="flex-1 py-2.5 rounded-2xl border border-rose-200 text-rose-700 text-xs font-semibold hover:bg-rose-50 transition-colors"
+                    >
+                      📅 일정 등록
+                    </button>
+                    <button
+                      onClick={openHealthRecord}
+                      className="flex-1 py-2.5 rounded-2xl bg-primary text-white text-xs font-semibold hover:bg-rose-500 transition-colors"
+                    >
+                      📊 수치 기록
+                    </button>
+                  </>
                 )}
               </div>
 

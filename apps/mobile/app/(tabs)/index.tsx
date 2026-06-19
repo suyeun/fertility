@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   View, Text, TouchableOpacity, ScrollView,
   StyleSheet, ActivityIndicator, Pressable, SafeAreaView,
@@ -26,8 +26,14 @@ const MUTED      = '#b07080'
 const BORDER     = '#ffd6e0'
 const LIGHT_PINK = '#fff0f4'
 
-const PHASE_EMOJI: Record<string, string> = {
-  menstrual: '🌷', follicular: '🌱', ovulation: '🌸', luteal: '✨',
+function getDDay(target: Date): string {
+  const t = new Date(target)
+  t.setHours(0, 0, 0, 0)
+  const now = new Date()
+  now.setHours(0, 0, 0, 0)
+  const diff = Math.ceil((t.getTime() - now.getTime()) / 86400000)
+  if (diff === 0) return 'D-Day'
+  return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`
 }
 
 // ── 단계 진행 바 ─────────────────────────────────────────────
@@ -49,27 +55,87 @@ function StageBar({ mode, stage }: { mode: TreatmentMode; stage: CurrentStage })
   )
 }
 
+// ── 자연임신 위상 뱃지 ────────────────────────────────────────
+const PHASE_BADGE: Record<string, { emoji: string; label: string; color: string }> = {
+  menstrual:  { emoji: '🔴', label: '생리기',  color: 'rgba(255,255,255,0.22)' },
+  follicular: { emoji: '🟢', label: '난포기',  color: 'rgba(255,255,255,0.22)' },
+  ovulation:  { emoji: '⭐', label: '배란기',  color: 'rgba(255,255,255,0.28)' },
+  luteal:     { emoji: '🟡', label: '황체기',  color: 'rgba(255,255,255,0.22)' },
+}
+
 // ── 히어로 카드 ──────────────────────────────────────────────
 function HeroCard({
-  treatmentMode, currentStage, phase, phaseLabel, cycleDay, stageDay, tip, dDay, isFertileWindow,
+  treatmentMode, currentStage, phase, cycleDay, stageDay, tip, dDay, periodDDay,
+  isFertileWindow, hasCycleData, upcomingSchedule,
 }: {
-  treatmentMode: TreatmentMode; currentStage: CurrentStage
-  phase: string; phaseLabel: string; cycleDay: number; stageDay: number | null
-  tip: string; dDay: string; isFertileWindow: boolean
+  treatmentMode: TreatmentMode
+  currentStage: CurrentStage
+  phase: string
+  cycleDay: number
+  stageDay: number | null
+  tip: string
+  dDay: string
+  periodDDay: string
+  isFertileWindow: boolean
+  hasCycleData: boolean
+  upcomingSchedule: TreatmentSchedule | null
 }) {
-  // 자연임신
+  // 자연임신 — 사이클 데이터 없음
+  if (treatmentMode === 'natural' && !hasCycleData) {
+    return (
+      <TouchableOpacity
+        style={[hero.card, { backgroundColor: PINK }]}
+        onPress={() => router.push('/settings' as any)}
+        activeOpacity={0.9}
+      >
+        <Text style={hero.meta}>🌱 자연임신 준비 중</Text>
+        <Text style={[hero.phase, { fontSize: 16, marginBottom: 6 }]}>
+          생리 시작일을 입력하면{'\n'}주기를 알려드려요
+        </Text>
+        <View style={hero.ctaBtn}>
+          <Text style={[hero.ctaBtnText, { color: DARK_ROSE }]}>생리 정보 입력하러 가기 →</Text>
+        </View>
+      </TouchableOpacity>
+    )
+  }
+
+  // 자연임신 — 사이클 데이터 있음
   if (treatmentMode === 'natural') {
+    const effectivePhase = isFertileWindow && phase === 'follicular' ? 'follicular' : phase
+    const badge = PHASE_BADGE[effectivePhase] ?? PHASE_BADGE.follicular
+    const isGaim = isFertileWindow && phase === 'follicular'
+
+    let dDayText: string
+    let dDayLabel: string
+    if (phase === 'menstrual') {
+      dDayText = `${cycleDay}일차`
+      dDayLabel = '생리'
+    } else if (phase === 'ovulation') {
+      dDayText = '오늘 🌟'
+      dDayLabel = '배란 예정일'
+    } else if (phase === 'luteal') {
+      dDayText = periodDDay
+      dDayLabel = '생리 예정'
+    } else {
+      dDayText = dDay
+      dDayLabel = '배란까지'
+    }
+
     return (
       <View style={[hero.card, { backgroundColor: PINK }]}>
         <View style={hero.ddayBadge}>
-          <Text style={hero.ddayNum}>{dDay}</Text>
-          <Text style={hero.ddayLabel}>배란까지</Text>
+          <Text style={hero.ddayNum}>{dDayText}</Text>
+          <Text style={hero.ddayLabel}>{dDayLabel}</Text>
         </View>
-        <Text style={hero.meta}>오늘의 사이클 상태</Text>
-        <Text style={hero.phase}>{PHASE_EMOJI[phase]} {phaseLabel}</Text>
+        <Text style={hero.meta}>🌱 자연임신 준비 중</Text>
+        <View style={[hero.phaseBadge, { backgroundColor: badge.color }]}>
+          <Text style={hero.phaseBadgeText}>{badge.emoji} {isGaim ? '가임기' : badge.label}</Text>
+        </View>
         <Text style={hero.day}>사이클 {cycleDay}일째</Text>
-        <View style={hero.tipBox}><Text style={hero.tipText}>{tip}</Text></View>
-        {isFertileWindow && (
+        <View style={hero.tipBox}>
+          <Text style={hero.tipText}>{tip}</Text>
+        </View>
+        {(isFertileWindow || phase === 'ovulation') && (
           <View style={[hero.tipBox, { marginTop: 6, backgroundColor: 'rgba(255,255,255,0.18)' }]}>
             <Text style={hero.tipText}>💗 지금은 가임기! 오늘 타이밍을 놓치지 마세요</Text>
           </View>
@@ -80,12 +146,14 @@ function HeroCard({
 
   // IUI/IVF — 단계 미설정
   if (currentStage === null) {
+    const modeLabel = treatmentMode === 'iui' ? 'IUI 인공수정' : 'IVF 시험관'
+    const modeIcon  = treatmentMode === 'iui' ? '💉' : '🔬'
     return (
       <View style={[hero.card, { backgroundColor: '#c084fc' }]}>
-        <Text style={hero.meta}>{treatmentMode === 'iui' ? 'IUI 인공수정' : 'IVF 시험관'}</Text>
-        <Text style={[hero.phase, { fontSize: 18 }]}>🌸 치료 단계를 설정해주세요</Text>
+        <Text style={hero.meta}>{modeIcon} {modeLabel}</Text>
+        <Text style={[hero.phase, { fontSize: 18, marginBottom: 6 }]}>치료 단계를 설정해주세요</Text>
         <Text style={[hero.day, { marginBottom: 14 }]}>
-          현재 단계를 등록하면 맞춤 일정을 알려드려요
+          단계를 설정하면 맞춤 정보를 드려요
         </Text>
         <TouchableOpacity
           style={hero.ctaBtn}
@@ -98,18 +166,28 @@ function HeroCard({
   }
 
   // IUI/IVF — 단계 설정됨
-  const bgColor = treatmentMode === 'iui' ? '#a855f7' : '#7c3aed'
-  const modeLabel = treatmentMode === 'iui' ? 'IUI 인공수정' : 'IVF 시험관'
+  const bgColor    = treatmentMode === 'iui' ? '#a855f7' : '#7c3aed'
+  const modeLabel  = treatmentMode === 'iui' ? 'IUI 인공수정' : 'IVF 시험관'
+  const modeIcon   = treatmentMode === 'iui' ? '💉' : '🔬'
   return (
     <View style={[hero.card, { backgroundColor: bgColor }]}>
       <View style={hero.ddayBadge}>
         <Text style={hero.ddayNum}>{stageDay ?? cycleDay}일</Text>
         <Text style={hero.ddayLabel}>치료 중</Text>
       </View>
-      <Text style={hero.meta}>{modeLabel}</Text>
-      <Text style={[hero.phase, { fontSize: 20 }]}>🧬 {getStageLabelKo(treatmentMode, currentStage)}</Text>
+      <Text style={hero.meta}>{modeIcon} {modeLabel}</Text>
+      <Text style={[hero.phase, { fontSize: 20 }]}>{getStageLabelKo(treatmentMode, currentStage)}</Text>
       <StageBar mode={treatmentMode} stage={currentStage} />
-      <View style={[hero.tipBox, { marginTop: 10 }]}><Text style={hero.tipText}>{tip}</Text></View>
+      {upcomingSchedule && (
+        <View style={[hero.tipBox, { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+          <Text style={hero.tipText}>
+            📅 {upcomingSchedule.title}까지 {getDDay(new Date(upcomingSchedule.scheduledAt))}
+          </Text>
+        </View>
+      )}
+      <View style={[hero.tipBox, { marginTop: upcomingSchedule ? 6 : 10 }]}>
+        <Text style={hero.tipText}>{tip}</Text>
+      </View>
     </View>
   )
 }
@@ -211,22 +289,29 @@ export default function HomeScreen() {
 
   const profile = storeProfile ?? serverProfile
 
-  const treatmentMode     = (profile?.treatmentStage as TreatmentMode) ?? 'natural'
-  const currentStage      = (profile as any)?._currentStage as CurrentStage ?? null
-  const stageStartedAt    = (profile as any)?._stageStartedAt as string | null ?? null
+  const treatmentMode  = (profile?.treatmentStage as TreatmentMode) ?? 'natural'
+  const currentStage   = (profile as any)?._currentStage as CurrentStage ?? null
+  const stageStartedAt = (profile as any)?._stageStartedAt as string | null ?? null
   const stageDay = stageStartedAt
     ? Math.max(1, Math.floor((Date.now() - new Date(stageStartedAt).getTime()) / 86400000) + 1)
     : null
 
   const home = useHomeData(treatmentMode, currentStage, cycles, hormones, schedules, diaries)
 
-  const todayStr     = new Date().toISOString().split('T')[0]
-  const todayHormone = hormones.find(h => h.recordedAt.split('T')[0] === todayStr)
-  const latestDiary  = diaries[0]
+  const todayStr    = new Date().toISOString().split('T')[0]
+  const todayDiary  = diaries.find(d => d.date === todayStr) ?? null
+
+  const hasCycleData = cycles.length > 0
+
+  const upcomingSchedule = useMemo(() => {
+    return schedules
+      .filter(s => s.scheduledAt.split('T')[0] >= todayStr && s.status !== 'cancelled')
+      .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))[0] ?? null
+  }, [schedules, todayStr])
 
   const [quickA, quickB] = getQuickActions(treatmentMode, currentStage)
 
-  // 빠른 기록 카드 값 (자연임신 BBT/OPK만 실제 수치 표시)
+  const todayHormone = hormones.find(h => h.recordedAt.split('T')[0] === todayStr)
   const quickAValue = treatmentMode === 'natural' && quickA.emoji === '🌡️' && todayHormone?.bbt
     ? `${todayHormone.bbt}°C`
     : undefined
@@ -256,7 +341,7 @@ export default function HomeScreen() {
         {/* 섹션 A — 헤더 */}
         <View style={s.header}>
           <View>
-            <Text style={s.greeting}>🌸 봄 &nbsp;|&nbsp; {profile?.name || '사용자'}님, 안녕하세요</Text>
+            <Text style={s.greeting}>🌸 봄 &nbsp;|&nbsp; {profile?.name || '테스터'}님, 안녕하세요</Text>
             <Text style={s.greetingSub}>오늘도 따뜻하게 함께할게요</Text>
           </View>
           <TouchableOpacity onPress={() => router.push('/settings' as any)} style={s.settingsBtn}>
@@ -269,12 +354,14 @@ export default function HomeScreen() {
           treatmentMode={treatmentMode}
           currentStage={currentStage}
           phase={home.todayCycleInfo?.phase ?? 'follicular'}
-          phaseLabel={home.todayPhaseLabel}
           cycleDay={home.currentCycleDay}
           stageDay={stageDay}
           tip={home.todayTip}
           dDay={home.ovulationDDay}
+          periodDDay={home.periodDDay}
           isFertileWindow={home.isFertileWindow}
+          hasCycleData={hasCycleData}
+          upcomingSchedule={upcomingSchedule}
         />
 
         {/* 섹션 C — 빠른 기록 */}
@@ -287,11 +374,21 @@ export default function HomeScreen() {
         </View>
 
         {/* 섹션 D — 오늘 할 일 */}
-        {home.todayTasks.length > 0 && (
-          <View style={s.section}>
-            <View style={s.secHeader}>
-              <Text style={s.secTitle}>📋 오늘 할 일</Text>
-            </View>
+        <View style={s.section}>
+          <View style={s.secHeader}>
+            <Text style={s.secTitle}>🗓️ 오늘 할 일</Text>
+          </View>
+          {treatmentMode !== 'natural' && currentStage === null ? (
+            <TouchableOpacity style={t.row} onPress={() => router.push('/settings' as any)}>
+              <View style={[t.icon, { backgroundColor: '#eef2ff' }]}>
+                <Text style={{ fontSize: 18 }}>🗓️</Text>
+              </View>
+              <View style={t.text}>
+                <Text style={t.title}>치료 단계를 설정하면 맞춤 할 일이 나와요</Text>
+                <Text style={t.sub}>지금 설정하러 가기 →</Text>
+              </View>
+            </TouchableOpacity>
+          ) : (
             <View style={t.list}>
               {home.todayTasks.map(task => (
                 <TaskRow
@@ -305,8 +402,8 @@ export default function HomeScreen() {
                 />
               ))}
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         {/* 섹션 E — 오늘의 마음 */}
         <View style={s.section}>
@@ -318,14 +415,14 @@ export default function HomeScreen() {
           </View>
           <TouchableOpacity style={t.row} onPress={() => router.push('/records' as any)}>
             <View style={[t.icon, { backgroundColor: LIGHT_PINK }]}>
-              <Text style={{ fontSize: 18 }}>{latestDiary ? '😊' : '📝'}</Text>
+              <Text style={{ fontSize: 18 }}>{todayDiary ? '😊' : '📝'}</Text>
             </View>
             <View style={t.text}>
-              {latestDiary ? (
-                <Text style={t.title} numberOfLines={2}>{latestDiary.content}</Text>
+              {todayDiary ? (
+                <Text style={t.title} numberOfLines={2}>{todayDiary.content}</Text>
               ) : (
                 <>
-                  <Text style={[t.title, { color: MUTED, fontWeight: '400' }]}>오늘 감정을 기록해보세요</Text>
+                  <Text style={[t.title, { color: MUTED, fontWeight: '400' }]}>오늘 기분을 기록해봐요 💭</Text>
                   <Text style={t.sub}>AI가 따뜻하게 응원해드려요</Text>
                 </>
               )}
@@ -333,10 +430,10 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* 섹션 F — 이번 주 기록 스트릭 */}
+        {/* 섹션 F — 이번 주 기록 */}
         <View style={s.section}>
           <View style={s.secHeader}>
-            <Text style={s.secTitle}>📊 이번 주 기록</Text>
+            <Text style={s.secTitle}>📈 이번 주 기록</Text>
             <TouchableOpacity onPress={() => router.push('/records' as any)}>
               <Text style={s.secLink}>전체 보기 ›</Text>
             </TouchableOpacity>
@@ -352,16 +449,18 @@ export default function HomeScreen() {
                       ? { backgroundColor: day.isToday ? BORDER : PINK }
                       : { backgroundColor: LIGHT_PINK, borderWidth: day.isToday ? 1.5 : 0.5, borderColor: day.isToday ? PINK : BORDER },
                   ]}>
-                    {day.recorded && (
+                    {day.recorded && day.recordIcon ? (
+                      <Text style={{ fontSize: 13 }}>{day.recordIcon}</Text>
+                    ) : day.recorded ? (
                       <Text style={{ fontSize: 11, color: day.isToday ? PINK : '#fff', fontWeight: '700' }}>✓</Text>
-                    )}
+                    ) : null}
                   </View>
                 </View>
               ))}
             </View>
             <Text style={streak.summary}>
               {home.streakCount > 0
-                ? `이번 주 ${home.streakCount}일 연속 기록 중 🔥`
+                ? `${home.streakCount}일 연속 기록 중이에요 🔥`
                 : '오늘부터 기록을 시작해봐요 ✨'}
             </Text>
           </View>
@@ -394,11 +493,15 @@ const hero = StyleSheet.create({
   card: {
     borderRadius: 22, padding: 20, marginBottom: 14, position: 'relative',
   },
-  meta:    { fontFamily: F.regular, fontSize: 11, color: 'rgba(255,255,255,0.75)', marginBottom: 4 },
+  meta:    { fontFamily: F.regular, fontSize: 11, color: 'rgba(255,255,255,0.75)', marginBottom: 8 },
   phase:   { fontFamily: F.bold,    fontSize: 24, color: '#fff', marginBottom: 2, paddingRight: 70 },
   day:     { fontFamily: F.regular, fontSize: 13, color: 'rgba(255,255,255,0.85)', marginBottom: 10 },
   tipBox:  { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10 },
   tipText: { fontFamily: F.regular, fontSize: 12, color: '#fff', lineHeight: 18 },
+  phaseBadge: {
+    alignSelf: 'flex-start', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, marginBottom: 6,
+  },
+  phaseBadgeText: { fontFamily: F.bold, fontSize: 14, color: '#fff' },
   ddayBadge: {
     position: 'absolute', top: 18, right: 18,
     backgroundColor: 'rgba(255,255,255,0.25)',
@@ -443,6 +546,6 @@ const streak = StyleSheet.create({
   col:        { alignItems: 'center', gap: 6 },
   label:      { fontFamily: F.regular, fontSize: 11, color: MUTED },
   labelToday: { fontFamily: F.bold,    fontSize: 11, color: PINK },
-  circle:     { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  circle:     { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   summary:    { fontFamily: F.regular, fontSize: 12, color: MUTED, textAlign: 'center' },
 })

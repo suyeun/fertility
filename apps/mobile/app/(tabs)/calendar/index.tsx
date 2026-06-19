@@ -13,6 +13,8 @@ import {
   Platform,
   Alert,
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
 import {
   useCycleCalendar, cyclesApi, hormonesApi, treatmentApi, diaryApi,
   canUseClinicScheduler, isPremiumProfile, ClinicFeature,
@@ -31,12 +33,35 @@ import { F } from '../../../lib/fonts'
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토']
 
-const LEGEND = [
-  { color: '#fecdd3', label: '생리' },
-  { color: '#ede9fe', label: '가임기' },
-  { color: '#ff8fab', label: '배란일' },
-  { color: '#fb7185', label: '관계일(❤️)' },
-]
+function getLegend(mode: TreatmentMode): Array<{ color: string; label: string; icon?: string }> {
+  if (mode === 'natural') {
+    return [
+      { color: '#fecdd3', label: '생리' },
+      { color: '#ede9fe', label: '가임기' },
+      { color: '#ff8fab', label: '배란일' },
+      { color: '#fb7185', label: '관계일', icon: '❤️' },
+    ]
+  }
+  if (mode === 'iui') {
+    return [
+      { color: '#fecdd3', label: '생리' },
+      { color: '#ede9fe', label: '가임기' },
+      { color: '#ff8fab', label: '배란일' },
+      { color: '#ff8fab', label: '인공수정', icon: '★' },
+      { color: '#a855f7', label: '초음파', icon: '●' },
+      { color: '#60a5fa', label: '주사', icon: '●' },
+    ]
+  }
+  // ivf
+  return [
+    { color: '#fecdd3', label: '생리' },
+    { color: '#2dd4bf', label: '이식', icon: '♥' },
+    { color: '#f97316', label: '채취', icon: '◎' },
+    { color: '#a855f7', label: '초음파', icon: '●' },
+    { color: '#60a5fa', label: '주사', icon: '●' },
+    { color: '#fbbf24', label: '판정일', icon: '☆' },
+  ]
+}
 
 const MOODS = [
   { mood: 'great',   emoji: '😄', label: '최고' },
@@ -65,6 +90,7 @@ const BORDER    = '#ffd6e0'
 const LIGHT_PINK = '#fff0f4'
 
 export default function CalendarScreen() {
+  const insets = useSafeAreaInsets()
   const { profile: storeProfile } = useUserStore()
   const [user, setUser]         = useState<any>(null)
   const [profile, setProfile]   = useState<UserProfile | null>(null)
@@ -399,7 +425,7 @@ export default function CalendarScreen() {
 
   return (
     <>
-      <ScrollView style={styles.screen} bounces={false}>
+      <ScrollView style={styles.screen} bounces={false} contentContainerStyle={{ paddingTop: insets.top }}>
         <View style={styles.container}>
 
           {/* 헤더 */}
@@ -414,10 +440,6 @@ export default function CalendarScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.headerSubRow}>
-              <View style={styles.statusPill}>
-                <View style={styles.statusDot} />
-                <Text style={styles.statusText}>{todayPhaseLabel}</Text>
-              </View>
               <TouchableOpacity
                 style={styles.addScheduleBtn}
                 onPress={() => { setMedStartDate(selectedDateStr); setIsScheduleModalOpen(true) }}
@@ -429,9 +451,15 @@ export default function CalendarScreen() {
 
           {/* 요일 */}
           <View style={styles.weekdays}>
-            {WEEKDAYS.map(d => (
+            {WEEKDAYS.map((d, i) => (
               <View key={d} style={styles.weekdayCell}>
-                <Text style={styles.weekday}>{d}</Text>
+                <Text style={[
+                  styles.weekday,
+                  i === 0 && { color: '#f43f5e' },
+                  i === 6 && { color: '#60a5fa' },
+                ]}>
+                  {d}
+                </Text>
               </View>
             ))}
           </View>
@@ -440,19 +468,26 @@ export default function CalendarScreen() {
           <View style={styles.grid}>
             {calendarDays.map((day, i) => {
               const dateStr = toLocalDateStr(day.date)
-              const dayHormone = hormones.find(h => h.recordedAt === dateStr)
-              const daySchedule = schedules.find(s => s.scheduledAt.split('T')[0] === dateStr)
-              const markerColor = treatmentMode !== 'natural' && daySchedule
-                ? getScheduleMarkerStyle(daySchedule.type).color
-                : undefined
+              const dayHormone = hormones.find(h =>
+                h.recordedAt === dateStr || h.recordedAt.split('T')[0] === dateStr
+              )
+              const daySchedules = schedules.filter(s => s.scheduledAt.split('T')[0] === dateStr)
+              const markers: Array<{ color: string; icon?: string }> = [
+                ...daySchedules.map(s => {
+                  const style = getScheduleMarkerStyle(s.type)
+                  return { color: style.color, icon: style.emoji }
+                }),
+                ...(dayHormone?.injectionDrug || dayHormone?.injectionDose
+                  ? [{ color: '#60a5fa' }]
+                  : []),
+              ]
               return (
                 <DayCell
                   key={i}
                   day={day}
                   isSelected={selectedDate?.getTime() === day.date.getTime()}
                   hasIntercourse={dayHormone?.intercourse === true}
-                  hasSchedule={!!daySchedule}
-                  scheduleColor={markerColor}
+                  markers={markers.length > 0 ? markers : undefined}
                   onPress={(date) => {
                     selectDate(date)
                     const ds = toLocalDateStr(date)
@@ -467,38 +502,96 @@ export default function CalendarScreen() {
           </View>
 
           {/* 범례 */}
-          <View style={styles.legend}>
-            {LEGEND.map(({ color, label }) => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.legend}
+          >
+            {getLegend(treatmentMode).map(({ color, label, icon }) => (
               <View key={label} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: color }]} />
+                {icon ? (
+                  <Text style={[styles.legendIcon, { color }]}>{icon}</Text>
+                ) : (
+                  <View style={[styles.legendDot, { backgroundColor: color }]} />
+                )}
                 <Text style={styles.legendLabel}>{label}</Text>
               </View>
             ))}
-          </View>
+          </ScrollView>
 
-          {cycles.length === 0 ? (
-            <View style={styles.noCycleBox}>
-              <Text style={styles.noCycleTitle}>🌸 생리 시작일을 기록해보세요</Text>
-              <Text style={styles.noCycleSub}>
-                첫 생리 시작일을 기록하면{'\n'}가임기·배란일 예측을 시작해드려요.
-              </Text>
-              <TouchableOpacity
-                style={styles.noCycleBtn}
-                onPress={() => setIsScheduleModalOpen(true)}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.noCycleBtnTxt}>+ 첫 생리 시작일 기록하기</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <CycleSummary
-              nextOvulationDate={nextOvulationDate}
-              nextPeriodDate={nextPeriodDate}
-              currentCycleDay={currentCycleDay}
-              cycleLength={cycleLength}
-              formatKorDate={formatKorDate}
-            />
-          )}
+          {(() => {
+            const todayStr = toLocalDateStr(today)
+            const stageStartedAt = (effectiveProfile as any)?._stageStartedAt ?? null
+            const stageDay = stageStartedAt
+              ? Math.max(1, Math.round((today.getTime() - new Date(stageStartedAt).getTime()) / 86400000) + 1)
+              : null
+            const upcomingSchedule = schedules
+              .filter(s => s.scheduledAt >= todayStr && (s as any).status !== 'cancelled')
+              .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))[0] ?? null
+
+            const showNaturalCTA = treatmentMode === 'natural' && cycles.length === 0
+            const showClinicCTA = treatmentMode !== 'natural' && schedules.length === 0
+
+            return (
+              <>
+                <CycleSummary
+                  nextOvulationDate={nextOvulationDate}
+                  nextPeriodDate={nextPeriodDate}
+                  currentCycleDay={currentCycleDay}
+                  cycleLength={cycleLength}
+                  formatKorDate={formatKorDate}
+                  mode={treatmentMode}
+                  currentStage={currentStage}
+                  stageDay={stageDay}
+                  upcomingSchedule={upcomingSchedule}
+                />
+                {showNaturalCTA && (
+                  <View style={styles.noCycleBox}>
+                    <Text style={styles.noCycleTitle}>🌸 생리 시작일을 기록해보세요</Text>
+                    <Text style={styles.noCycleSub}>
+                      첫 생리 시작일을 기록하면{'\n'}가임기·배란일 예측을 시작해드려요.
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.noCycleBtn}
+                      onPress={() => setIsScheduleModalOpen(true)}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.noCycleBtnTxt}>+ 첫 생리 시작일 기록하기</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {showClinicCTA && (
+                  <View style={styles.noCycleBox}>
+                    <Text style={styles.noCycleTitle}>
+                      {treatmentMode === 'iui' ? '💉 오늘 시술 일정을 등록해보세요' : '🔬 오늘 시술 일정을 등록해보세요'}
+                    </Text>
+                    <Text style={styles.noCycleSub}>
+                      {treatmentMode === 'iui'
+                        ? '초음파, 채혈, 주사 일정을 기록하면 치료 흐름을 한눈에 볼 수 있어요.'
+                        : '난포 모니터링, 이식, 채취 일정을 기록해요.'}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.noCycleBtn}
+                      onPress={() => { setMedStartDate(todayStr); setIsScheduleModalOpen(true) }}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.noCycleBtnTxt}>+ 오늘 일정 등록하기</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPeriodStartDate(todayStr)
+                        setPeriodEndDate('')
+                        setIsEditingPeriod(false)
+                        setIsDayDetailModalOpen(true)
+                      }}
+                    >
+                      <Text style={styles.noCycleLinkTxt}>생리 시작일도 기록하기 →</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            )
+          })()}
           {/* 날짜 탭 힌트 */}
           <Text style={styles.tapHint}>날짜를 탭하면 기록을 확인하거나 추가할 수 있어요</Text>
         </View>
@@ -595,7 +688,8 @@ export default function CalendarScreen() {
               </View>
 
               {/* ── 약물 등록 서브폼 ── */}
-              <View style={styles.subForm}>
+              <View style={{ position: 'relative' }}>
+              <View style={[styles.subForm, (!isPremium && treatmentMode !== 'natural') ? { opacity: 0.4 } : undefined]}>
                 <Text style={styles.subFormTitle}>💊 동반 복용/투약 약물 추가</Text>
 
                 <View style={styles.gridInputs}>
@@ -664,6 +758,15 @@ export default function CalendarScreen() {
                     )}
                   </TouchableOpacity>
                 )}
+              </View>
+              {!isPremium && treatmentMode !== 'natural' && (
+                <View style={styles.premiumOverlay}>
+                  <Text style={styles.premiumOverlayText}>💊 복용 알림은 프리미엄 기능이에요</Text>
+                  <TouchableOpacity onPress={() => { setIsScheduleModalOpen(false); setPaywallSource('medication_reminder') }}>
+                    <Text style={styles.premiumOverlayBtn}>지금 구독하기 →</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
               </View>
 
               <TouchableOpacity
@@ -785,13 +888,20 @@ export default function CalendarScreen() {
                                 setIsEditingPeriod(false)
                               } else {
                                 setPeriodStartDate(selectedCycleRecord?.startDate || selectedDateStr)
-                                const existingEnd = selectedCycleRecord?.endDate
-                                if (existingEnd) {
-                                  setPeriodEndDate(existingEnd)
+                                // 선택한 날짜가 시작일 이후면 종료일로 pre-fill (저장값 유무 무관)
+                                const startStr = selectedCycleRecord?.startDate || selectedDateStr
+                                if (selectedDateStr >= startStr) {
+                                  setPeriodEndDate(selectedDateStr)
                                 } else {
-                                  const start = new Date(selectedCycleRecord?.startDate || selectedDateStr)
-                                  start.setDate(start.getDate() + (selectedCycleRecord?.periodLength || periodLength) - 1)
-                                  setPeriodEndDate(toLocalDateStr(start))
+                                  // 선택일이 시작일 이전인 경우 기존 저장값 또는 기본값 사용
+                                  const existingEnd = selectedCycleRecord?.endDate
+                                  if (existingEnd) {
+                                    setPeriodEndDate(existingEnd)
+                                  } else {
+                                    const start = new Date(startStr)
+                                    start.setDate(start.getDate() + (selectedCycleRecord?.periodLength || periodLength) - 1)
+                                    setPeriodEndDate(toLocalDateStr(start))
+                                  }
                                 }
                                 setIsEditingPeriod(true)
                               }
@@ -978,6 +1088,41 @@ export default function CalendarScreen() {
                       )}
                     </View>
 
+                    {/* 하단 버튼 행 */}
+                    <View style={{ flexDirection: 'row', gap: 10, paddingTop: 8 }}>
+                      {treatmentMode === 'natural' ? (
+                        <>
+                          <TouchableOpacity
+                            style={styles.bottomBtn}
+                            onPress={() => { setIsDayDetailModalOpen(false); router.push('/records' as any) }}
+                          >
+                            <Text style={styles.bottomBtnTxt}>+ 기록 추가하기</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.bottomBtn}
+                            onPress={() => { setMedStartDate(selectedDateStr); setIsDayDetailModalOpen(false); setIsScheduleModalOpen(true) }}
+                          >
+                            <Text style={styles.bottomBtnTxt}>+ 일정 등록하기</Text>
+                          </TouchableOpacity>
+                        </>
+                      ) : (
+                        <>
+                          <TouchableOpacity
+                            style={styles.bottomBtn}
+                            onPress={() => { setMedStartDate(selectedDateStr); setIsDayDetailModalOpen(false); setIsScheduleModalOpen(true) }}
+                          >
+                            <Text style={styles.bottomBtnTxt}>+ 일정 등록하기</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={styles.bottomBtn}
+                            onPress={() => { setIsDayDetailModalOpen(false); router.push('/records' as any) }}
+                          >
+                            <Text style={styles.bottomBtnTxt}>+ 수치 기록하기</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+
                     <View style={{ height: 16 }} />
                   </View>
                 </ScrollView>
@@ -1052,7 +1197,7 @@ const styles = StyleSheet.create({
   monthTitle: { fontFamily: F.bold,     fontSize: 18, color: '#fff' },
   navBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center' },
   navBtnText: { fontFamily: F.regular,  fontSize: 20, color: '#fff', lineHeight: 24 },
-  headerSubRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerSubRow: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.25)', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 5, alignSelf: 'flex-start' },
   statusDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#fff' },
   statusText: { fontFamily: F.bold,     fontSize: 12, color: '#fff' },
@@ -1060,10 +1205,10 @@ const styles = StyleSheet.create({
   addScheduleBtnText: { fontFamily: F.bold, color: PINK, fontSize: 11 },
 
   // 달력
-  weekdays:    { flexDirection: 'row', paddingHorizontal: 12, paddingTop: 12, paddingBottom: 2 },
+  weekdays:    { flexDirection: 'row', paddingLeft: 12, paddingRight: 16, paddingTop: 12, paddingBottom: 2 },
   weekdayCell: { width: DAY_CELL_W, marginHorizontal: 2, alignItems: 'center' },
   weekday:     { fontFamily: F.bold, fontSize: 11, color: PINK },
-  grid:        { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, paddingBottom: 12 },
+  grid:        { flexDirection: 'row', flexWrap: 'wrap', paddingLeft: 12, paddingRight: 16, paddingBottom: 12 },
   legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingBottom: 16 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
@@ -1322,6 +1467,40 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   healthChipTxt: { fontFamily: F.semiBold, fontSize: 12, color: DARK_ROSE },
+
+  // 프리미엄 오버레이
+  premiumOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,240,244,0.85)',
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  premiumOverlayText: { fontFamily: F.bold, fontSize: 12, color: DARK_ROSE, textAlign: 'center' },
+  premiumOverlayBtn: { fontFamily: F.bold, fontSize: 12, color: PINK },
+
+  // 클리닉 CTA 링크
+  noCycleLinkTxt: { fontFamily: F.semiBold, fontSize: 11, color: PINK, textDecorationLine: 'underline', marginTop: 2 },
+
+  // 하단 버튼
+  bottomBtn: {
+    flex: 1,
+    backgroundColor: '#fff0f4',
+    borderWidth: 1,
+    borderColor: BORDER,
+    borderRadius: 12,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  bottomBtnTxt: { fontFamily: F.bold, fontSize: 11, color: PINK },
+
+  // 범례 아이콘
+  legendIcon: { fontSize: 10 },
 
   // 시술 일정 아이템
   dayScheduleItem: {

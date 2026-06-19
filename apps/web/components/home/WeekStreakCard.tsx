@@ -57,11 +57,15 @@ export default function WeekStreakCard({ weekDays, streakCount }: WeekStreakCard
                   className="w-8 h-8 rounded-full flex items-center justify-center"
                   style={{ background: day.isToday ? '#ffd6e0' : '#ff8fab' }}
                 >
-                  <Check
-                    size={13}
-                    style={{ color: day.isToday ? '#ff8fab' : '#fff' }}
-                    strokeWidth={3}
-                  />
+                  {day.recordIcon ? (
+                    <span style={{ fontSize: 14 }}>{day.recordIcon}</span>
+                  ) : (
+                    <Check
+                      size={13}
+                      style={{ color: day.isToday ? '#ff8fab' : '#fff' }}
+                      strokeWidth={3}
+                    />
+                  )}
                 </div>
               ) : (
                 <div
@@ -79,7 +83,7 @@ export default function WeekStreakCard({ weekDays, streakCount }: WeekStreakCard
         {/* 스트릭 텍스트 */}
         <div className="text-[11px] text-center" style={{ color: '#b07080' }}>
           {streakCount > 0
-            ? `이번 주 ${streakCount}일 연속 기록 중 🔥`
+            ? `${streakCount}일 연속 기록 중이에요 🔥`
             : '오늘부터 기록을 시작해봐요 ✨'}
         </div>
       </div>

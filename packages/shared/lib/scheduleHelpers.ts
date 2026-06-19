@@ -13,8 +13,9 @@ export function getScheduleChips(mode: TreatmentMode): { chips: ScheduleChip[]; 
     return {
       chips: [
         { value: 'period',      label: '생리 시작',  backendType: 'other',      emoji: '🌸' },
+        { value: 'ovulation',   label: '배란 확인',  backendType: 'other',      emoji: '🥚' },
         { value: 'intercourse', label: '관계일',     backendType: 'other',      emoji: '❤️' },
-        { value: 'symptom',     label: '증상',       backendType: 'other',      emoji: '📝' },
+        { value: 'hospital',    label: '병원 방문',  backendType: 'other',      emoji: '🏥' },
         { value: 'other',       label: '기타',       backendType: 'other',      emoji: '📅' },
       ],
       defaultValue: null,
@@ -23,10 +24,10 @@ export function getScheduleChips(mode: TreatmentMode): { chips: ScheduleChip[]; 
   if (mode === 'iui') {
     return {
       chips: [
-        { value: 'iui',         label: '인공수정',   backendType: 'IUI',        emoji: '🧪' },
-        { value: 'monitoring',  label: '초음파',     backendType: 'monitoring', emoji: '🩺' },
-        { value: 'bloodtest',   label: '채혈',       backendType: 'monitoring', emoji: '💉' },
-        { value: 'injection',   label: '주사',       backendType: 'other',      emoji: '💊' },
+        { value: 'iui',         label: '인공수정',   backendType: 'IUI',        emoji: '💫' },
+        { value: 'monitoring',  label: '초음파',     backendType: 'monitoring', emoji: '🔊' },
+        { value: 'bloodtest',   label: '채혈',       backendType: 'monitoring', emoji: '🧪' },
+        { value: 'injection',   label: '주사',       backendType: 'other',      emoji: '💉' },
         { value: 'other',       label: '기타',       backendType: 'other',      emoji: '📅' },
       ],
       defaultValue: 'iui',
@@ -35,12 +36,12 @@ export function getScheduleChips(mode: TreatmentMode): { chips: ScheduleChip[]; 
   // ivf
   return {
     chips: [
-      { value: 'ivf',         label: '시험관',     backendType: 'IVF',        emoji: '🧬' },
-      { value: 'monitoring',  label: '초음파',     backendType: 'monitoring', emoji: '🩺' },
-      { value: 'bloodtest',   label: '채혈',       backendType: 'monitoring', emoji: '💉' },
+      { value: 'ivf',         label: '시험관',     backendType: 'IVF',        emoji: '🔬' },
+      { value: 'monitoring',  label: '초음파',     backendType: 'monitoring', emoji: '🔊' },
+      { value: 'bloodtest',   label: '채혈',       backendType: 'monitoring', emoji: '🧪' },
       { value: 'transfer',    label: '이식',       backendType: 'FET',        emoji: '🌱' },
       { value: 'retrieval',   label: '채취',       backendType: 'IVF',        emoji: '🥚' },
-      { value: 'injection',   label: '주사',       backendType: 'other',      emoji: '💊' },
+      { value: 'injection',   label: '주사',       backendType: 'other',      emoji: '💉' },
       { value: 'other',       label: '기타',       backendType: 'other',      emoji: '📅' },
     ],
     defaultValue: 'ivf',
@@ -78,11 +79,21 @@ export interface MarkerStyle {
 }
 
 export function getScheduleMarkerStyle(scheduleType: string, title?: string): MarkerStyle {
+  // chip value 기반 매핑
   switch (scheduleType) {
-    case 'IVF': return { emoji: '★', color: '#ff8fab', label: '시험관' }
-    case 'IUI': return { emoji: '●', color: '#60a5fa', label: '인공수정' }
-    case 'FET': return { emoji: '♥', color: '#2dd4bf', label: '이식' }
-    case 'monitoring': return { emoji: '●', color: '#a855f7', label: '검진' }
-    default:    return { emoji: '●', color: '#94a3b8', label: '일정' }
+    case 'injection':  return { emoji: '●', color: '#60a5fa', label: '주사' }
+    case 'bloodtest':  return { emoji: '●', color: '#a855f7', label: '채혈' }
+    case 'monitoring': return { emoji: '●', color: '#a855f7', label: '초음파' }
+    case 'iui':        return { emoji: '★', color: '#ff8fab', label: '인공수정' }
+    case 'transfer':   return { emoji: '♥', color: '#2dd4bf', label: '이식' }
+    case 'retrieval':  return { emoji: '◎', color: '#f97316', label: '채취' }
+  }
+  // backendType 기반 매핑 (Firestore에 저장된 type 값)
+  switch (scheduleType) {
+    case 'IUI':        return { emoji: '★', color: '#ff8fab', label: '인공수정' }
+    case 'IVF':        return { emoji: '★', color: '#ff8fab', label: '시험관' }
+    case 'FET':        return { emoji: '♥', color: '#2dd4bf', label: '이식' }
+    case 'monitoring': return { emoji: '●', color: '#a855f7', label: '초음파/채혈' }
+    default:           return { emoji: '●', color: '#94a3b8', label: '일정' }
   }
 }

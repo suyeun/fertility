@@ -102,6 +102,7 @@ export interface UpdateProfilePayload {
   currentMode?: 'NATURAL' | 'CLINIC'
   treatmentStage?: 'natural' | 'iui' | 'ivf' | 'fet' | 'pregnant'
   currentStage?: string | null
+  stageStartedAt?: string | null
   averageCycleLength?: number
   averagePeriodLength?: number
 }

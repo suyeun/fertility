@@ -36,7 +36,9 @@
       "Bash(sudo xcrun simctl erase all)",
       "Bash(xcodebuild -version)",
       "Bash(sw_vers)",
-      "Bash(rm -rf ~/Library/Developer/Xcode/DerivedData && echo \"done\")"
+      "Bash(rm -rf ~/Library/Developer/Xcode/DerivedData && echo \"done\")",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -E \"\\\\.\\(ts|d\\\\.ts\\)$\")"
     ]
   }
 }

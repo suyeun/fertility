@@ -27,6 +27,10 @@ export class UpdateProfileDto {
   currentStage?: string | null
 
   @IsOptional()
+  @IsString()
+  stageStartedAt?: string | null
+
+  @IsOptional()
   @IsInt()
   @Min(15)
   @Max(60)
