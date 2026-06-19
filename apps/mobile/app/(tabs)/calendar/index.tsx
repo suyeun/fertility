@@ -1181,14 +1181,21 @@ export default function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#fff8f9' },
+  screen: { flex: 1, backgroundColor: '#f9f0f4' },
   container: {
-    backgroundColor: '#fff8f9',
-    borderRadius: 28,
+    backgroundColor: '#fff',
+    borderRadius: 24,
     overflow: 'hidden',
-    margin: 12,
-    borderWidth: 0.5,
-    borderColor: '#f9c6d0',
+    marginHorizontal: 14,
+    marginTop: 10,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#fde8ef',
+    shadowColor: '#ff8fab',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
 
   // 헤더
@@ -1205,22 +1212,33 @@ const styles = StyleSheet.create({
   addScheduleBtnText: { fontFamily: F.bold, color: PINK, fontSize: 11 },
 
   // 달력
-  weekdays:    { flexDirection: 'row', paddingLeft: 12, paddingRight: 16, paddingTop: 12, paddingBottom: 2 },
+  weekdays:    { flexDirection: 'row', paddingLeft: 12, paddingRight: 16, paddingTop: 14, paddingBottom: 4 },
   weekdayCell: { width: DAY_CELL_W, marginHorizontal: 2, alignItems: 'center' },
-  weekday:     { fontFamily: F.bold, fontSize: 11, color: PINK },
-  grid:        { flexDirection: 'row', flexWrap: 'wrap', paddingLeft: 12, paddingRight: 16, paddingBottom: 12 },
-  legend: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingBottom: 16 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendLabel: { fontFamily: F.semiBold, fontSize: 11, color: '#8c5060' },
+  weekday:     { fontFamily: F.bold, fontSize: 11, color: '#b07080' },
+  grid:        { flexDirection: 'row', flexWrap: 'wrap', paddingLeft: 12, paddingRight: 16, paddingBottom: 14 },
+  legend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#fde8ef',
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 9, height: 9, borderRadius: 5 },
+  legendLabel: { fontFamily: F.semiBold, fontSize: 10, color: '#9c6070' },
 
   // 주기 기록 없을 때 빈 상태
   noCycleBox: {
     backgroundColor: '#fff8f9',
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: BORDER,
     borderStyle: 'dashed',
+    marginHorizontal: 14,
+    marginBottom: 12,
     padding: 20,
     alignItems: 'center',
     gap: 8,

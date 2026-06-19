@@ -27,7 +27,8 @@ export function DayCell({ day, isSelected, hasIntercourse, markers, onPress }: D
     isOvulation                    && styles.ovulationCell,
     isMenstruation && !isOvulation && styles.periodCell,
     isFertile                      && styles.fertileCell,
-    isSelected && !isOvulation     && styles.selectedCell,
+    isSelected                     && styles.selectedCell,
+    isToday && !isSelected         && styles.todayCell,
     !isCurrentMonth                && styles.otherMonth,
   ]
 
@@ -36,13 +37,33 @@ export function DayCell({ day, isSelected, hasIntercourse, markers, onPress }: D
     isOvulation                    && styles.ovulationNum,
     isMenstruation && !isOvulation && styles.periodNum,
     isFertile                      && styles.fertileNum,
+    isToday                        && styles.todayNum,
   ]
+
+  // 셀 안에 표시할 뱃지 레이블
+  const badge = isOvulation ? '🌸' : isMenstruation ? '생리' : isFertile ? '가임' : null
+  const badgeStyle = isOvulation
+    ? styles.badgeOvulation
+    : isMenstruation
+    ? styles.badgePeriod
+    : isFertile
+    ? styles.badgeFertile
+    : null
 
   return (
     <TouchableOpacity style={cellStyle} onPress={() => onPress(date)} activeOpacity={0.7}>
-      <Text style={numStyle}>{dayNum}</Text>
-      {hasIntercourse && <Text style={styles.heart}>❤️</Text>}
-      {isToday && <View style={styles.todayDot} />}
+      {/* 숫자 + 관계일 ❤️ */}
+      <View style={styles.topRow}>
+        <Text style={numStyle}>{dayNum}</Text>
+        {hasIntercourse && <Text style={styles.heart}>❤️</Text>}
+      </View>
+
+      {/* 상태 뱃지 (생리/가임/🌸) */}
+      {badge && (
+        <Text style={[styles.badge, badgeStyle]}>{badge}</Text>
+      )}
+
+      {/* 일정 마커 도트 */}
       {markers && markers.length > 0 && (
         <View style={styles.markersRow}>
           {(markers.length <= 3 ? markers : markers.slice(0, 3)).map((marker, idx) =>
@@ -57,6 +78,11 @@ export function DayCell({ day, isSelected, hasIntercourse, markers, onPress }: D
           )}
         </View>
       )}
+
+      {/* 오늘 표시 점 (뱃지 없는 날만) */}
+      {isToday && !badge && !markers?.length && (
+        <View style={styles.todayDot} />
+      )}
     </TouchableOpacity>
   )
 }
@@ -64,58 +90,102 @@ export function DayCell({ day, isSelected, hasIntercourse, markers, onPress }: D
 const styles = StyleSheet.create({
   cell: {
     width: DAY_CELL_W,
-    height: 40,
+    height: 56,
     marginHorizontal: 2,
     marginVertical: 2,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 6,
+    paddingBottom: 4,
     position: 'relative',
   },
   ovulationCell: {
-    backgroundColor: '#ff8fab',
-    borderRadius: 20,
+    backgroundColor: '#ffe4ec',
+    borderWidth: 1,
+    borderColor: '#ffb3c6',
   },
   periodCell: {
-    backgroundColor: '#fecdd3',
+    backgroundColor: '#fee2e2',
+    borderWidth: 1,
+    borderColor: '#fca5a5',
   },
   fertileCell: {
     backgroundColor: '#ede9fe',
+    borderWidth: 1,
+    borderColor: '#c4b5fd',
+    borderStyle: 'dashed',
   },
   selectedCell: {
     borderWidth: 2,
     borderColor: '#ff4d7d',
+    borderStyle: 'solid',
+  },
+  todayCell: {
+    borderWidth: 2,
+    borderColor: '#ff8fab',
+    borderStyle: 'solid',
   },
   otherMonth: {
-    opacity: 0.3,
+    opacity: 0.28,
+  },
+
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   num: {
     fontFamily: F.semiBold,
     fontSize: 13,
     color: '#5a3042',
+    lineHeight: 16,
   },
-  ovulationNum: { color: '#fff' },
-  periodNum:    { color: '#9f1239' },
-  fertileNum:   { color: '#5b21b6' },
+  ovulationNum: { color: '#be185d', fontFamily: F.bold },
+  periodNum:    { color: '#b91c1c', fontFamily: F.bold },
+  fertileNum:   { color: '#6d28d9', fontFamily: F.bold },
+  todayNum:     { color: '#ff4d7d', fontFamily: F.bold },
+
+  badge: {
+    marginTop: 3,
+    fontSize: 9,
+    fontFamily: F.bold,
+    overflow: 'hidden',
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    lineHeight: 12,
+  },
+  badgeOvulation: {
+    fontSize: 11,
+    backgroundColor: 'transparent',
+  },
+  badgePeriod: {
+    color: '#b91c1c',
+    backgroundColor: '#fecaca',
+  },
+  badgeFertile: {
+    color: '#5b21b6',
+    backgroundColor: '#ddd6fe',
+  },
+
+  heart: {
+    fontSize: 7,
+    lineHeight: 10,
+  },
+
   todayDot: {
-    position: 'absolute',
-    bottom: 3,
+    marginTop: 3,
     width: 4,
     height: 4,
     borderRadius: 2,
     backgroundColor: '#ff4d7d',
   },
-  heart: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    fontSize: 7,
-  },
+
   markersRow: {
     flexDirection: 'row',
     gap: 2,
-    position: 'absolute',
-    bottom: 2,
+    marginTop: 3,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -125,8 +195,8 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   markerIcon: {
-    fontSize: 6,
-    lineHeight: 7,
+    fontSize: 7,
+    lineHeight: 8,
   },
   markerMore: {
     fontSize: 5,
