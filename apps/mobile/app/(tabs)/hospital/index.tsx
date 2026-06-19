@@ -410,9 +410,6 @@ export default function InfoScreen() {
                 activeOpacity={0.85}
               >
                 <View style={styles.articleTop}>
-                  <View style={[styles.articleEmojiBadge, { backgroundColor: meta.bgColor }]}>
-                    <Text style={{ fontSize: 22 }}>{meta.emoji}</Text>
-                  </View>
                   <View style={{ flex: 1 }}>
                     <View style={styles.articleMeta}>
                       <View style={[styles.categoryBadge, { backgroundColor: meta.bgColor }]}>
@@ -577,10 +574,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
   },
   articleTop:  { flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginBottom: 4 },
-  articleEmojiBadge: {
-    width: 46, height: 46, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-  },
   articleMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   categoryBadge:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   categoryBadgeText: { fontFamily: F.semiBold, fontSize: 10 },

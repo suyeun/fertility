@@ -411,9 +411,6 @@ export default function InfoPage() {
             return (
             <div key={a.id} className="rounded-2xl p-4 border border-rose-100 bg-white space-y-2">
               <div className="flex gap-3 items-start">
-                <div className={`w-12 h-12 rounded-xl ${meta.bgColor} flex items-center justify-center text-2xl shrink-0`}>
-                  {meta.emoji}
-                </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-lg ${meta.badgeColor} ${meta.textColor}`}>
