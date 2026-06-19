@@ -112,144 +112,65 @@ interface AffiliateProduct {
 interface Article {
   id: string
   category: string
-  emoji: string
   title: string
   summary: string
   readMin: number
   tags: string[]
-  bgColor: string
-  textColor: string
   products?: AffiliateProduct[]
+}
+
+const CATEGORY_META: Record<string, { emoji: string; bgColor: string; textColor: string }> = {
+  '시술 이해': { emoji: '🔬', bgColor: '#ede9fe', textColor: '#6d28d9' },
+  '생활 습관': { emoji: '🌿', bgColor: '#dcfce7', textColor: '#15803d' },
+  '검사·수치': { emoji: '📊', bgColor: '#e0f2fe', textColor: '#0369a1' },
+  '심리·감정': { emoji: '💙', bgColor: '#fce7f3', textColor: '#be185d' },
+  '식단':      { emoji: '🥗', bgColor: '#fef3c7', textColor: '#92400e' },
 }
 
 // ── 정보 콘텐츠 데이터 ───────────────────────────────────────────
 const INFO_CATEGORIES = ['전체', '시술 이해', '생활 습관', '검사·수치', '심리·감정', '식단']
 
 const INFO_ARTICLES: Article[] = [
-  {
-    id: 'a1',
-    category: '시술 이해',
-    emoji: '🔬',
-    title: 'IVF 시험관 시술, 처음이라면 꼭 알아야 할 5단계',
+  { id: 'a1', category: '시술 이해', title: 'IVF 시험관 시술, 처음이라면 꼭 알아야 할 5단계',
     summary: '과배란 유도 → 채취 → 수정 → 배양 → 이식까지, 각 단계에서 무엇을 준비해야 하는지 알기 쉽게 정리했어요.',
-    readMin: 5,
-    tags: ['IVF', '입문'],
-    bgColor: '#ede9fe',
-    textColor: '#6d28d9',
-  },
-  {
-    id: 'a2',
-    category: '시술 이해',
-    emoji: '💫',
-    title: 'IUI와 IVF, 나에게 맞는 시술은?',
+    readMin: 5, tags: ['IVF', '입문'] },
+  { id: 'a2', category: '시술 이해', title: 'IUI와 IVF, 나에게 맞는 시술은?',
     summary: '인공수정과 시험관의 차이, 성공률, 비용을 비교해서 어떤 상황에 어떤 시술이 적합한지 설명해드려요.',
-    readMin: 4,
-    tags: ['IUI', 'IVF', '비교'],
-    bgColor: '#fce7f3',
-    textColor: '#be185d',
-  },
-  {
-    id: 'a3',
-    category: '시술 이해',
-    emoji: '❄️',
-    title: '동결이식(FET)이 신선배아보다 성공률이 높을 수 있는 이유',
+    readMin: 4, tags: ['IUI', 'IVF', '비교'] },
+  { id: 'a3', category: '시술 이해', title: '동결이식(FET)이 신선배아보다 성공률이 높을 수 있는 이유',
     summary: '자궁 내막 환경, 호르몬 안정성 측면에서 FET가 왜 더 유리한 경우가 있는지 근거와 함께 설명해요.',
-    readMin: 6,
-    tags: ['FET', '성공률'],
-    bgColor: '#e0f2fe',
-    textColor: '#0369a1',
-  },
-  {
-    id: 'a4',
-    category: '생활 습관',
-    emoji: '🏃‍♀️',
-    title: '난임 시술 중 운동, 어느 정도까지 해도 될까?',
+    readMin: 6, tags: ['FET', '성공률'] },
+  { id: 'a4', category: '생활 습관', title: '난임 시술 중 운동, 어느 정도까지 해도 될까?',
     summary: '시술 단계별로 권장·주의해야 할 운동 강도를 정리했어요. 과배란 중 과격한 운동이 위험한 이유도 함께요.',
-    readMin: 3,
-    tags: ['운동', '생활'],
-    bgColor: '#dcfce7',
-    textColor: '#15803d',
-  },
-  {
-    id: 'a5',
-    category: '생활 습관',
-    emoji: '😴',
-    title: '수면이 난임에 영향을 미친다? 수면 호르몬과 임신의 관계',
+    readMin: 3, tags: ['운동', '생활'] },
+  { id: 'a5', category: '생활 습관', title: '수면이 난임에 영향을 미친다? 수면 호르몬과 임신의 관계',
     summary: '멜라토닌과 생식 호르몬의 연관성, 수면 부족이 배란과 착상에 미치는 영향을 알아봐요.',
-    readMin: 4,
-    tags: ['수면', '호르몬'],
-    bgColor: '#fef3c7',
-    textColor: '#92400e',
-  },
-  {
-    id: 'a6',
-    category: '검사·수치',
-    emoji: '🧪',
-    title: 'AMH 수치, 낮다고 포기하지 마세요',
+    readMin: 4, tags: ['수면', '호르몬'] },
+  { id: 'a6', category: '검사·수치', title: 'AMH 수치, 낮다고 포기하지 마세요',
     summary: 'AMH가 난소예비력의 전부가 아닌 이유, 낮은 AMH에서도 임신에 성공하는 방법을 정리했어요.',
-    readMin: 5,
-    tags: ['AMH', '난소예비력'],
-    bgColor: '#fce7f3',
-    textColor: '#be185d',
-  },
-  {
-    id: 'a7',
-    category: '검사·수치',
-    emoji: '📊',
-    title: '호르몬 검사 결과지 읽는 법 — FSH, LH, E2 완벽 정리',
+    readMin: 5, tags: ['AMH', '난소예비력'] },
+  { id: 'a7', category: '검사·수치', title: '호르몬 검사 결과지 읽는 법 — FSH, LH, E2 완벽 정리',
     summary: '병원에서 받은 혈액검사 결과지에 있는 수치들이 무엇을 의미하는지, 정상 범위와 함께 설명해요.',
-    readMin: 7,
-    tags: ['호르몬', '혈액검사'],
-    bgColor: '#ede9fe',
-    textColor: '#6d28d9',
-  },
-  {
-    id: 'a8',
-    category: '심리·감정',
-    emoji: '💙',
-    title: '난임 치료 중 우울감, 정상인가요?',
+    readMin: 7, tags: ['호르몬', '혈액검사'] },
+  { id: 'a8', category: '심리·감정', title: '난임 치료 중 우울감, 정상인가요?',
     summary: '난임 환자의 40%가 경험하는 심리적 어려움. 이 감정이 자연스러운 이유와 혼자 버티지 않아도 되는 방법을 공유해요.',
-    readMin: 4,
-    tags: ['심리', '정서'],
-    bgColor: '#e0f2fe',
-    textColor: '#0369a1',
-  },
-  {
-    id: 'a9',
-    category: '심리·감정',
-    emoji: '👫',
-    title: '파트너와 난임을 함께 극복하는 대화법',
+    readMin: 4, tags: ['심리', '정서'] },
+  { id: 'a9', category: '심리·감정', title: '파트너와 난임을 함께 극복하는 대화법',
     summary: '시술 중 부부 갈등이 생기는 흔한 패턴과, 서로를 지지하는 구체적인 대화 방법을 소개해요.',
-    readMin: 5,
-    tags: ['부부', '소통'],
-    bgColor: '#fce7f3',
-    textColor: '#be185d',
-  },
+    readMin: 5, tags: ['부부', '소통'] },
   {
-    id: 'a10',
-    category: '식단',
-    emoji: '🥦',
-    title: '배란을 돕는 음식 vs 피해야 할 음식',
+    id: 'a10', category: '식단', title: '배란을 돕는 음식 vs 피해야 할 음식',
     summary: '항산화 식품, 엽산이 풍부한 음식, 반대로 난임에 영향을 줄 수 있는 음식과 카페인 섭취량 기준을 정리했어요.',
-    readMin: 4,
-    tags: ['식단', '배란'],
-    bgColor: '#dcfce7',
-    textColor: '#15803d',
+    readMin: 4, tags: ['식단', '배란'],
     products: [
       { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
       { name: '네이처메이드 엽산', desc: '천연 엽산 400mcg, 미국산', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=네이처메이드+엽산' },
     ],
   },
   {
-    id: 'a11',
-    category: '식단',
-    emoji: '💊',
-    title: '엽산, 언제부터 얼마나 먹어야 할까?',
+    id: 'a11', category: '식단', title: '엽산, 언제부터 얼마나 먹어야 할까?',
     summary: '임신 준비 전부터 먹어야 하는 이유, 권장 용량, 천연 엽산 vs 합성 엽산 차이까지 알기 쉽게 정리했어요.',
-    readMin: 3,
-    tags: ['영양제', '엽산'],
-    bgColor: '#fef3c7',
-    textColor: '#92400e',
+    readMin: 3, tags: ['영양제', '엽산'],
     products: [
       { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
       { name: '메가푸드 베이비앤미', desc: '천연 식품형 산전 종합비타민', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=메가푸드+베이비앤미' },
@@ -481,7 +402,10 @@ export default function InfoScreen() {
             </ScrollView>
 
             {/* 추천 아티클 */}
-            {filteredArticles.map(a => (
+            {filteredArticles.map(a => {
+              const meta = CATEGORY_META[a.category] ?? CATEGORY_META['시술 이해']
+              const products = getProducts(a)
+              return (
               <TouchableOpacity
                 key={a.id}
                 style={styles.articleCard}
@@ -489,15 +413,20 @@ export default function InfoScreen() {
                 activeOpacity={0.85}
               >
                 <View style={styles.articleTop}>
-                  <View style={[styles.articleEmojiBadge, { backgroundColor: a.bgColor }]}>
-                    <Text style={{ fontSize: 22 }}>{a.emoji}</Text>
+                  <View style={[styles.articleEmojiBadge, { backgroundColor: meta.bgColor }]}>
+                    <Text style={{ fontSize: 22 }}>{meta.emoji}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <View style={styles.articleMeta}>
-                      <View style={[styles.categoryBadge, { backgroundColor: a.bgColor }]}>
-                        <Text style={[styles.categoryBadgeText, { color: a.textColor }]}>{a.category}</Text>
+                      <View style={[styles.categoryBadge, { backgroundColor: meta.bgColor }]}>
+                        <Text style={[styles.categoryBadgeText, { color: meta.textColor }]}>{a.category}</Text>
                       </View>
                       <Text style={styles.readMin}>📖 {a.readMin}분</Text>
+                      {products.length > 0 && (
+                        <View style={styles.productBadge}>
+                          <Text style={styles.productBadgeText}>🛍️ 추천 제품</Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.articleTitle}>{a.title}</Text>
                   </View>
@@ -508,19 +437,19 @@ export default function InfoScreen() {
                     <Text style={styles.articleSummary}>{a.summary}</Text>
                     <View style={styles.articleTags}>
                       {a.tags.map(t => (
-                        <View key={t} style={[styles.articleTag, { borderColor: a.textColor }]}>
-                          <Text style={[styles.articleTagText, { color: a.textColor }]}>#{t}</Text>
+                        <View key={t} style={[styles.articleTag, { borderColor: meta.textColor }]}>
+                          <Text style={[styles.articleTagText, { color: meta.textColor }]}>#{t}</Text>
                         </View>
                       ))}
                     </View>
-                    <TouchableOpacity style={[styles.readBtn, { backgroundColor: a.bgColor }]}>
-                      <Text style={[styles.readBtnText, { color: a.textColor }]}>전체 내용 보기 →</Text>
+                    <TouchableOpacity style={[styles.readBtn, { backgroundColor: meta.bgColor }]}>
+                      <Text style={[styles.readBtnText, { color: meta.textColor }]}>전체 내용 보기 →</Text>
                     </TouchableOpacity>
 
-                    {getProducts(a).length > 0 && (
+                    {products.length > 0 && (
                       <View style={styles.productSection}>
                         <Text style={styles.productSectionTitle}>🛍️ 아티클 관련 추천 제품</Text>
-                        {getProducts(a).map((p, i) => (
+                        {products.map((p, i) => (
                           <TouchableOpacity
                             key={i}
                             style={styles.productCard}
@@ -546,7 +475,7 @@ export default function InfoScreen() {
                   {expandedArticle === a.id ? '접기 ▲' : '더보기 ▼'}
                 </Text>
               </TouchableOpacity>
-            ))}
+            )})}
           </>
         )}
 
@@ -684,4 +613,6 @@ const styles = StyleSheet.create({
   productDesc:    { fontFamily: F.regular,  fontSize: 11, color: MUTED, marginTop: 1 },
   platformBadge:    { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: LIGHT_PINK },
   platformBadgeText: { fontFamily: F.bold, fontSize: 10, color: PINK },
+  productBadge:     { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: LIGHT_PINK, borderWidth: 1, borderColor: BORDER },
+  productBadgeText: { fontFamily: F.semiBold, fontSize: 9, color: MUTED },
 })

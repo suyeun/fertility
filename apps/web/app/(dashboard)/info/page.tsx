@@ -87,108 +87,101 @@ const STEPS = [
 // ── 정보 아티클 데이터 ────────────────────────────────────────────
 const INFO_CATEGORIES = ['전체', '시술 이해', '생활 습관', '검사·수치', '심리·감정', '식단']
 
+const CATEGORY_META: Record<string, { emoji: string; bgColor: string; textColor: string; badgeColor: string }> = {
+  '시술 이해': { emoji: '🔬', bgColor: 'bg-violet-50', textColor: 'text-violet-700', badgeColor: 'bg-violet-100' },
+  '생활 습관': { emoji: '🌿', bgColor: 'bg-green-50',  textColor: 'text-green-700',  badgeColor: 'bg-green-100'  },
+  '검사·수치': { emoji: '📊', bgColor: 'bg-sky-50',    textColor: 'text-sky-700',    badgeColor: 'bg-sky-100'    },
+  '심리·감정': { emoji: '💙', bgColor: 'bg-pink-50',   textColor: 'text-pink-700',   badgeColor: 'bg-pink-100'   },
+  '식단':      { emoji: '🥗', bgColor: 'bg-amber-50',  textColor: 'text-amber-700',  badgeColor: 'bg-amber-100'  },
+}
+
 interface Article {
   id: string
   category: string
-  emoji: string
   title: string
   summary: string
   readMin: number
   tags: string[]
-  bgColor: string
-  textColor: string
-  badgeColor: string
   products?: AffiliateProduct[]
 }
 
 const ARTICLES: Article[] = [
   {
-    id: 'a1', category: '시술 이해', emoji: '🔬',
+    id: 'a1', category: '시술 이해',
     title: 'IVF 시험관 시술, 처음이라면 꼭 알아야 할 5단계',
     summary: '과배란 유도 → 채취 → 수정 → 배양 → 이식까지, 각 단계에서 무엇을 준비해야 하는지 알기 쉽게 정리했어요.',
     readMin: 5, tags: ['IVF', '입문'],
-    bgColor: 'bg-violet-50', textColor: 'text-violet-700', badgeColor: 'bg-violet-100',
   },
   {
-    id: 'a2', category: '시술 이해', emoji: '💫',
+    id: 'a2', category: '시술 이해',
     title: 'IUI와 IVF, 나에게 맞는 시술은?',
     summary: '인공수정과 시험관의 차이, 성공률, 비용을 비교해서 어떤 상황에 어떤 시술이 적합한지 설명해드려요.',
     readMin: 4, tags: ['IUI', 'IVF', '비교'],
-    bgColor: 'bg-pink-50', textColor: 'text-pink-700', badgeColor: 'bg-pink-100',
   },
   {
-    id: 'a3', category: '시술 이해', emoji: '❄️',
+    id: 'a3', category: '시술 이해',
     title: '동결이식(FET)이 신선배아보다 성공률이 높을 수 있는 이유',
     summary: '자궁 내막 환경, 호르몬 안정성 측면에서 FET가 왜 더 유리한 경우가 있는지 근거와 함께 설명해요.',
     readMin: 6, tags: ['FET', '성공률'],
-    bgColor: 'bg-sky-50', textColor: 'text-sky-700', badgeColor: 'bg-sky-100',
   },
   {
-    id: 'a4', category: '생활 습관', emoji: '🏃‍♀️',
+    id: 'a4', category: '생활 습관',
     title: '난임 시술 중 운동, 어느 정도까지 해도 될까?',
     summary: '시술 단계별로 권장·주의해야 할 운동 강도를 정리했어요. 과배란 중 과격한 운동이 위험한 이유도 함께요.',
     readMin: 3, tags: ['운동', '생활'],
-    bgColor: 'bg-green-50', textColor: 'text-green-700', badgeColor: 'bg-green-100',
   },
   {
-    id: 'a5', category: '생활 습관', emoji: '😴',
+    id: 'a5', category: '생활 습관',
     title: '수면이 난임에 영향을 미친다? 수면 호르몬과 임신의 관계',
     summary: '멜라토닌과 생식 호르몬의 연관성, 수면 부족이 배란과 착상에 미치는 영향을 알아봐요.',
     readMin: 4, tags: ['수면', '호르몬'],
-    bgColor: 'bg-amber-50', textColor: 'text-amber-700', badgeColor: 'bg-amber-100',
   },
   {
-    id: 'a6', category: '검사·수치', emoji: '🧪',
+    id: 'a6', category: '검사·수치',
     title: 'AMH 수치, 낮다고 포기하지 마세요',
     summary: 'AMH가 난소예비력의 전부가 아닌 이유, 낮은 AMH에서도 임신에 성공하는 방법을 정리했어요.',
     readMin: 5, tags: ['AMH', '난소예비력'],
-    bgColor: 'bg-pink-50', textColor: 'text-pink-700', badgeColor: 'bg-pink-100',
   },
   {
-    id: 'a7', category: '검사·수치', emoji: '📊',
+    id: 'a7', category: '검사·수치',
     title: '호르몬 검사 결과지 읽는 법 — FSH, LH, E2 완벽 정리',
     summary: '병원에서 받은 혈액검사 결과지에 있는 수치들이 무엇을 의미하는지, 정상 범위와 함께 설명해요.',
     readMin: 7, tags: ['호르몬', '혈액검사'],
-    bgColor: 'bg-violet-50', textColor: 'text-violet-700', badgeColor: 'bg-violet-100',
   },
   {
-    id: 'a8', category: '심리·감정', emoji: '💙',
+    id: 'a8', category: '심리·감정',
     title: '난임 치료 중 우울감, 정상인가요?',
     summary: '난임 환자의 40%가 경험하는 심리적 어려움. 이 감정이 자연스러운 이유와 혼자 버티지 않아도 되는 방법을 공유해요.',
     readMin: 4, tags: ['심리', '정서'],
-    bgColor: 'bg-sky-50', textColor: 'text-sky-700', badgeColor: 'bg-sky-100',
   },
   {
-    id: 'a9', category: '심리·감정', emoji: '👫',
+    id: 'a9', category: '심리·감정',
     title: '파트너와 난임을 함께 극복하는 대화법',
     summary: '시술 중 부부 갈등이 생기는 흔한 패턴과, 서로를 지지하는 구체적인 대화 방법을 소개해요.',
     readMin: 5, tags: ['부부', '소통'],
-    bgColor: 'bg-pink-50', textColor: 'text-pink-700', badgeColor: 'bg-pink-100',
   },
   {
-    id: 'a10', category: '식단', emoji: '🥦',
+    id: 'a10', category: '식단',
     title: '배란을 돕는 음식 vs 피해야 할 음식',
     summary: '항산화 식품, 엽산이 풍부한 음식, 반대로 난임에 영향을 줄 수 있는 음식과 카페인 섭취량 기준을 정리했어요.',
     readMin: 4, tags: ['식단', '배란'],
-    bgColor: 'bg-green-50', textColor: 'text-green-700', badgeColor: 'bg-green-100',
     products: [
       { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
       { name: '네이처메이드 엽산', desc: '천연 엽산 400mcg, 미국산', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=네이처메이드+엽산' },
     ],
   },
   {
-    id: 'a11', category: '식단', emoji: '💊',
+    id: 'a11', category: '식단',
     title: '엽산, 언제부터 얼마나 먹어야 할까?',
     summary: '임신 준비 전부터 먹어야 하는 이유, 권장 용량, 천연 엽산 vs 합성 엽산 차이까지 알기 쉽게 정리했어요.',
     readMin: 3, tags: ['영양제', '엽산'],
-    bgColor: 'bg-amber-50', textColor: 'text-amber-700', badgeColor: 'bg-amber-100',
     products: [
       { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
       { name: '메가푸드 베이비앤미', desc: '천연 식품형 산전 종합비타민', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=메가푸드+베이비앤미' },
     ],
   },
   {
-    id: 'a12', category: '식단', emoji: '🐟',
+    id: 'a12', category: '식단',
     title: '오메가3와 코엔자임Q10, 난임에 정말 효과 있을까?',
     summary: '난임 관련 영양제 중 실제 연구로 효과가 입증된 것과 과대광고인 것을 구분해서 알려드려요.',
     readMin: 5, tags: ['영양제', '근거'],
@@ -413,18 +406,26 @@ export default function InfoPage() {
             ))}
           </div>
 
-          {filteredArticles.map(a => (
-            <div key={a.id} className={`rounded-2xl p-4 border border-rose-100 bg-white space-y-2`}>
+          {filteredArticles.map(a => {
+            const meta = CATEGORY_META[a.category] ?? CATEGORY_META['시술 이해']
+            const products = getProducts(a)
+            return (
+            <div key={a.id} className="rounded-2xl p-4 border border-rose-100 bg-white space-y-2">
               <div className="flex gap-3 items-start">
-                <div className={`w-12 h-12 rounded-xl ${a.bgColor} flex items-center justify-center text-2xl shrink-0`}>
-                  {a.emoji}
+                <div className={`w-12 h-12 rounded-xl ${meta.bgColor} flex items-center justify-center text-2xl shrink-0`}>
+                  {meta.emoji}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-lg ${a.badgeColor} ${a.textColor}`}>
+                    <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-lg ${meta.badgeColor} ${meta.textColor}`}>
                       {a.category}
                     </span>
                     <span className="text-[10px] text-rose-300">📖 {a.readMin}분</span>
+                    {products.length > 0 && (
+                      <span className="px-2 py-0.5 text-[10px] font-semibold rounded-lg bg-rose-50 text-rose-400 border border-rose-100">
+                        🛍️ 추천 제품
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm font-bold text-rose-950 leading-snug">{a.title}</p>
                 </div>
@@ -435,21 +436,21 @@ export default function InfoPage() {
                   <p className="text-xs text-rose-700/80 leading-relaxed">{a.summary}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {a.tags.map(t => (
-                      <span key={t} className={`px-2 py-0.5 text-[10px] font-semibold border rounded-lg ${a.textColor} border-current/30`}>
+                      <span key={t} className={`px-2 py-0.5 text-[10px] font-semibold border rounded-lg ${meta.textColor} border-current/30`}>
                         #{t}
                       </span>
                     ))}
                   </div>
-                  <button className={`w-full py-2.5 text-xs font-bold rounded-xl ${a.bgColor} ${a.textColor} hover:opacity-80 transition-opacity`}>
+                  <button className={`w-full py-2.5 text-xs font-bold rounded-xl ${meta.bgColor} ${meta.textColor} hover:opacity-80 transition-opacity`}>
                     전체 내용 보기 →
                   </button>
 
-                  {getProducts(a).length > 0 && (
+                  {products.length > 0 && (
                     <div className="pt-2 border-t border-rose-50 space-y-2">
                       <p className="flex items-center gap-1 text-[10px] font-bold text-rose-400">
                         <ShoppingBag size={11} /> 아티클 관련 추천 제품
                       </p>
-                      {getProducts(a).map((p, i) => (
+                      {products.map((p, i) => (
                         <a
                           key={i}
                           href={p.url}
@@ -484,7 +485,7 @@ export default function InfoPage() {
                 }
               </button>
             </div>
-          ))}
+          )})}
         </div>
       )}
     </div>
