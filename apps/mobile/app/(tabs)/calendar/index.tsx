@@ -188,7 +188,11 @@ export default function CalendarScreen() {
   // ──────────────────────────────────────────
   // 달력 상태
   // ──────────────────────────────────────────
-  const latestCycle  = cycles[0]
+  // 가장 최근에 입력한 주기를 primary로 사용 (startDate DESC가 아닌 createdAt DESC 기준)
+  const sortedCycles = [...cycles].sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  )
+  const latestCycle  = sortedCycles[0]
   const lastPeriod   = latestCycle ? new Date(latestCycle.startDate) : null
   const cycleLength  = latestCycle?.cycleLength  || 28
   const periodLength = latestCycle?.periodLength || 5
@@ -200,7 +204,7 @@ export default function CalendarScreen() {
     currentCycleDay, todayPhaseLabel,
     goToPrevMonth, goToNextMonth,
     selectDate, formatKorDate,
-  } = useCycleCalendar(lastPeriod, cycleLength, periodLength)
+  } = useCycleCalendar(lastPeriod, cycleLength, periodLength, sortedCycles)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)

@@ -41,10 +41,18 @@ function toLocalDateStr(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
+export interface HistoricalCycle {
+  startDate: string
+  endDate?: string | null
+  cycleLength?: number
+  periodLength?: number
+}
+
 export function useCycleCalendar(
   lastPeriodStart: Date | null,
   cycleLength = 28,
-  periodLength = 5
+  periodLength = 5,
+  allCycles?: HistoricalCycle[]
 ): UseCycleCalendarReturn {
   const today = useMemo(() => {
     const d = new Date()
@@ -65,9 +73,25 @@ export function useCycleCalendar(
 
   const cycleDayMap = useMemo(() => {
     const map = new Map<string, CycleDay>()
+    // Build from primary (most recent) cycle first
     cycleDays.forEach((d) => map.set(d.date, d))
+    // Overlay historical cycles' menstruation periods
+    if (allCycles && allCycles.length > 1) {
+      allCycles.slice(1).forEach((cycle) => {
+        const start = new Date(cycle.startDate)
+        if (isNaN(start.getTime())) return
+        const pLen = cycle.periodLength ?? periodLength
+        const cLen = cycle.cycleLength ?? cycleLength
+        const days = calculateCycleDays(start, cLen, pLen, pLen + 2)
+        days.forEach((d) => {
+          if (d.isMenstruation && !map.has(d.date)) {
+            map.set(d.date, d)
+          }
+        })
+      })
+    }
     return map
-  }, [cycleDays])
+  }, [cycleDays, allCycles, cycleLength, periodLength])
 
   const calendarDays = useMemo(() => {
     const y = viewDate.getFullYear()

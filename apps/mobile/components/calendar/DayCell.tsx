@@ -11,9 +11,9 @@ interface DayCellProps {
 }
 
 const { width: SCREEN_W } = Dimensions.get('window')
-// container margin 12*2=24 + grid paddingLeft 12 + paddingRight 16 = 52px inset
+// container marginHorizontal 14*2=28 + grid paddingLeft 12 + paddingRight 16 = 56px inset
 // 7 cells * marginHorizontal 2*2=4px = 28px gap total
-export const DAY_CELL_W = Math.floor((SCREEN_W - 52 - 28) / 7)
+export const DAY_CELL_W = Math.floor((SCREEN_W - 56 - 28) / 7)
 
 export function DayCell({ day, isSelected, hasIntercourse, markers, onPress }: DayCellProps) {
   const { date, dayNum, isCurrentMonth, isToday, cycleInfo } = day
