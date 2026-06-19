@@ -12,12 +12,15 @@ import {
   KeyboardAvoidingView,
   Platform
 } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { router } from 'expo-router'
 import { hormonesApi, diaryApi, usersApi, useUserStore, getRecordTabs, getHospitalFields } from '@fertility/shared'
 import type { HormoneRecord, DiaryEntry, Mood, UserProfile, TreatmentMode, CurrentStage } from '@fertility/shared'
 
 type HormoneType = 'amh' | 'fsh' | 'lh' | 'estradiol' | 'progesterone' | 'bbt' | 'opkIndex'
 
 export default function RecordsScreen() {
+  const insets = useSafeAreaInsets()
   const { profile: storeProfile } = useUserStore()
   const [user, setUser] = useState<any>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
@@ -403,6 +406,15 @@ export default function RecordsScreen() {
       style={styles.keyboardView}
     >
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+        {/* 뒤로가기 헤더 */}
+        <View style={[styles.pageHeader, { paddingTop: insets.top + 4 }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Text style={styles.backIcon}>‹</Text>
+          </TouchableOpacity>
+          <Text style={styles.pageTitle}>오늘의 신체 기록</Text>
+          <View style={{ width: 36 }} />
+        </View>
+
         {/* 상단 탭 스위처 */}
         <View style={styles.tabSwitcher}>
           {recordTabs.map(tab => (
@@ -1338,7 +1350,22 @@ export default function RecordsScreen() {
 const styles = StyleSheet.create({
   keyboardView: { flex: 1, backgroundColor: '#fff1f2' },
   container: { flex: 1 },
-  contentContainer: { padding: 16, gap: 14 },
+  contentContainer: { padding: 16, gap: 14, paddingTop: 0 },
+  pageHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingBottom: 12,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#ffb3c6', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2, shadowRadius: 3, elevation: 2,
+  },
+  backIcon: { fontSize: 22, color: '#ff8fab', lineHeight: 26 },
+  pageTitle: { fontSize: 15, fontWeight: '700', color: '#5a3042' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff1f2' },
   tabSwitcher: {
     flexDirection: 'row',

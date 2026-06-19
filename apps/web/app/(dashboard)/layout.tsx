@@ -4,7 +4,7 @@ import React from 'react'
 import { useAuth } from '../context/AuthContext'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Home, CalendarDays, Users, Sparkles, Settings } from 'lucide-react'
+import { Home, CalendarDays, Users, BookOpen, Sparkles, Settings } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, profile, mode, loading } = useAuth()
@@ -26,7 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/',           icon: Home,        label: '홈'      },
     { href: '/calendar',   icon: CalendarDays, label: '캘린더'  },
     { href: '/community',  icon: Users,        label: '이야기방' },
-    { href: '/chat',       icon: Sparkles,     label: 'AI 상담' },
+    { href: '/info',       icon: BookOpen,     label: '정보'    },
   ]
 
   return (
@@ -60,6 +60,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <main className="flex-1 p-4 overflow-y-auto">
         {children}
       </main>
+
+      {/* AI 상담 플로팅 버튼 */}
+      <Link
+        href="/chat"
+        className="fixed bottom-20 right-4 z-50 flex items-center gap-2 bg-violet-600 text-white text-sm font-bold px-4 py-3 rounded-full shadow-lg shadow-violet-400/40 hover:bg-violet-700 transition-all"
+      >
+        <Sparkles size={16} />
+        AI 상담
+      </Link>
 
       {/* 하단 탭 바 — 4탭 */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] z-40 glass border-t border-rose-100/40 px-2 py-2 flex justify-between items-center shadow-lg rounded-t-3xl">

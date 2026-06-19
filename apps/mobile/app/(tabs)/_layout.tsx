@@ -57,10 +57,14 @@ export default function TabsLayout() {
       />
       <Tabs.Screen
         name="chat/index"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="hospital/index"
         options={{
-          title: 'AI 상담',
+          title: '정보',
           tabBarIcon: ({ color, size }) =>
-            <TabIcon name="chatbubble-ellipses-outline" color={color} size={size} />,
+            <TabIcon name="medkit-outline" color={color} size={size} />,
         }}
       />
     </Tabs>

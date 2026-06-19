@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   View, Text, TouchableOpacity, ScrollView,
   StyleSheet, ActivityIndicator, Pressable, SafeAreaView,
@@ -6,13 +6,13 @@ import {
 import {
   useHomeData, authApi, usersApi, cyclesApi, hormonesApi, treatmentApi, diaryApi,
   useUserStore, getQuickActions, getStageLabelKo, getStageProgress,
-  IUI_STAGE_ORDER, IVF_STAGE_ORDER,
+  IUI_STAGE_ORDER, IVF_STAGE_ORDER, getScheduleMarkerStyle,
 } from '@fertility/shared'
 import type {
   MenstrualCycle, HormoneRecord, TreatmentSchedule, DiaryEntry,
   TreatmentMode, CurrentStage,
 } from '@fertility/shared'
-import { router } from 'expo-router'
+import { router, useFocusEffect } from 'expo-router'
 import { loadStoredToken, clearAuth } from '../../lib/auth'
 import { initNotifications, addNotificationListeners } from '../../lib/notifications'
 import { initPurchases, identifyUser } from '../../lib/purchases'
@@ -66,7 +66,7 @@ const PHASE_BADGE: Record<string, { emoji: string; label: string; color: string 
 // ── 히어로 카드 ──────────────────────────────────────────────
 function HeroCard({
   treatmentMode, currentStage, phase, cycleDay, stageDay, tip, dDay, periodDDay,
-  isFertileWindow, hasCycleData, upcomingSchedule,
+  isFertileWindow, hasCycleData, upcomingSchedule, upcomingSchedules,
 }: {
   treatmentMode: TreatmentMode
   currentStage: CurrentStage
@@ -79,6 +79,7 @@ function HeroCard({
   isFertileWindow: boolean
   hasCycleData: boolean
   upcomingSchedule: TreatmentSchedule | null
+  upcomingSchedules: TreatmentSchedule[]
 }) {
   // 자연임신 — 사이클 데이터 없음
   if (treatmentMode === 'natural' && !hasCycleData) {
@@ -144,51 +145,73 @@ function HeroCard({
     )
   }
 
-  // IUI/IVF — 단계 미설정
-  if (currentStage === null) {
-    const modeLabel = treatmentMode === 'iui' ? 'IUI 인공수정' : 'IVF 시험관'
-    const modeIcon  = treatmentMode === 'iui' ? '💉' : '🔬'
+  // IUI/IVF — 다가오는 일정 카드
+  const modeLabel = treatmentMode === 'iui' ? 'IUI 인공수정' : 'IVF 시험관'
+  const modeIcon  = treatmentMode === 'iui' ? '💉' : '🔬'
+  const bgColor   = treatmentMode === 'iui' ? '#a855f7' : '#7c3aed'
+
+  if (upcomingSchedules.length === 0) {
     return (
-      <View style={[hero.card, { backgroundColor: '#c084fc' }]}>
+      <TouchableOpacity
+        style={[hero.card, { backgroundColor: bgColor }]}
+        onPress={() => router.push('/(tabs)/calendar' as any)}
+        activeOpacity={0.9}
+      >
         <Text style={hero.meta}>{modeIcon} {modeLabel}</Text>
-        <Text style={[hero.phase, { fontSize: 18, marginBottom: 6 }]}>치료 단계를 설정해주세요</Text>
-        <Text style={[hero.day, { marginBottom: 14 }]}>
-          단계를 설정하면 맞춤 정보를 드려요
-        </Text>
-        <TouchableOpacity
-          style={hero.ctaBtn}
-          onPress={() => router.push('/settings' as any)}
-        >
-          <Text style={hero.ctaBtnText}>지금 설정하기 →</Text>
-        </TouchableOpacity>
-      </View>
+        <Text style={[hero.phase, { fontSize: 18, marginBottom: 6 }]}>다가오는 일정이 없어요</Text>
+        <Text style={[hero.day, { marginBottom: 14 }]}>캘린더에서 일정을 등록해보세요</Text>
+        <View style={hero.ctaBtn}>
+          <Text style={hero.ctaBtnText}>일정 추가하러 가기 →</Text>
+        </View>
+      </TouchableOpacity>
     )
   }
 
-  // IUI/IVF — 단계 설정됨
-  const bgColor    = treatmentMode === 'iui' ? '#a855f7' : '#7c3aed'
-  const modeLabel  = treatmentMode === 'iui' ? 'IUI 인공수정' : 'IVF 시험관'
-  const modeIcon   = treatmentMode === 'iui' ? '💉' : '🔬'
+  const next = upcomingSchedules[0]
+  const nextDate = new Date(next.scheduledAt)
+  const nextDateStr = `${nextDate.getMonth() + 1}월 ${nextDate.getDate()}일`
+  const nextDDay = getDDay(nextDate)
+  const nextMarker = getScheduleMarkerStyle(next.type)
+
   return (
-    <View style={[hero.card, { backgroundColor: bgColor }]}>
-      <View style={hero.ddayBadge}>
-        <Text style={hero.ddayNum}>{stageDay ?? cycleDay}일</Text>
-        <Text style={hero.ddayLabel}>치료 중</Text>
-      </View>
-      <Text style={hero.meta}>{modeIcon} {modeLabel}</Text>
-      <Text style={[hero.phase, { fontSize: 20 }]}>{getStageLabelKo(treatmentMode, currentStage)}</Text>
-      <StageBar mode={treatmentMode} stage={currentStage} />
-      {upcomingSchedule && (
-        <View style={[hero.tipBox, { marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
-          <Text style={hero.tipText}>
-            📅 {upcomingSchedule.title}까지 {getDDay(new Date(upcomingSchedule.scheduledAt))}
+    <TouchableOpacity
+      style={[hero.card, { backgroundColor: bgColor }]}
+      onPress={() => router.push('/(tabs)/calendar' as any)}
+      activeOpacity={0.9}
+    >
+      <Text style={hero.meta}>{modeIcon} {modeLabel} · 다가오는 일정</Text>
+
+      {/* 다음 일정 메인 */}
+      <View style={hero.scheduleMain}>
+        <View style={[hero.scheduleBadge, { backgroundColor: nextMarker.color }]}>
+          <Text style={hero.scheduleEmoji}>
+            {['★','♥','◎'].includes(nextMarker.emoji) ? nextMarker.emoji : '📅'}
           </Text>
         </View>
-      )}
-      <View style={[hero.tipBox, { marginTop: upcomingSchedule ? 6 : 10 }]}>
-        <Text style={hero.tipText}>{tip}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={hero.scheduleTitle}>{next.title || nextMarker.label}</Text>
+          <Text style={hero.scheduleDate}>{nextDateStr} · {next.scheduledAt.slice(11, 16)}</Text>
+          {next.hospitalName ? <Text style={hero.scheduleHospital}>🏥 {next.hospitalName}</Text> : null}
+        </View>
+        <View style={hero.ddayBadge}>
+          <Text style={hero.ddayNum}>{nextDDay}</Text>
+        </View>
       </View>
-    </View>
+
+      {/* 추가 일정 (최대 2개) */}
+      {upcomingSchedules.slice(1).map((s, i) => {
+        const d = new Date(s.scheduledAt)
+        const m = getScheduleMarkerStyle(s.type)
+        return (
+          <View key={i} style={hero.scheduleExtra}>
+            <View style={[hero.scheduleExtraDot, { backgroundColor: m.color }]} />
+            <Text style={hero.scheduleExtraText}>
+              {s.title || m.label}  ·  {d.getMonth() + 1}월 {d.getDate()}일  {getDDay(d)}
+            </Text>
+          </View>
+        )
+      })}
+    </TouchableOpacity>
   )
 }
 
@@ -245,6 +268,11 @@ export default function HomeScreen() {
     const unsub = addNotificationListeners()
     return unsub
   }, [])
+
+  // 다른 화면에서 돌아올 때마다 프로필 최신화 (단계 변경 반영)
+  useFocusEffect(useCallback(() => {
+    syncProfile()
+  }, [syncProfile]))
 
   useEffect(() => {
     const init = async () => {
@@ -309,6 +337,14 @@ export default function HomeScreen() {
       .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))[0] ?? null
   }, [schedules, todayStr])
 
+  // 다가오는 일정 최대 3개 (오늘 포함)
+  const upcomingSchedules = useMemo(() => {
+    return schedules
+      .filter(s => s.scheduledAt.split('T')[0] >= todayStr && s.status !== 'cancelled')
+      .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))
+      .slice(0, 3)
+  }, [schedules, todayStr])
+
   const [quickA, quickB] = getQuickActions(treatmentMode, currentStage)
 
   const todayHormone = hormones.find(h => h.recordedAt.split('T')[0] === todayStr)
@@ -362,6 +398,7 @@ export default function HomeScreen() {
           isFertileWindow={home.isFertileWindow}
           hasCycleData={hasCycleData}
           upcomingSchedule={upcomingSchedule}
+          upcomingSchedules={upcomingSchedules}
         />
 
         {/* 섹션 C — 빠른 기록 */}
@@ -406,29 +443,25 @@ export default function HomeScreen() {
         </View>
 
         {/* 섹션 E — 오늘의 마음 */}
-        <View style={s.section}>
-          <View style={s.secHeader}>
-            <Text style={s.secTitle}>📝 오늘의 마음</Text>
-            <TouchableOpacity onPress={() => router.push('/records' as any)}>
-              <Text style={s.secLink}>쓰러 가기 ›</Text>
-            </TouchableOpacity>
+        <TouchableOpacity style={s.mindCard} onPress={() => router.push('/records' as any)} activeOpacity={0.85}>
+          <View style={s.mindCardTop}>
+            <Text style={s.mindCardTitle}>📝 오늘의 마음</Text>
+            <Text style={s.mindCardLink}>기록하러 가기 →</Text>
           </View>
-          <TouchableOpacity style={t.row} onPress={() => router.push('/records' as any)}>
-            <View style={[t.icon, { backgroundColor: LIGHT_PINK }]}>
-              <Text style={{ fontSize: 18 }}>{todayDiary ? '😊' : '📝'}</Text>
-            </View>
-            <View style={t.text}>
+          <View style={s.mindCardBody}>
+            <Text style={{ fontSize: 26 }}>{todayDiary ? '😊' : '💭'}</Text>
+            <View style={{ flex: 1 }}>
               {todayDiary ? (
-                <Text style={t.title} numberOfLines={2}>{todayDiary.content}</Text>
+                <Text style={s.mindCardContent} numberOfLines={2}>{todayDiary.content}</Text>
               ) : (
                 <>
-                  <Text style={[t.title, { color: MUTED, fontWeight: '400' }]}>오늘 기분을 기록해봐요 💭</Text>
-                  <Text style={t.sub}>AI가 따뜻하게 응원해드려요</Text>
+                  <Text style={s.mindCardPrompt}>오늘 기분을 기록해봐요</Text>
+                  <Text style={s.mindCardSub}>신체 수치 · 감정 · 메모를 한 곳에</Text>
                 </>
               )}
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        </TouchableOpacity>
 
         {/* 섹션 F — 이번 주 기록 */}
         <View style={s.section}>
@@ -466,15 +499,35 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <View style={{ height: 16 }} />
+        <View style={{ height: 80 }} />
       </ScrollView>
+
+      {/* AI 상담 플로팅 버튼 */}
+      <TouchableOpacity
+        style={s.fab}
+        onPress={() => router.push('/(tabs)/chat' as any)}
+        activeOpacity={0.85}
+      >
+        <Text style={s.fabIcon}>🤖</Text>
+        <Text style={s.fabText}>AI 상담</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   )
 }
 
 // ── Styles ────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe:        { flex: 1, backgroundColor: '#fff8f9' },
+  safe:        { flex: 1, backgroundColor: '#fff8f9', position: 'relative' },
+  fab: {
+    position: 'absolute', bottom: 20, right: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#7c3aed',
+    borderRadius: 28, paddingHorizontal: 18, paddingVertical: 12,
+    shadowColor: '#7c3aed', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35, shadowRadius: 8, elevation: 8,
+  },
+  fabIcon: { fontSize: 18 },
+  fabText: { fontFamily: F.bold, fontSize: 13, color: '#fff' },
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff8f9' },
   scroll:      { flex: 1 },
   content:     { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
@@ -487,6 +540,30 @@ const s = StyleSheet.create({
   secHeader:   { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   secTitle:    { fontFamily: F.bold,     fontSize: 14, color: DARK_ROSE },
   secLink:     { fontFamily: F.semiBold, fontSize: 12, color: PINK },
+
+  // 오늘의 마음 강조 카드
+  mindCard: {
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: '#ffd6e0',
+    shadowColor: '#ffb3c6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  mindCardTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
+  },
+  mindCardTitle:   { fontFamily: F.bold,     fontSize: 14, color: DARK_ROSE },
+  mindCardLink:    { fontFamily: F.semiBold, fontSize: 12, color: PINK },
+  mindCardBody:    { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  mindCardContent: { fontFamily: F.regular,  fontSize: 13, color: DARK_ROSE, lineHeight: 20 },
+  mindCardPrompt:  { fontFamily: F.semiBold, fontSize: 13, color: DARK_ROSE, marginBottom: 2 },
+  mindCardSub:     { fontFamily: F.regular,  fontSize: 11, color: MUTED },
 })
 
 const hero = StyleSheet.create({
@@ -511,6 +588,28 @@ const hero = StyleSheet.create({
   ddayLabel: { fontFamily: F.regular, fontSize: 10, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
   ctaBtn:    { backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 10, alignSelf: 'flex-start' },
   ctaBtnText:{ fontFamily: F.bold, fontSize: 13, color: '#7c3aed' },
+
+  // 다가오는 일정 카드
+  scheduleMain: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 14,
+    padding: 12, marginTop: 10, marginBottom: 8,
+  },
+  scheduleBadge: {
+    width: 42, height: 42, borderRadius: 21,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  scheduleEmoji:    { fontSize: 18, color: '#fff' },
+  scheduleTitle:    { fontFamily: F.bold,    fontSize: 15, color: '#fff', marginBottom: 2 },
+  scheduleDate:     { fontFamily: F.regular, fontSize: 11, color: 'rgba(255,255,255,0.8)' },
+  scheduleHospital: { fontFamily: F.regular, fontSize: 11, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  scheduleExtra: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4,
+  },
+  scheduleExtraDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  scheduleExtraText: { fontFamily: F.regular, fontSize: 12, color: 'rgba(255,255,255,0.9)', flex: 1 },
 })
 
 const q = StyleSheet.create({

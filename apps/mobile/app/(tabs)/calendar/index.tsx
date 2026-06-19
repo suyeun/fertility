@@ -175,9 +175,13 @@ export default function CalendarScreen() {
 
         setUser(u)
 
-        // 프로필 로드 (_layout의 addCustomerInfoListener가 isPremium을 스토어에 자동 동기화)
-        const p = await import('@fertility/shared').then(m => m.usersApi.getProfile()).catch(() => null)
-        if (p) setProfile(p)
+        // 프로필 로드 — 로컬 state + Zustand 스토어 모두 업데이트
+        const shared = await import('@fertility/shared')
+        const p = await shared.usersApi.getProfile().catch(() => null)
+        if (p) {
+          setProfile(p)
+          shared.useUserStore.getState().setProfile(p as any)
+        }
 
         await fetchData(u.uid)
       } catch { setLoading(false) }
@@ -444,6 +448,12 @@ export default function CalendarScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.headerSubRow}>
+              <TouchableOpacity
+                style={[styles.addScheduleBtn, { marginRight: 8 }]}
+                onPress={() => router.push('/records' as any)}
+              >
+                <Text style={styles.addScheduleBtnText}>🗒️ 기록하기</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 style={styles.addScheduleBtn}
                 onPress={() => { setMedStartDate(selectedDateStr); setIsScheduleModalOpen(true) }}
@@ -1158,8 +1168,22 @@ export default function CalendarScreen() {
                   if (!stageSuggestion) return
                   try {
                     const { useUserStore: _store } = await import('@fertility/shared')
-                    _store.getState().setCurrentStage(stageSuggestion.nextStage)
-                    await usersApi.updateProfile({ currentStage: stageSuggestion.nextStage })
+                    const state = _store.getState()
+                    if (state.profile) {
+                      // 스토어에 프로필 있으면 setCurrentStage가 저장+API 모두 처리
+                      state.setCurrentStage(stageSuggestion.nextStage)
+                    } else {
+                      // 스토어 프로필 없을 때 직접 API 호출
+                      const today = new Date().toISOString().split('T')[0]
+                      await usersApi.updateProfile({
+                        currentStage: stageSuggestion.nextStage,
+                        stageStartedAt: today,
+                      })
+                      const prof = effectiveProfile as any
+                      if (prof) {
+                        state.setProfile({ ...prof, _currentStage: stageSuggestion.nextStage, _stageStartedAt: today })
+                      }
+                    }
                   } catch {}
                   setStageSuggestion(null)
                 }}
