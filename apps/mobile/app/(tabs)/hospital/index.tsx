@@ -179,13 +179,10 @@ const INFO_ARTICLES: Article[] = [
   {
     id: 'a12',
     category: '식단',
-    emoji: '🐟',
     title: '오메가3와 코엔자임Q10, 난임에 정말 효과 있을까?',
     summary: '난임 관련 영양제 중 실제 연구로 효과가 입증된 것과 과대광고인 것을 구분해서 알려드려요.',
     readMin: 5,
     tags: ['영양제', '근거'],
-    bgColor: '#e0f2fe',
-    textColor: '#0369a1',
     products: [
       { name: '노르딕 내추럴스 오메가3', desc: '생식의학 연구에서 자주 쓰인 rTG형 오메가3', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=노르딕내추럴스+오메가3' },
       { name: '유비퀴놀 코엔자임Q10 100mg', desc: '흡수율 높은 환원형 CoQ10', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=유비퀴놀+코큐텐+100mg' },

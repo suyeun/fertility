@@ -38,7 +38,11 @@
       "Bash(sw_vers)",
       "Bash(rm -rf ~/Library/Developer/Xcode/DerivedData && echo \"done\")",
       "Bash(grep -v \"^$\")",
-      "Bash(grep -E \"\\\\.\\(ts|d\\\\.ts\\)$\")"
+      "Bash(grep -E \"\\\\.\\(ts|d\\\\.ts\\)$\")",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/info)"
     ]
   }
 }
