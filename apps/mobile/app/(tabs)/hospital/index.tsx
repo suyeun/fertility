@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, SafeAreaView, Linking,
 } from 'react-native'
 import { router } from 'expo-router'
 import { F } from '../../../lib/fonts'
+import { infoApi, type AffiliateProductsMap } from '@fertility/shared'
 
 const PINK       = '#ff8fab'
 const DARK_ROSE  = '#5a3042'
@@ -100,10 +101,31 @@ const COST_INFO = [
   },
 ]
 
+// ── 제휴 상품 타입 ────────────────────────────────────────────────
+interface AffiliateProduct {
+  name: string
+  desc: string
+  platform: string
+  url: string
+}
+
+interface Article {
+  id: string
+  category: string
+  emoji: string
+  title: string
+  summary: string
+  readMin: number
+  tags: string[]
+  bgColor: string
+  textColor: string
+  products?: AffiliateProduct[]
+}
+
 // ── 정보 콘텐츠 데이터 ───────────────────────────────────────────
 const INFO_CATEGORIES = ['전체', '시술 이해', '생활 습관', '검사·수치', '심리·감정', '식단']
 
-const INFO_ARTICLES = [
+const INFO_ARTICLES: Article[] = [
   {
     id: 'a1',
     category: '시술 이해',
@@ -213,6 +235,10 @@ const INFO_ARTICLES = [
     tags: ['식단', '배란'],
     bgColor: '#dcfce7',
     textColor: '#15803d',
+    products: [
+      { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
+      { name: '네이처메이드 엽산', desc: '천연 엽산 400mcg, 미국산', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=네이처메이드+엽산' },
+    ],
   },
   {
     id: 'a11',
@@ -224,6 +250,10 @@ const INFO_ARTICLES = [
     tags: ['영양제', '엽산'],
     bgColor: '#fef3c7',
     textColor: '#92400e',
+    products: [
+      { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
+      { name: '메가푸드 베이비앤미', desc: '천연 식품형 산전 종합비타민', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=메가푸드+베이비앤미' },
+    ],
   },
   {
     id: 'a12',
@@ -235,6 +265,10 @@ const INFO_ARTICLES = [
     tags: ['영양제', '근거'],
     bgColor: '#e0f2fe',
     textColor: '#0369a1',
+    products: [
+      { name: '노르딕 내추럴스 오메가3', desc: '생식의학 연구에서 자주 쓰인 rTG형 오메가3', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=노르딕내추럴스+오메가3' },
+      { name: '유비퀴놀 코엔자임Q10 100mg', desc: '흡수율 높은 환원형 CoQ10', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=유비퀴놀+코큐텐+100mg' },
+    ],
   },
 ]
 
@@ -245,6 +279,14 @@ export default function InfoScreen() {
   const [searchText, setSearchText]         = useState('')
   const [selectedCategory, setSelectedCategory] = useState('전체')
   const [expandedArticle, setExpandedArticle]   = useState<string | null>(null)
+  const [remoteProducts, setRemoteProducts]     = useState<AffiliateProductsMap | null>(null)
+
+  useEffect(() => {
+    infoApi.getProducts().then(setRemoteProducts).catch(() => {})
+  }, [])
+
+  const getProducts = (article: Article): AffiliateProduct[] =>
+    remoteProducts?.[article.id] ?? article.products ?? []
 
   const filteredHospitals = HOSPITALS.filter(h => {
     const regionMatch = selectedRegion === '전체' || h.region === selectedRegion
@@ -474,6 +516,29 @@ export default function InfoScreen() {
                     <TouchableOpacity style={[styles.readBtn, { backgroundColor: a.bgColor }]}>
                       <Text style={[styles.readBtnText, { color: a.textColor }]}>전체 내용 보기 →</Text>
                     </TouchableOpacity>
+
+                    {getProducts(a).length > 0 && (
+                      <View style={styles.productSection}>
+                        <Text style={styles.productSectionTitle}>🛍️ 아티클 관련 추천 제품</Text>
+                        {getProducts(a).map((p, i) => (
+                          <TouchableOpacity
+                            key={i}
+                            style={styles.productCard}
+                            onPress={() => Linking.openURL(p.url)}
+                            activeOpacity={0.75}
+                          >
+                            <Text style={styles.productIcon}>🛍️</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.productName} numberOfLines={1}>{p.name}</Text>
+                              <Text style={styles.productDesc} numberOfLines={1}>{p.desc}</Text>
+                            </View>
+                            <View style={styles.platformBadge}>
+                              <Text style={styles.platformBadgeText}>{p.platform}</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
                   </>
                 )}
 
@@ -605,4 +670,18 @@ const styles = StyleSheet.create({
   readBtn:     { borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginBottom: 6 },
   readBtnText: { fontFamily: F.bold, fontSize: 13 },
   articleToggle: { fontFamily: F.regular, fontSize: 11, color: MUTED, textAlign: 'right', marginTop: 6 },
+
+  // 제휴 상품
+  productSection: { marginTop: 12, borderTopWidth: 1, borderTopColor: BORDER, paddingTop: 10, gap: 8 },
+  productSectionTitle: { fontFamily: F.semiBold, fontSize: 11, color: MUTED, marginBottom: 2 },
+  productCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#fff', borderRadius: 12, padding: 10,
+    borderWidth: 1, borderColor: BORDER,
+  },
+  productIcon:    { fontSize: 18 },
+  productName:    { fontFamily: F.semiBold, fontSize: 12, color: DARK_ROSE },
+  productDesc:    { fontFamily: F.regular,  fontSize: 11, color: MUTED, marginTop: 1 },
+  platformBadge:    { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: LIGHT_PINK },
+  platformBadgeText: { fontFamily: F.bold, fontSize: 10, color: PINK },
 })

@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { Phone, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Phone, ChevronDown, ChevronUp, ExternalLink, ShoppingBag } from 'lucide-react'
+import { infoApi, type AffiliateProductsMap } from '@fertility/shared'
 
 // ── 병원 데이터 ───────────────────────────────────────────────────
 const REGIONS = ['전체', '서울', '경기', '인천', '부산', '대구', '대전', '광주', '기타']
@@ -86,7 +87,21 @@ const STEPS = [
 // ── 정보 아티클 데이터 ────────────────────────────────────────────
 const INFO_CATEGORIES = ['전체', '시술 이해', '생활 습관', '검사·수치', '심리·감정', '식단']
 
-const ARTICLES = [
+interface Article {
+  id: string
+  category: string
+  emoji: string
+  title: string
+  summary: string
+  readMin: number
+  tags: string[]
+  bgColor: string
+  textColor: string
+  badgeColor: string
+  products?: AffiliateProduct[]
+}
+
+const ARTICLES: Article[] = [
   {
     id: 'a1', category: '시술 이해', emoji: '🔬',
     title: 'IVF 시험관 시술, 처음이라면 꼭 알아야 할 5단계',
@@ -156,6 +171,10 @@ const ARTICLES = [
     summary: '항산화 식품, 엽산이 풍부한 음식, 반대로 난임에 영향을 줄 수 있는 음식과 카페인 섭취량 기준을 정리했어요.',
     readMin: 4, tags: ['식단', '배란'],
     bgColor: 'bg-green-50', textColor: 'text-green-700', badgeColor: 'bg-green-100',
+    products: [
+      { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
+      { name: '네이처메이드 엽산', desc: '천연 엽산 400mcg, 미국산', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=네이처메이드+엽산' },
+    ],
   },
   {
     id: 'a11', category: '식단', emoji: '💊',
@@ -163,6 +182,10 @@ const ARTICLES = [
     summary: '임신 준비 전부터 먹어야 하는 이유, 권장 용량, 천연 엽산 vs 합성 엽산 차이까지 알기 쉽게 정리했어요.',
     readMin: 3, tags: ['영양제', '엽산'],
     bgColor: 'bg-amber-50', textColor: 'text-amber-700', badgeColor: 'bg-amber-100',
+    products: [
+      { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
+      { name: '메가푸드 베이비앤미', desc: '천연 식품형 산전 종합비타민', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=메가푸드+베이비앤미' },
+    ],
   },
   {
     id: 'a12', category: '식단', emoji: '🐟',
@@ -170,8 +193,20 @@ const ARTICLES = [
     summary: '난임 관련 영양제 중 실제 연구로 효과가 입증된 것과 과대광고인 것을 구분해서 알려드려요.',
     readMin: 5, tags: ['영양제', '근거'],
     bgColor: 'bg-sky-50', textColor: 'text-sky-700', badgeColor: 'bg-sky-100',
+    products: [
+      { name: '노르딕 내추럴스 오메가3', desc: '생식의학 연구에서 자주 쓰인 rTG형 오메가3', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=노르딕내추럴스+오메가3' },
+      { name: '유비퀴놀 코엔자임Q10 100mg', desc: '흡수율 높은 환원형 CoQ10', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=유비퀴놀+코큐텐+100mg' },
+    ],
   },
 ]
+
+// ── 제휴 상품 타입 ────────────────────────────────────────────────
+interface AffiliateProduct {
+  name: string
+  desc: string
+  platform: string
+  url: string
+}
 
 type Tab = 'hospitals' | 'cost' | 'info'
 
@@ -181,6 +216,15 @@ export default function InfoPage() {
   const [searchText, setSearchText]         = useState('')
   const [selectedCategory, setSelectedCategory] = useState('전체')
   const [expandedArticle, setExpandedArticle]   = useState<string | null>(null)
+  const [remoteProducts, setRemoteProducts]     = useState<AffiliateProductsMap | null>(null)
+
+  useEffect(() => {
+    infoApi.getProducts().then(setRemoteProducts).catch(() => {})
+  }, [])
+
+  // 서버에서 내려온 제품 데이터 우선, 없으면 하드코딩 fallback
+  const getProducts = (article: Article): AffiliateProduct[] =>
+    remoteProducts?.[article.id] ?? article.products ?? []
 
   const filteredHospitals = HOSPITALS.filter(h => {
     const regionMatch = selectedRegion === '전체' || h.region === selectedRegion
@@ -399,6 +443,34 @@ export default function InfoPage() {
                   <button className={`w-full py-2.5 text-xs font-bold rounded-xl ${a.bgColor} ${a.textColor} hover:opacity-80 transition-opacity`}>
                     전체 내용 보기 →
                   </button>
+
+                  {getProducts(a).length > 0 && (
+                    <div className="pt-2 border-t border-rose-50 space-y-2">
+                      <p className="flex items-center gap-1 text-[10px] font-bold text-rose-400">
+                        <ShoppingBag size={11} /> 아티클 관련 추천 제품
+                      </p>
+                      {getProducts(a).map((p, i) => (
+                        <a
+                          key={i}
+                          href={p.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white border border-rose-100 hover:border-primary hover:shadow-sm transition-all group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <span className="text-base shrink-0">🛍️</span>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-rose-900 truncate">{p.name}</p>
+                              <p className="text-[10px] text-rose-400 truncate">{p.desc}</p>
+                            </div>
+                          </div>
+                          <span className="shrink-0 px-2 py-1 text-[9px] font-bold rounded-lg bg-rose-50 text-rose-500">
+                            {p.platform}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 

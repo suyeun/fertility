@@ -227,3 +227,17 @@ export const versionApi = {
   check: (version: string, platform: 'ios' | 'android') =>
     request('GET', `/app/version-check?version=${encodeURIComponent(version)}&platform=${platform}`),
 }
+
+export interface AffiliateProduct {
+  name: string
+  desc: string
+  platform: string
+  url: string
+}
+
+// articleId → 제품 목록
+export type AffiliateProductsMap = Record<string, AffiliateProduct[]>
+
+export const infoApi = {
+  getProducts: () => request<AffiliateProductsMap>('GET', '/info/products'),
+}
