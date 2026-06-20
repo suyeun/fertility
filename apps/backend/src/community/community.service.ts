@@ -2,6 +2,10 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
 import { v4 as uuidv4 } from 'uuid'
 import * as crypto from 'crypto'
+import sanitizeHtml from 'sanitize-html'
+
+const sanitize = (text: string) =>
+  sanitizeHtml(text, { allowedTags: [], allowedAttributes: {} })
 import {
   TAG_META, CATEGORY_ANONYMOUS,
   type PostTag, type PostCategory, type PostTargetMode,
@@ -88,7 +92,7 @@ export class CommunityService {
       category,
       tag: body.tag,
       targetMode,
-      content: body.content,
+      content: sanitize(body.content),
       commentsCount: 0,
       reactions: { cheer: [], empathy: [], pray: [] },
       createdAt: new Date().toISOString(),
@@ -165,7 +169,7 @@ export class CommunityService {
       authorName: isAnonymous ? anonymousName : realName,
       isAnonymous,
       isAuthor,
-      content,
+      content: sanitize(content),
       createdAt: new Date().toISOString(),
     }
 
