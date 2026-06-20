@@ -415,7 +415,6 @@ export default function InfoScreen() {
                       <View style={[styles.categoryBadge, { backgroundColor: meta.bgColor }]}>
                         <Text style={[styles.categoryBadgeText, { color: meta.textColor }]}>{a.category}</Text>
                       </View>
-                      <Text style={styles.readMin}>📖 {a.readMin}분</Text>
                       {products.length > 0 && (
                         <View style={styles.productBadge}>
                           <Text style={styles.productBadgeText}>🛍️ 추천 제품</Text>
@@ -577,7 +576,6 @@ const styles = StyleSheet.create({
   articleMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
   categoryBadge:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   categoryBadgeText: { fontFamily: F.semiBold, fontSize: 10 },
-  readMin:     { fontFamily: F.regular, fontSize: 10, color: MUTED },
   articleTitle:{ fontFamily: F.bold, fontSize: 13, color: DARK_ROSE, lineHeight: 18 },
   articleSummary: {
     fontFamily: F.regular, fontSize: 13, color: '#5a3042cc',

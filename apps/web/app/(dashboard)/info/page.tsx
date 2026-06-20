@@ -416,7 +416,6 @@ export default function InfoPage() {
                     <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-lg ${meta.badgeColor} ${meta.textColor}`}>
                       {a.category}
                     </span>
-                    <span className="text-[10px] text-rose-300">📖 {a.readMin}분</span>
                     {products.length > 0 && (
                       <span className="px-2 py-0.5 text-[10px] font-semibold rounded-lg bg-rose-50 text-rose-400 border border-rose-100">
                         🛍️ 추천 제품
