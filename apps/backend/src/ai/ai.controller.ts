@@ -4,6 +4,7 @@ import { Response } from 'express'
 import { AiService } from './ai.service'
 import { JwtAuthGuard } from '../common/jwt-auth.guard'
 import { CurrentUser, JwtPayload } from '../common/current-user.decorator'
+import { ChatDto, SaveHistoryDto } from './dto/ai.dto'
 
 @Controller('ai')
 @UseGuards(JwtAuthGuard)
@@ -15,7 +16,7 @@ export class AiController {
   @Throttle({ default: { ttl: 60000, limit: 20 } })
   async chat(
     @CurrentUser() user: JwtPayload,
-    @Body() body: { messages: any[]; mode?: 'NATURAL' | 'CLINIC' },
+    @Body() body: ChatDto,
     @Res() res: Response,
   ) {
     await this.ai.streamChat(body.messages, res, body.mode ?? 'CLINIC')
@@ -27,7 +28,7 @@ export class AiController {
   }
 
   @Post('history')
-  saveHistory(@CurrentUser() user: JwtPayload, @Body() body: { messages: any[] }) {
+  saveHistory(@CurrentUser() user: JwtPayload, @Body() body: SaveHistoryDto) {
     return this.ai.saveHistory(user.sub, body.messages)  // [BIZ-001] firebase 파라미터 제거
   }
 }

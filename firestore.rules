@@ -62,7 +62,8 @@ service cloud.firestore {
       allow read: if isLoggedIn();
       allow create: if isLoggedIn()
         && request.resource.data.userId == request.auth.uid;
-      allow update: if isLoggedIn();
+      allow update: if isLoggedIn()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']);
       allow delete: if isLoggedIn()
         && resource.data.userId == request.auth.uid;
     }

@@ -1,7 +1,8 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common'
+import { Controller, Post, Body, UseGuards, UnauthorizedException } from '@nestjs/common'
 import { NotificationsService } from './notifications.service'
 import { JwtAuthGuard } from '../common/jwt-auth.guard'
 import { CurrentUser, JwtPayload } from '../common/current-user.decorator'
+import * as crypto from 'crypto'
 
 @Controller('notifications')
 export class NotificationsController {
@@ -20,7 +21,16 @@ export class NotificationsController {
   // Cloud Scheduler에서 매일 아침 호출 (내부 엔드포인트)
   @Post('daily')
   sendDailyReminders(@Body('secret') secret: string) {
-    if (secret !== process.env.SCHEDULER_SECRET) return { skip: true }
+    const expected = process.env.SCHEDULER_SECRET
+    if (!expected || !secret) throw new UnauthorizedException()
+
+    const a = Buffer.from(secret)
+    const b = Buffer.from(expected)
+    // 길이가 다르면 timingSafeEqual이 throw하므로 길이를 먼저 상수 시간 비교
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      throw new UnauthorizedException()
+    }
+
     return this.notifications.sendAllDailyReminders()
   }
 }

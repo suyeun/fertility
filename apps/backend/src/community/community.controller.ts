@@ -5,6 +5,7 @@ import { CurrentUser, JwtPayload } from '../common/current-user.decorator'
 import { UsersService } from '../users/users.service'
 import { makeAnonName } from '@fertility/shared'
 import type { PostCategory, PostTag } from '@fertility/shared'
+import { CreatePostDto, CreateCommentDto } from './dto/community.dto'
 
 @Controller('community')
 @UseGuards(JwtAuthGuard)
@@ -28,7 +29,7 @@ export class CommunityController {
   }
 
   @Post('posts')
-  async createPost(@CurrentUser() user: JwtPayload, @Body() body: any) {
+  async createPost(@CurrentUser() user: JwtPayload, @Body() body: CreatePostDto) {
     const profile = await this.users.getProfile(user.sub)
     const realName = profile?.name || '봄 유저'
     const anonymousName = makeAnonName(user.sub, 'community')
@@ -65,7 +66,7 @@ export class CommunityController {
   async addComment(
     @CurrentUser() user: JwtPayload,
     @Param('id') postId: string,
-    @Body() body: any,
+    @Body() body: CreateCommentDto,
   ) {
     const profile = await this.users.getProfile(user.sub)
     const realName = profile?.name || '봄 유저'

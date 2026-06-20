@@ -1,5 +1,6 @@
 import { Controller, Post, Body, Headers, UnauthorizedException, Logger } from '@nestjs/common'
 import { PaymentsService } from './payments.service'
+import * as crypto from 'crypto'
 
 @Controller('payments')
 export class PaymentsController {
@@ -19,7 +20,11 @@ export class PaymentsController {
     @Body() body: any,
   ) {
     const secret = process.env.REVENUECAT_WEBHOOK_SECRET
-    if (!secret || auth !== secret) {
+    if (!secret || !auth) throw new UnauthorizedException('Invalid webhook secret')
+
+    const a = Buffer.from(auth)
+    const b = Buffer.from(secret)
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
       throw new UnauthorizedException('Invalid webhook secret')
     }
 
