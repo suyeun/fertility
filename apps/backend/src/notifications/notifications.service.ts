@@ -114,32 +114,94 @@ export class NotificationsService {
   }
 
   // ──────────────────────────────────────────
-  // 시술 일정 D-1 원격 알림
-  // D-1 알림은 일반 일정 알림이므로 구독 게이트 없음.
+  // 시술 일정 D-1 알림 예약 — Firestore 큐에 저장
+  // 서버 재시작과 무관하게 유지된다.
   // ──────────────────────────────────────────
   async scheduleAppointmentNotification(uid: string, schedule: any): Promise<void> {
     const scheduledAt = new Date(schedule.scheduledAt)
-    const dayBefore = new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000)
-    dayBefore.setHours(9, 0, 0, 0)
+    const sendAt = new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000)
+    sendAt.setHours(9, 0, 0, 0)
 
-    if (dayBefore <= new Date()) return
+    if (sendAt <= new Date()) return
 
-    const delayMs = dayBefore.getTime() - Date.now()
-    this.logger.log(`D-1 알림 예약: ${schedule.title} / ${Math.round(delayMs / 3600000)}시간 후`)
+    const month = scheduledAt.getMonth() + 1
+    const day = scheduledAt.getDate()
+    const hour = scheduledAt.getHours()
+    const hospitalSuffix = schedule.hospitalName ? ` · ${schedule.hospitalName}` : ''
 
-    // setTimeout으로 지연 발송 (소규모 운영용)
-    // 운영 환경에서는 Cloud Tasks / BullMQ 등 큐 시스템 권장
-    setTimeout(async () => {
-      try {
-        await this.sendToUser(uid, {
-          title: `내일 ${schedule.title} 일정이 있어요 🌸`,
-          body: `${scheduledAt.getMonth() + 1}월 ${scheduledAt.getDate()}일 ${scheduledAt.getHours()}시 예정${schedule.hospitalName ? ` · ${schedule.hospitalName}` : ''}`,
-          data: { type: 'appointment', scheduleId: schedule.id },
-        })
-      } catch (e) {
-        this.logger.warn(`D-1 지연 발송 실패: ${e}`)
-      }
-    }, delayMs)
+    // scheduleId 기반 고정 doc ID — 같은 일정 재등록 시 덮어써서 중복 큐 방지
+    const docId = `appointment_${schedule.id}`
+    await this.firebase.collection('scheduled_notifications').doc(docId).set({
+      uid,
+      type: 'appointment',
+      sendAt: sendAt.toISOString(),
+      sent: false,
+      processing: false,
+      payload: {
+        title: `내일 ${schedule.title} 일정이 있어요 🌸`,
+        body: `${month}월 ${day}일 ${hour}시 예정${hospitalSuffix}`,
+        data: { type: 'appointment', scheduleId: schedule.id },
+      },
+      createdAt: new Date().toISOString(),
+    })
+
+    this.logger.log(`D-1 알림 큐 등록: ${schedule.title} / 발송 예정 ${sendAt.toISOString()}`)
+  }
+
+  // ──────────────────────────────────────────
+  // 예약 알림 처리 — Cloud Scheduler에서 주기적으로 호출
+  // sendAt이 지났고 아직 발송 안 된 문서를 처리한다.
+  // ──────────────────────────────────────────
+  async processScheduledNotifications(): Promise<{ processed: number }> {
+    const now = new Date().toISOString()
+    const snap = await this.firebase
+      .collection('scheduled_notifications')
+      .where('sent', '==', false)
+      .where('processing', '==', false)
+      .where('sendAt', '<=', now)
+      .get()
+
+    if (snap.empty) return { processed: 0 }
+
+    // 트랜잭션으로 processing=true 선점 — 동시 폴러가 같은 문서를 중복 처리하는 것을 방지
+    const claimed: FirebaseFirestore.DocumentSnapshot[] = []
+    await Promise.all(
+      snap.docs.map(async (doc) => {
+        try {
+          await this.firebase.db.runTransaction(async (tx) => {
+            const fresh = await tx.get(doc.ref)
+            if (fresh.data()?.processing || fresh.data()?.sent) return
+            tx.update(doc.ref, { processing: true })
+          })
+          claimed.push(doc)
+        } catch {
+          // 다른 인스턴스가 먼저 선점한 경우 — 건너뜀
+        }
+      })
+    )
+
+    const results = await Promise.allSettled(
+      claimed.map(async (doc) => {
+        const { uid, payload } = doc.data()
+        await this.sendToUser(uid, payload)
+        await doc.ref.update({ sent: true, processing: false, sentAt: new Date().toISOString() })
+      })
+    )
+
+    // 발송 실패한 문서는 processing을 되돌려 다음 사이클에 재시도
+    await Promise.all(
+      results.map(async (result, i) => {
+        if (result.status === 'rejected') {
+          await claimed[i].ref.update({ processing: false })
+          this.logger.warn(`예약 알림 발송 실패: ${claimed[i].id} / ${result.reason}`)
+        }
+      })
+    )
+
+    const succeeded = results.filter(r => r.status === 'fulfilled').length
+    this.logger.log(`예약 알림 처리 완료: ${succeeded}/${claimed.length}건`)
+
+    return { processed: succeeded }
   }
 
   // ──────────────────────────────────────────

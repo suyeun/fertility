@@ -18,6 +18,19 @@ export class NotificationsController {
     return this.notifications.registerToken(user.sub, body.token, body.platform)
   }
 
+  // Cloud Scheduler에서 5분마다 호출 — 예약 알림 처리
+  @Post('process')
+  processScheduled(@Body('secret') secret: string) {
+    const expected = process.env.SCHEDULER_SECRET
+    if (!expected || !secret) throw new UnauthorizedException()
+    const a = Buffer.from(secret)
+    const b = Buffer.from(expected)
+    if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+      throw new UnauthorizedException()
+    }
+    return this.notifications.processScheduledNotifications()
+  }
+
   // Cloud Scheduler에서 매일 아침 호출 (내부 엔드포인트)
   @Post('daily')
   sendDailyReminders(@Body('secret') secret: string) {

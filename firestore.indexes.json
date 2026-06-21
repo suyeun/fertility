@@ -71,6 +71,15 @@
         { "fieldPath": "postId",    "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "scheduled_notifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sent",       "order": "ASCENDING" },
+        { "fieldPath": "processing", "order": "ASCENDING" },
+        { "fieldPath": "sendAt",     "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
