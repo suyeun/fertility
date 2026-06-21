@@ -96,7 +96,6 @@ export default function CommunityScreen() {
       })
       setPosts(data)
     } catch (e) {
-      console.warn('[커뮤니티] 게시글 로드 실패:', e)
     } finally {
       setPostsLoading(false)
     }

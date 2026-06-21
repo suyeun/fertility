@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  Switch, SafeAreaView, Alert, ActivityIndicator, Modal,
+  Switch, SafeAreaView, Alert, ActivityIndicator, Modal, Linking,
 } from 'react-native'
 import { router } from 'expo-router'
 import * as Notifications from 'expo-notifications'
@@ -273,6 +273,19 @@ export default function SettingsScreen() {
             <Text style={s.sectionTitle}>👤 계정</Text>
             <TouchableOpacity style={s.dangerRow} onPress={handleLogout}>
               <Text style={s.dangerText}>로그아웃</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* 약관 */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>📋 약관 및 정책</Text>
+            <TouchableOpacity
+              style={s.row}
+              onPress={() => Linking.openURL('https://cuboid-string-459.notion.site/Lunera-3864e4079c7880699f4cf6ac9f9c7952')}
+              activeOpacity={0.8}
+            >
+              <Text style={s.rowLabel}>개인정보처리방침</Text>
+              <Text style={s.chevron}>›</Text>
             </TouchableOpacity>
           </View>
 

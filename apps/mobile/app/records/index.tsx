@@ -71,7 +71,6 @@ export default function RecordsScreen() {
       setProfile(p)
       setActiveTab(targetStage === 'iui' ? 'hospital' : 'procedure')
     } catch (err) {
-      console.error('단계 업그레이드 실패:', err)
     } finally {
       setIsUpgrading(false)
     }
@@ -94,7 +93,6 @@ export default function RecordsScreen() {
       await hormonesApi.save(updatedRecord)
       await fetchRecords(user.uid)
     } catch (err) {
-      console.error('일상 수치 저장 실패:', err)
     }
   }
 
@@ -118,7 +116,6 @@ export default function RecordsScreen() {
       const data = await hormonesApi.getAll()
       setRecords(data)
     } catch (err) {
-      console.error('호르몬 기록 로드 실패:', err)
     } finally {
       setLoadingHormones(false)
     }
@@ -137,7 +134,6 @@ export default function RecordsScreen() {
         setAiFeedback(todayEntry.aiAnalysis || '')
       }
     } catch (err) {
-      console.error('일기 로드 실패:', err)
     } finally {
       setLoadingDiaries(false)
     }
@@ -210,7 +206,6 @@ export default function RecordsScreen() {
       setHcgLevel('')
       setHormoneNotes('')
     } catch (err) {
-      console.error(err)
     } finally {
       setSavingHormone(false)
     }

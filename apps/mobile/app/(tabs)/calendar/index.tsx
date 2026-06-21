@@ -158,7 +158,6 @@ export default function CalendarScreen() {
       setHormones(unwrap(fetchedHormones))
       setSchedules(unwrap(fetchedSchedules))
     } catch (error) {
-      console.error('데이터 로드 실패:', error)
     } finally {
       setLoading(false)
     }
@@ -355,7 +354,6 @@ export default function CalendarScreen() {
       setScheduleNotes(''); setMedications([])
       setScheduleTime('09:00'); setScheduleChipValue(null)
     } catch (err) {
-      console.error(err)
       Alert.alert('저장 실패', '일정을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')
     } finally {
       setSavingSchedule(false)

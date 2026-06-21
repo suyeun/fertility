@@ -42,7 +42,6 @@ function CompleteScreen({ data }: { data: OnboardingData }) {
       if (updated) await saveProfile(updated)
       router.replace('/')
     } catch (err) {
-      console.error('온보딩 저장 실패:', err)
     } finally {
       setSaving(false)
     }

@@ -41,7 +41,7 @@ export async function registerPushToken(): Promise<void> {
     const platform = Platform.OS === 'ios' ? 'ios' : 'android'
     await notificationsApi.registerToken(expoPushToken, platform)
   } catch (e) {
-    console.warn('[알림] Expo Push Token 등록 실패:', e)
+    // push token 등록 실패 — 무시하고 진행
   }
 }
 
@@ -215,15 +215,11 @@ export async function initNotifications(schedules: TreatmentSchedule[]): Promise
 
 export function addNotificationListeners() {
   // 포그라운드 알림 수신
-  const receivedSub = Notifications.addNotificationReceivedListener(notification => {
-    console.log('[알림 수신]', notification.request.content.title)
-  })
+  const receivedSub = Notifications.addNotificationReceivedListener(_notification => {})
 
   // 알림 탭 → 화면 이동 처리
-  const responseSub = Notifications.addNotificationResponseReceivedListener(response => {
-    const data = response.notification.request.content.data as any
-    // 필요 시 router.push로 화면 이동 처리 가능
-    console.log('[알림 탭]', data?.tag)
+  const responseSub = Notifications.addNotificationResponseReceivedListener(_response => {
+    // 필요 시 router.push로 화면 이동 처리
   })
 
   return () => {

@@ -304,7 +304,7 @@ export default function HomeScreen() {
 
         await initPurchases(me.id).catch(() => {})
         identifyUser(me.id).catch(() => {})
-        initNotifications(unwrap(s)).catch(e => console.warn('[알림 초기화 실패]', e))
+        initNotifications(unwrap(s)).catch(() => {})
       } catch {
         await clearAuth()
         router.replace('/login' as any)

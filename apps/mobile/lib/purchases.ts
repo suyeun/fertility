@@ -34,7 +34,6 @@ export async function initPurchases(userId?: string): Promise<void> {
 
   const apiKey = Platform.OS === 'ios' ? RC_API_KEY_IOS : RC_API_KEY_ANDROID
   if (!apiKey) {
-    console.warn('[RevenueCat] API 키 미설정 — 결제 기능 비활성화')
     return
   }
 
@@ -93,7 +92,6 @@ export async function getOfferings(): Promise<PurchasesPackage[]> {
     const offerings = await Purchases.getOfferings()
     return offerings.current?.availablePackages ?? []
   } catch (e) {
-    console.warn('[RevenueCat] Offerings 조회 실패:', e)
     return []
   }
 }
