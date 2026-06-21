@@ -350,14 +350,14 @@ export default function RecordsScreen() {
     bbt: {
       name: '기초체온 (BBT)',
       unit: '°C',
-      desc: '매일 아침 눈뜬 직후 움직이지 않고 측정하는 구강 체온입니다. 저온기와 고온기의 흐름을 파악하여 배란일을 예측합니다.',
+      desc: '매일 아침 눈뜬 직후 움직이지 않고 측정하는 구강 체온입니다. 저온기와 고온기의 흐름을 기록해 배란 시기를 파악하는 데 참고할 수 있어요.',
       normal: '저온기 36.1 ~ 36.4°C / 고온기 36.5 ~ 37.0°C',
       maxLimit: 38
     },
     opkIndex: {
       name: '배란테스트기 (OPK)',
       unit: 'Level',
-      desc: '소변 내 황체형성호르몬(LH) 농도 진하기를 0 ~ 10 단계 수치로 진단하여 배란 피크를 파악합니다.',
+      desc: '소변 내 황체형성호르몬(LH) 농도를 0 ~ 10 단계로 기록해 배란 피크 시기를 파악하는 데 참고할 수 있어요.',
       normal: '양성(피크): 9 ~ 10 Level',
       maxLimit: 10
     }
@@ -532,7 +532,7 @@ export default function RecordsScreen() {
                 <View style={styles.nudgeBanner}>
                   <Text style={styles.nudgeEmoji}>💡</Text>
                   <Text style={styles.nudgeText}>
-                    기초체온을 매일 기록하면 배란일 예측이 훨씬 정확해져요
+                    기초체온을 매일 기록하면 배란 흐름을 파악하는 데 도움이 돼요
                   </Text>
                 </View>
               </View>
