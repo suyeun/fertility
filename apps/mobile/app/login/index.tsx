@@ -8,6 +8,7 @@ import { router } from 'expo-router'
 import { authApi } from '@fertility/shared'
 import { loadStoredToken, saveUser } from '../../lib/auth'
 import { setToken } from '@fertility/shared'
+import { registerPushToken } from '../../lib/notifications'
 
 const PINK = '#ff8fab'
 const DARK_ROSE = '#5a3042'
@@ -44,6 +45,8 @@ export default function LoginScreen() {
       }
       setToken(res.access_token)
       await saveUser(res.uid, res.email)
+      // JWT 세팅 직후 토큰 등록 — 실패해도 로그인은 계속 진행
+      registerPushToken().catch(() => {})
       router.replace('/')
     } catch (e: any) {
       setError(e.message || '로그인에 실패했습니다.')
