@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "756585631935",
+    "project_id": "lunera-a47ac",
+    "storage_bucket": "lunera-a47ac.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:756585631935:android:634ea30b25e69bc02f360a",
+        "android_client_info": {
+          "package_name": "com.fertility.bom.flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCWoopUvyzOluFlajDKHPMDDJuG1pQF4pI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -71,6 +71,18 @@ export class NotificationsService {
     }
   }
 
+  // ──────────────────────────────────────────
+  // [부부 공유] 외부 서비스에서 특정 uid에게 바로 푸시 발송
+  // CouplesService, TreatmentService 등에서 사용
+  // ──────────────────────────────────────────
+  async sendPushToUser(uid: string, payload: {
+    title: string
+    body: string
+    data?: Record<string, string>
+  }): Promise<void> {
+    return this.sendToUser(uid, payload)
+  }
+
   // Expo Push API 발송
   private async sendViaExpo(expoPushToken: string, payload: {
     title: string; body: string; data?: Record<string, string>

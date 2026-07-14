@@ -205,6 +205,22 @@ export default function SettingsScreen() {
             )}
           </View>
 
+          {/* ── 부부 공유 ── */}
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>💑 부부 공유</Text>
+            <TouchableOpacity
+              style={s.row}
+              onPress={() => router.push('/couple' as any)}
+              activeOpacity={0.8}
+            >
+              <View style={s.rowLeft}>
+                <Text style={s.rowLabel}>배우자 연결 관리</Text>
+                <Text style={s.rowDesc}>배우자 초대 및 연결 상태 설정</Text>
+              </View>
+              <Text style={s.chevron}>이동 ›</Text>
+            </TouchableOpacity>
+          </View>
+
           {/* 알림 설정 */}
           <View style={s.section}>
             <Text style={s.sectionTitle}>🔔 알림 설정</Text>

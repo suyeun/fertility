@@ -340,3 +340,95 @@ export interface SecretComment {
   content: string
   createdAt: string
 }
+
+// ============================
+// 부부 공유 (Couple Linking) 타입
+// ============================
+
+export type CoupleRole = 'OWNER' | 'PARTNER'
+
+export type CoupleStatus = 'PENDING' | 'LINKED' | 'UNLINKED'
+
+export interface CoupleInfo {
+  coupleId: string
+  ownerId: string
+  partnerId: string | null
+  inviteCode: string | null
+  status: CoupleStatus
+  createdAt: string
+  expiresAt: string | null  // 초대코드 만료 시각
+}
+
+/** 배우자 알림 설정 (사용자별 독립 설정) */
+export interface CoupleNotifSettings {
+  scheduleChanges: boolean      // 시술 일정 변경 시 배우자 푸시
+  medicationReminder: boolean   // 복약 알림 공동 수신
+}
+
+/** couples/me 응답 */
+export interface CoupleStatusResponse {
+  linked: boolean
+  role: CoupleRole | null
+  coupleId: string | null
+  partnerName: string | null
+  inviteCode: string | null      // PENDING 상태일 때만 존재
+  expiresAt: string | null
+}
+
+// ============================
+// 병원 (Hospital) 타입
+// ============================
+
+export type HospitalSpecialty = 'IVF' | 'IUI' | 'FET' | 'PGT' | '남성난임' | '기타'
+
+export interface Hospital {
+  id: string
+  name: string
+  region: string
+  address: string
+  lat: number | null
+  lng: number | null
+  phone: string
+  specialties: HospitalSpecialty[]
+  website?: string
+  avgCost?: string
+  rating?: number
+  reviewCount?: number
+  tags?: string[]
+  note?: string
+  isVerified: boolean
+  createdAt?: string
+}
+
+export interface HospitalSuggestPayload {
+  name: string
+  region: string
+  address: string
+  phone?: string
+  specialties?: HospitalSpecialty[]
+  note?: string
+}
+
+// ============================
+// 전문의 자문 아티클 타입
+// ============================
+
+export interface MedicalArticle {
+  id: string
+  category: string
+  title: string
+  summary: string
+  content?: string              // 상세 조회 시에만 포함
+  authorName?: string           // 자문 의료진 이름
+  authorAffiliation?: string    // 소속
+  readMin: number
+  tags: string[]
+  publishedAt: string
+  isVerified: boolean           // 자문 검수 완료 여부
+  products?: Array<{
+    name: string
+    desc: string
+    platform: string
+    url: string
+  }>
+}

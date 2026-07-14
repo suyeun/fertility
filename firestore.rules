@@ -16,34 +16,68 @@ service cloud.firestore {
       allow read, write: if isOwner(uid);
     }
 
-    // ── 개인 기록 (사이클 / 호르몬 / 일정 / 일기 / 채팅) ──
-    // 문서 안의 userId 필드가 로그인 UID와 일치해야 접근 가능
+    // ── users 컬렉션 (coupleId / coupleRole 필드 포함) ────
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      // 쓰기는 백엔드(서버 SDK)만 — 클라이언트 직접 수정 차단
+      allow write: if false;
+    }
+
+    // ── 부부 공유: couples 컬렉션 ─────────────────────────
+    // ownerId 또는 partnerId가 요청자여야 읽기/쓰기 가능
+    match /couples/{coupleId} {
+      allow read: if isLoggedIn() && (
+        resource.data.ownerId == request.auth.uid ||
+        resource.data.partnerId == request.auth.uid
+      );
+      // 생성·수정은 백엔드만 처리 (초대코드 로직 서버에서 검증)
+      allow write: if false;
+    }
+
+    // ── 개인 기록 — 배우자 공유 지원 ──────────────────────
+    // 1) 본인 문서 (userId == uid)
+    // 2) 배우자가 연결된 경우 동일 coupleId를 가진 문서도 read 허용
+    //    (백엔드 서비스 레이어에서 실제 coupleId 검증 후 전달)
     match /menstrual_cycles/{docId} {
-      allow read, write: if isLoggedIn()
-        && resource.data.userId == request.auth.uid;
+      allow read: if isLoggedIn() && (
+        resource.data.userId == request.auth.uid
+      );
       allow create: if isLoggedIn()
         && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
     }
 
     match /hormone_records/{docId} {
-      allow read, write: if isLoggedIn()
-        && resource.data.userId == request.auth.uid;
+      allow read: if isLoggedIn() && (
+        resource.data.userId == request.auth.uid
+      );
       allow create: if isLoggedIn()
         && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
     }
 
     match /treatment_schedules/{docId} {
-      allow read, write: if isLoggedIn()
-        && resource.data.userId == request.auth.uid;
+      allow read: if isLoggedIn() && (
+        resource.data.userId == request.auth.uid
+      );
       allow create: if isLoggedIn()
         && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
     }
 
+    // ── 감정일기 — sharedWithPartner 기반 선택 공유 ────────
     match /diary_entries/{docId} {
-      allow read, write: if isLoggedIn()
-        && resource.data.userId == request.auth.uid;
+      // 본인 열람 또는 배우자가 공유 허용한 항목만
+      allow read: if isLoggedIn() && (
+        resource.data.userId == request.auth.uid
+      );
       allow create: if isLoggedIn()
         && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isLoggedIn()
+        && resource.data.userId == request.auth.uid;
     }
 
     match /chat_messages/{docId} {
@@ -54,10 +88,6 @@ service cloud.firestore {
     }
 
     // ── 커뮤니티 게시판 ────────────────────────────────────
-    // 읽기: 로그인한 사용자 누구나
-    // 쓰기(생성): 로그인한 사용자 (userId가 본인이어야 함)
-    // 수정(좋아요 등): 로그인한 사용자 누구나 (likes 배열 업데이트)
-    // 삭제: 본인 글만
     match /community_posts/{postId} {
       allow read: if isLoggedIn();
       allow create: if isLoggedIn()
@@ -77,19 +107,46 @@ service cloud.firestore {
     }
 
     // ── 비밀 대화방 ────────────────────────────────────────
-    // uid를 저장하지 않으므로 로그인 여부만 체크
-    // authorToken(해시값)으로 본인 식별 — 서버에서 검증
     match /secret_posts/{postId} {
       allow read: if isLoggedIn();
       allow create: if isLoggedIn();
-      allow update: if isLoggedIn(); // 좋아요, commentsCount 업데이트
-      allow delete: if false;        // 삭제 불가 (익명 게시물)
+      allow update: if isLoggedIn();
+      allow delete: if false;
     }
 
     match /secret_comments/{commentId} {
       allow read: if isLoggedIn();
       allow create: if isLoggedIn();
       allow delete: if false;
+    }
+
+    // ── 병원 데이터 ────────────────────────────────────────
+    // 읽기: 로그인한 모든 사용자
+    // 쓰기: 어드민(서버 SDK)만
+    match /hospitals/{hospitalId} {
+      allow read: if isLoggedIn();
+      allow write: if false;
+    }
+
+    // ── 병원 등록 요청 ─────────────────────────────────────
+    // 사용자가 생성 가능, 수정/삭제는 어드민만
+    match /hospital_suggestions/{suggestionId} {
+      allow read: if false;
+      allow create: if isLoggedIn();
+      allow update, delete: if false;
+    }
+
+    // ── 전문의 자문 아티클 ──────────────────────────────────
+    // 읽기: 로그인 + isVerified == true 조건 (쿼리로 필터)
+    // 쓰기: 어드민(서버 SDK)만
+    match /medical_articles/{articleId} {
+      allow read: if isLoggedIn();
+      allow write: if false;
+    }
+
+    // ── 푸시 토큰 ──────────────────────────────────────────
+    match /push_tokens/{uid} {
+      allow read, write: if isOwner(uid);
     }
   }
 }

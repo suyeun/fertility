@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity,
   StyleSheet, TextInput, SafeAreaView, Linking,
+  ActivityIndicator, Modal, Alert, KeyboardAvoidingView, Platform
 } from 'react-native'
 import { router } from 'expo-router'
 import { F } from '../../../lib/fonts'
-import { infoApi, type AffiliateProductsMap } from '@fertility/shared'
+import { infoApi, hospitalsApi, articlesApi, type AffiliateProductsMap, type Hospital, type MedicalArticle, type HospitalSpecialty } from '@fertility/shared'
 
 const PINK       = '#ff8fab'
 const DARK_ROSE  = '#5a3042'
@@ -13,73 +14,21 @@ const MUTED      = '#b07080'
 const BORDER     = '#ffd6e0'
 const LIGHT_PINK = '#fff0f4'
 
-// ── 병원 데이터 ──────────────────────────────────────────────────
+// ── 필터 옵션 ──────────────────────────────────────────────────
 const REGIONS = ['전체', '서울', '경기', '인천', '부산', '대구', '대전', '광주', '기타']
+const SPECIALTIES = ['전체', 'IVF', 'IUI', 'FET', 'PGT', '남성난임']
+const INFO_CATEGORIES = ['전체', '시술 이해', '생활 습관', '검사·수치', '심리·감정', '식단']
 
-const HOSPITALS = [
-  {
-    id: '1', name: '차병원 강남', region: '서울',
-    address: '서울 강남구 언주로 566',
-    specialties: ['IVF', 'IUI', 'PGT'],
-    phone: '02-3468-3000',
-    avgCost: 'IVF 350~450만',
-    rating: 4.5, reviewCount: 128,
-    tags: ['대기 짧음', '의사 친절'],
-    note: '국내 최대 난임 전문 센터',
-  },
-  {
-    id: '2', name: '마리아병원 강남', region: '서울',
-    address: '서울 강남구 도산대로 418',
-    specialties: ['IVF', 'IUI', 'FET'],
-    phone: '02-2088-6200',
-    avgCost: 'IVF 300~400만',
-    rating: 4.3, reviewCount: 89,
-    tags: ['성공률 높음', '친절한 상담'],
-    note: '동결이식 성공률 우수',
-  },
-  {
-    id: '3', name: '제일병원', region: '서울',
-    address: '서울 중구 마장로 91',
-    specialties: ['IVF', 'IUI'],
-    phone: '02-2000-7000',
-    avgCost: 'IVF 280~380만',
-    rating: 4.2, reviewCount: 64,
-    tags: ['합리적 비용'],
-    note: '난임 시술 20년 이상 경력',
-  },
-  {
-    id: '4', name: '미즈메디병원', region: '서울',
-    address: '서울 강서구 공항대로 389',
-    specialties: ['IVF', 'IUI', 'FET'],
-    phone: '02-2007-1700',
-    avgCost: 'IVF 320~420만',
-    rating: 4.4, reviewCount: 102,
-    tags: ['접근성 좋음', '주차 편함'],
-    note: '강서·김포 지역 최대 난임 센터',
-  },
-  {
-    id: '5', name: '차병원 분당', region: '경기',
-    address: '경기 성남시 분당구 야탑로 59',
-    specialties: ['IVF', 'IUI', 'PGT'],
-    phone: '031-780-5000',
-    avgCost: 'IVF 350~450만',
-    rating: 4.5, reviewCount: 76,
-    tags: ['대기 짧음'],
-    note: '분당·판교 지역 난임 전문',
-  },
-  {
-    id: '6', name: '아이유여성병원', region: '경기',
-    address: '경기 수원시 팔달구 매산로 39',
-    specialties: ['IVF', 'IUI'],
-    phone: '031-247-7575',
-    avgCost: 'IVF 270~360만',
-    rating: 4.1, reviewCount: 45,
-    tags: ['합리적 비용', '친절'],
-    note: '수원·용인 지역',
-  },
-]
+// ── 카테고리 스타일 매핑 ──────────────────────────────────────────
+const CATEGORY_META: Record<string, { emoji: string; bgColor: string; textColor: string }> = {
+  '시술 이해': { emoji: '🔬', bgColor: '#ede9fe', textColor: '#6d28d9' },
+  '생활 습관': { emoji: '🌿', bgColor: '#dcfce7', textColor: '#15803d' },
+  '검사·수치': { emoji: '📊', bgColor: '#e0f2fe', textColor: '#0369a1' },
+  '심리·감정': { emoji: '💙', bgColor: '#fce7f3', textColor: '#be185d' },
+  '식단':      { emoji: '🥗', bgColor: '#fef3c7', textColor: '#92400e' },
+}
 
-// ── 비용·지원 데이터 ─────────────────────────────────────────────
+// ── 비용·지원 정적 정보 ─────────────────────────────────────────────
 const COST_INFO = [
   {
     title: '인공수정 (IUI)',
@@ -109,112 +58,118 @@ interface AffiliateProduct {
   url: string
 }
 
-interface Article {
-  id: string
-  category: string
-  title: string
-  summary: string
-  readMin: number
-  tags: string[]
-  products?: AffiliateProduct[]
-}
-
-const CATEGORY_META: Record<string, { emoji: string; bgColor: string; textColor: string }> = {
-  '시술 이해': { emoji: '🔬', bgColor: '#ede9fe', textColor: '#6d28d9' },
-  '생활 습관': { emoji: '🌿', bgColor: '#dcfce7', textColor: '#15803d' },
-  '검사·수치': { emoji: '📊', bgColor: '#e0f2fe', textColor: '#0369a1' },
-  '심리·감정': { emoji: '💙', bgColor: '#fce7f3', textColor: '#be185d' },
-  '식단':      { emoji: '🥗', bgColor: '#fef3c7', textColor: '#92400e' },
-}
-
-// ── 정보 콘텐츠 데이터 ───────────────────────────────────────────
-const INFO_CATEGORIES = ['전체', '시술 이해', '생활 습관', '검사·수치', '심리·감정', '식단']
-
-const INFO_ARTICLES: Article[] = [
-  { id: 'a1', category: '시술 이해', title: 'IVF 시험관 시술, 처음이라면 꼭 알아야 할 5단계',
-    summary: '과배란 유도 → 채취 → 수정 → 배양 → 이식까지, 각 단계에서 무엇을 준비해야 하는지 알기 쉽게 정리했어요.',
-    readMin: 5, tags: ['IVF', '입문'] },
-  { id: 'a2', category: '시술 이해', title: 'IUI와 IVF, 나에게 맞는 시술은?',
-    summary: '인공수정과 시험관의 차이, 성공률, 비용을 비교해서 어떤 상황에 어떤 시술이 적합한지 설명해드려요.',
-    readMin: 4, tags: ['IUI', 'IVF', '비교'] },
-  { id: 'a3', category: '시술 이해', title: '동결이식(FET)이 신선배아보다 성공률이 높을 수 있는 이유',
-    summary: '자궁 내막 환경, 호르몬 안정성 측면에서 FET가 왜 더 유리한 경우가 있는지 근거와 함께 설명해요.',
-    readMin: 6, tags: ['FET', '성공률'] },
-  { id: 'a4', category: '생활 습관', title: '난임 시술 중 운동, 어느 정도까지 해도 될까?',
-    summary: '시술 단계별로 권장·주의해야 할 운동 강도를 정리했어요. 과배란 중 과격한 운동이 위험한 이유도 함께요.',
-    readMin: 3, tags: ['운동', '생활'] },
-  { id: 'a5', category: '생활 습관', title: '수면이 난임에 영향을 미친다? 수면 호르몬과 임신의 관계',
-    summary: '멜라토닌과 생식 호르몬의 연관성, 수면 부족이 배란과 착상에 미치는 영향을 알아봐요.',
-    readMin: 4, tags: ['수면', '호르몬'] },
-  { id: 'a6', category: '검사·수치', title: 'AMH 수치, 낮다고 포기하지 마세요',
-    summary: 'AMH가 난소예비력의 전부가 아닌 이유, 낮은 AMH에서도 임신에 성공하는 방법을 정리했어요.',
-    readMin: 5, tags: ['AMH', '난소예비력'] },
-  { id: 'a7', category: '검사·수치', title: '호르몬 검사 결과지 읽는 법 — FSH, LH, E2 완벽 정리',
-    summary: '병원에서 받은 혈액검사 결과지에 있는 수치들이 무엇을 의미하는지, 정상 범위와 함께 설명해요.',
-    readMin: 7, tags: ['호르몬', '혈액검사'] },
-  { id: 'a8', category: '심리·감정', title: '난임 치료 중 우울감, 정상인가요?',
-    summary: '난임 환자의 40%가 경험하는 심리적 어려움. 이 감정이 자연스러운 이유와 혼자 버티지 않아도 되는 방법을 공유해요.',
-    readMin: 4, tags: ['심리', '정서'] },
-  { id: 'a9', category: '심리·감정', title: '파트너와 난임을 함께 극복하는 대화법',
-    summary: '시술 중 부부 갈등이 생기는 흔한 패턴과, 서로를 지지하는 구체적인 대화 방법을 소개해요.',
-    readMin: 5, tags: ['부부', '소통'] },
-  {
-    id: 'a10', category: '식단', title: '배란을 돕는 음식 vs 피해야 할 음식',
-    summary: '항산화 식품, 엽산이 풍부한 음식, 반대로 난임에 영향을 줄 수 있는 음식과 카페인 섭취량 기준을 정리했어요.',
-    readMin: 4, tags: ['식단', '배란'],
-    products: [
-      { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
-      { name: '네이처메이드 엽산', desc: '천연 엽산 400mcg, 미국산', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=네이처메이드+엽산' },
-    ],
-  },
-  {
-    id: 'a11', category: '식단', title: '엽산, 언제부터 얼마나 먹어야 할까?',
-    summary: '임신 준비 전부터 먹어야 하는 이유, 권장 용량, 천연 엽산 vs 합성 엽산 차이까지 알기 쉽게 정리했어요.',
-    readMin: 3, tags: ['영양제', '엽산'],
-    products: [
-      { name: '종근당 엽산 5mg', desc: '임신 준비기 권장 고용량 엽산', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=엽산+임신준비' },
-      { name: '메가푸드 베이비앤미', desc: '천연 식품형 산전 종합비타민', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=메가푸드+베이비앤미' },
-    ],
-  },
-  {
-    id: 'a12',
-    category: '식단',
-    title: '오메가3와 코엔자임Q10, 난임 준비에 어떻게 활용될까?',
-    summary: '난임 준비 시 많이 찾는 영양제들을 연구 배경과 함께 소개해요. 복용 전 담당 의사와 상담하세요.',
-    readMin: 5,
-    tags: ['영양제', '근거'],
-    products: [
-      { name: '노르딕 내추럴스 오메가3', desc: '생식의학 연구에서 자주 쓰인 rTG형 오메가3', platform: 'coupang', url: 'https://www.coupang.com/np/search?q=노르딕내추럴스+오메가3' },
-      { name: '유비퀴놀 코엔자임Q10 100mg', desc: '흡수율 높은 환원형 CoQ10', platform: 'naver', url: 'https://search.shopping.naver.com/search/all?query=유비퀴놀+코큐텐+100mg' },
-    ],
-  },
-]
-
-// ── 메인 컴포넌트 ────────────────────────────────────────────────
 export default function InfoScreen() {
   const [activeTab, setActiveTab]         = useState<'hospitals' | 'cost' | 'info'>('hospitals')
   const [selectedRegion, setSelectedRegion] = useState('전체')
-  const [searchText, setSearchText]         = useState('')
+  const [selectedSpecialty, setSelectedSpecialty] = useState('전체')
   const [selectedCategory, setSelectedCategory] = useState('전체')
+  const [searchText, setSearchText]         = useState('')
   const [expandedArticle, setExpandedArticle]   = useState<string | null>(null)
+  
+  // 백엔드 연동 데이터 상태
+  const [hospitals, setHospitals] = useState<Hospital[]>([])
+  const [articles, setArticles] = useState<MedicalArticle[]>([])
+  const [loadingHospitals, setLoadingHospitals] = useState(false)
+  const [loadingArticles, setLoadingArticles] = useState(false)
   const [remoteProducts, setRemoteProducts]     = useState<AffiliateProductsMap | null>(null)
 
+  // 우리 병원 등록 제안 모달 상태
+  const [suggestModalVisible, setSuggestModalVisible] = useState(false)
+  const [suggestName, setSuggestName] = useState('')
+  const [suggestRegion, setSuggestRegion] = useState('서울')
+  const [suggestAddress, setSuggestAddress] = useState('')
+  const [suggestPhone, setSuggestPhone] = useState('')
+  const [suggestSpecialties, setSuggestSpecialties] = useState<HospitalSpecialty[]>([])
+  const [suggestNote, setSuggestNote] = useState('')
+  const [submittingSuggest, setSubmittingSuggest] = useState(false)
+
+  // 제휴 상품 로드
   useEffect(() => {
     infoApi.getProducts().then(setRemoteProducts).catch(() => {})
   }, [])
 
-  const getProducts = (article: Article): AffiliateProduct[] =>
+  // 병원 API 호출
+  useEffect(() => {
+    let active = true
+    if (activeTab !== 'hospitals') return
+
+    setLoadingHospitals(true)
+    hospitalsApi.getAll({
+      region: selectedRegion === '전체' ? undefined : selectedRegion,
+      specialty: selectedSpecialty === '전체' ? undefined : selectedSpecialty,
+      search: searchText || undefined,
+    }).then(res => {
+      if (active) setHospitals(res)
+    }).catch(err => {
+      console.warn('병원 목록 조회 실패:', err)
+    }).finally(() => {
+      if (active) setLoadingHospitals(false)
+    })
+
+    return () => { active = false }
+  }, [selectedRegion, selectedSpecialty, searchText, activeTab])
+
+  // 아티클 API 호출
+  useEffect(() => {
+    let active = true
+    if (activeTab !== 'info') return
+
+    setLoadingArticles(true)
+    articlesApi.getAll({
+      category: selectedCategory === '전체' ? undefined : selectedCategory,
+      search: searchText || undefined,
+    }).then(res => {
+      if (active) setArticles(res)
+    }).catch(err => {
+      console.warn('아티클 목록 조회 실패:', err)
+    }).finally(() => {
+      if (active) setLoadingArticles(false)
+    })
+
+    return () => { active = false }
+  }, [selectedCategory, searchText, activeTab])
+
+  const getProducts = (article: MedicalArticle): AffiliateProduct[] =>
     remoteProducts?.[article.id] ?? article.products ?? []
 
-  const filteredHospitals = HOSPITALS.filter(h => {
-    const regionMatch = selectedRegion === '전체' || h.region === selectedRegion
-    const searchMatch = !searchText || h.name.includes(searchText) || h.address.includes(searchText)
-    return regionMatch && searchMatch
-  })
+  // 병원 등록 제안 제출
+  const handleSuggestSubmit = async () => {
+    if (!suggestName.trim()) {
+      Alert.alert('필수 입력', '병원 이름을 입력해주세요.')
+      return
+    }
+    try {
+      setSubmittingSuggest(true)
+      await hospitalsApi.suggest({
+        name: suggestName,
+        region: suggestRegion,
+        address: suggestAddress,
+        phone: suggestPhone,
+        specialties: suggestSpecialties,
+        note: suggestNote,
+      })
+      Alert.alert('등록 완료 💕', '소중한 의견 감사드립니다. 검토 후 등록에 반영하겠습니다.')
+      setSuggestModalVisible(false)
+      // 초기화
+      setSuggestName('')
+      setSuggestAddress('')
+      setSuggestPhone('')
+      setSuggestNote('')
+      setSuggestSpecialties([])
+    } catch (e: any) {
+      Alert.alert('등록 실패', e?.message || '요청 처리 중 오류가 발생했습니다.')
+    } finally {
+      setSubmittingSuggest(false)
+    }
+  };
 
-  const filteredArticles = INFO_ARTICLES.filter(a =>
-    selectedCategory === '전체' || a.category === selectedCategory
-  )
+  const toggleSuggestSpecialty = (spec: HospitalSpecialty) => {
+    if (suggestSpecialties.includes(spec)) {
+      setSuggestSpecialties(suggestSpecialties.filter(s => s !== spec))
+    } else {
+      setSuggestSpecialties([...suggestSpecialties, spec])
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -251,13 +206,14 @@ export default function InfoScreen() {
               <Text style={styles.searchIcon}>🔍</Text>
               <TextInput
                 style={styles.searchInput}
-                placeholder="병원명, 지역으로 검색"
+                placeholder="등록된 병원명, 지역으로 검색"
                 placeholderTextColor={MUTED}
                 value={searchText}
                 onChangeText={setSearchText}
               />
             </View>
 
+            {/* 지역 필터 */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
               {REGIONS.map(r => (
                 <TouchableOpacity
@@ -270,54 +226,86 @@ export default function InfoScreen() {
               ))}
             </ScrollView>
 
+            {/* 시술 종류 필터 */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+              {SPECIALTIES.map(s => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.filterChip, selectedSpecialty === s && styles.filterChipActiveSpecialty]}
+                  onPress={() => setSelectedSpecialty(s)}
+                >
+                  <Text style={[styles.filterChipText, selectedSpecialty === s && styles.filterChipTextActive]}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
             <View style={styles.banner}>
               <Text style={styles.bannerText}>
-                💡 아래 정보는 참고용이에요. 실제 비용·대기는 병원에 직접 확인하세요.
+                💡 아래 정보는 단순 참고용입니다. 정확한 시술 및 비용 내용은 각 의료기관에 직접 문의하세요.
               </Text>
             </View>
 
-            {filteredHospitals.map(h => (
-              <View key={h.id} style={styles.hospitalCard}>
-                <View style={styles.cardTop}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.hospitalName}>{h.name}</Text>
-                    <Text style={styles.hospitalAddr}>{h.region} · {h.address}</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={styles.ratingNum}>⭐ {h.rating}</Text>
-                    <Text style={styles.ratingCount}>리뷰 {h.reviewCount}개</Text>
-                  </View>
-                </View>
-                <Text style={styles.hospitalNote}>{h.note}</Text>
-                <View style={styles.chipRow}>
-                  {h.specialties.map(s => (
-                    <View key={s} style={styles.specialtyChip}>
-                      <Text style={styles.specialtyText}>{s}</Text>
+            {loadingHospitals ? (
+              <ActivityIndicator color={PINK} style={{ marginVertical: 20 }} />
+            ) : (
+              hospitals.map(h => (
+                <View key={h.id} style={styles.hospitalCard}>
+                  <View style={styles.cardTop}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.hospitalName}>{h.name}</Text>
+                      <Text style={styles.hospitalAddr}>{h.region} · {h.address}</Text>
                     </View>
-                  ))}
-                  {h.tags.map(t => (
-                    <View key={t} style={styles.tagChip}>
-                      <Text style={styles.tagText}>{t}</Text>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={styles.ratingNum}>⭐ {h.rating ?? 0.0}</Text>
+                      <Text style={styles.ratingCount}>리뷰 {h.reviewCount ?? 0}개</Text>
                     </View>
-                  ))}
+                  </View>
+                  {h.note ? <Text style={styles.hospitalNote}>{h.note}</Text> : null}
+                  <View style={styles.chipRow}>
+                    {h.specialties?.map(s => (
+                      <View key={s} style={styles.specialtyChip}>
+                        <Text style={styles.specialtyText}>{s}</Text>
+                      </View>
+                    ))}
+                    {h.tags?.map(t => (
+                      <View key={t} style={styles.tagChip}>
+                        <Text style={styles.tagText}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <View style={styles.cardBottom}>
+                    <Text style={styles.costText}>💰 {h.avgCost || '평균 비용 정보 없음'}</Text>
+                    <TouchableOpacity
+                      style={styles.callBtn}
+                      onPress={() => Linking.openURL(`tel:${h.phone}`)}
+                    >
+                      <Text style={styles.callBtnText}>📞 전화</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-                <View style={styles.cardBottom}>
-                  <Text style={styles.costText}>💰 {h.avgCost}</Text>
-                  <TouchableOpacity
-                    style={styles.callBtn}
-                    onPress={() => Linking.openURL(`tel:${h.phone}`)}
-                  >
-                    <Text style={styles.callBtnText}>📞 전화</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))}
+              ))
+            )}
 
-            {filteredHospitals.length === 0 && (
+            {!loadingHospitals && hospitals.length === 0 && (
               <View style={styles.empty}>
-                <Text style={styles.emptyText}>검색 결과가 없어요</Text>
+                <Text style={styles.emptyText}>가까운 지역에 등록된 병원이 없어요</Text>
               </View>
             )}
+
+            {/* 우리 병원 등록 제안 버튼 */}
+            <TouchableOpacity
+              style={styles.suggestCtaBtn}
+              onPress={() => setSuggestModalVisible(true)}
+            >
+              <Text style={styles.suggestCtaBtnText}>🏥 다니는 병원이 없으신가요? 등록 요청하기</Text>
+            </TouchableOpacity>
+
+            {/* 법적/윤리적 가드레일 면책 조항 */}
+            <View style={styles.disclaimerBox}>
+              <Text style={styles.disclaimerText}>
+                ⚠️ 본 서비스는 정보 제공 목적으로만 제공되며, 의료기관을 알선·추천하거나 의사의 전문적인 진단 및 상담을 대신하지 않습니다. 정확한 진료와 시술 계획은 반드시 전문의와 상담하시기 바랍니다.
+              </Text>
+            </View>
           </>
         )}
 
@@ -385,6 +373,17 @@ export default function InfoScreen() {
         {/* ── 정보 탭 ── */}
         {activeTab === 'info' && (
           <>
+            <View style={styles.searchBox}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="아티클 제목 또는 태그로 검색"
+                placeholderTextColor={MUTED}
+                value={searchText}
+                onChangeText={setSearchText}
+              />
+            </View>
+
             {/* 카테고리 필터 */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
               {INFO_CATEGORIES.map(c => (
@@ -399,80 +398,231 @@ export default function InfoScreen() {
             </ScrollView>
 
             {/* 추천 아티클 */}
-            {filteredArticles.map(a => {
-              const meta = CATEGORY_META[a.category] ?? CATEGORY_META['시술 이해']
-              const products = getProducts(a)
-              return (
-              <TouchableOpacity
-                key={a.id}
-                style={styles.articleCard}
-                onPress={() => setExpandedArticle(expandedArticle === a.id ? null : a.id)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.articleTop}>
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.articleMeta}>
-                      <View style={[styles.categoryBadge, { backgroundColor: meta.bgColor }]}>
-                        <Text style={[styles.categoryBadgeText, { color: meta.textColor }]}>{a.category}</Text>
-                      </View>
-                      {products.length > 0 && (
-                        <View style={styles.productBadge}>
-                          <Text style={styles.productBadgeText}>🛍️ 추천 제품</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={styles.articleTitle}>{a.title}</Text>
-                  </View>
-                </View>
-
-                {expandedArticle === a.id && (
-                  <>
-                    <Text style={styles.articleSummary}>{a.summary}</Text>
-                    <View style={styles.articleTags}>
-                      {a.tags.map(t => (
-                        <View key={t} style={[styles.articleTag, { borderColor: meta.textColor }]}>
-                          <Text style={[styles.articleTagText, { color: meta.textColor }]}>#{t}</Text>
-                        </View>
-                      ))}
-                    </View>
-                    <TouchableOpacity style={[styles.readBtn, { backgroundColor: meta.bgColor }]}>
-                      <Text style={[styles.readBtnText, { color: meta.textColor }]}>전체 내용 보기 →</Text>
-                    </TouchableOpacity>
-
-                    {products.length > 0 && (
-                      <View style={styles.productSection}>
-                        <Text style={styles.productSectionTitle}>🛍️ 아티클 관련 추천 제품</Text>
-                        {products.map((p, i) => (
-                          <TouchableOpacity
-                            key={i}
-                            style={styles.productCard}
-                            onPress={() => Linking.openURL(p.url)}
-                            activeOpacity={0.75}
-                          >
-                            <Text style={styles.productIcon}>🛍️</Text>
-                            <View style={{ flex: 1 }}>
-                              <Text style={styles.productName} numberOfLines={1}>{p.name}</Text>
-                              <Text style={styles.productDesc} numberOfLines={1}>{p.desc}</Text>
+            {loadingArticles ? (
+              <ActivityIndicator color={PINK} style={{ marginVertical: 20 }} />
+            ) : (
+              articles.map(a => {
+                const meta = CATEGORY_META[a.category] ?? CATEGORY_META['시술 이해']
+                const products = getProducts(a)
+                return (
+                  <TouchableOpacity
+                    key={a.id}
+                    style={styles.articleCard}
+                    onPress={() => setExpandedArticle(expandedArticle === a.id ? null : a.id)}
+                    activeOpacity={0.85}
+                  >
+                    <View style={styles.articleTop}>
+                      <View style={{ flex: 1 }}>
+                        <View style={styles.articleMeta}>
+                          <View style={[styles.categoryBadge, { backgroundColor: meta.bgColor }]}>
+                            <Text style={[styles.categoryBadgeText, { color: meta.textColor }]}>{a.category}</Text>
+                          </View>
+                          
+                          {/* 실명 자문의 크레딧 표기 */}
+                          {a.authorName ? (
+                            <View style={styles.authorBadge}>
+                              <Text style={styles.authorBadgeText}>🩺 자문: {a.authorName} {a.authorAffiliation ? `(${a.authorAffiliation})` : ''}</Text>
                             </View>
-                            <View style={styles.platformBadge}>
-                              <Text style={styles.platformBadgeText}>{p.platform}</Text>
+                          ) : null}
+
+                          {products.length > 0 && (
+                            <View style={styles.productBadge}>
+                              <Text style={styles.productBadgeText}>🛍️ 추천 제품</Text>
                             </View>
-                          </TouchableOpacity>
-                        ))}
+                          )}
+                        </View>
+                        <Text style={styles.articleTitle}>{a.title}</Text>
                       </View>
+                    </View>
+
+                    {expandedArticle === a.id && (
+                      <>
+                        <Text style={styles.articleSummary}>{a.summary}</Text>
+                        
+                        {/* 상세 컨텐츠 출력 */}
+                        {a.content ? (
+                          <Text style={styles.articleContent}>{a.content}</Text>
+                        ) : null}
+
+                        <View style={styles.articleTags}>
+                          {a.tags.map(t => (
+                            <View key={t} style={[styles.articleTag, { borderColor: meta.textColor }]}>
+                              <Text style={[styles.articleTagText, { color: meta.textColor }]}>#{t}</Text>
+                            </View>
+                          ))}
+                        </View>
+
+                        {products.length > 0 && (
+                          <View style={styles.productSection}>
+                            <Text style={styles.productSectionTitle}>🛍️ 아티클 관련 추천 제품</Text>
+                            {products.map((p, i) => (
+                              <TouchableOpacity
+                                key={i}
+                                style={styles.productCard}
+                                onPress={() => Linking.openURL(p.url)}
+                                activeOpacity={0.75}
+                              >
+                                <Text style={styles.productIcon}>🛍️</Text>
+                                <View style={{ flex: 1 }}>
+                                  <Text style={styles.productName} numberOfLines={1}>{p.name}</Text>
+                                  <Text style={styles.productDesc} numberOfLines={1}>{p.desc}</Text>
+                                </View>
+                                <View style={styles.platformBadge}>
+                                  <Text style={styles.platformBadgeText}>{p.platform}</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        )}
+                      </>
                     )}
-                  </>
-                )}
 
-                <Text style={styles.articleToggle}>
-                  {expandedArticle === a.id ? '접기 ▲' : '더보기 ▼'}
-                </Text>
-              </TouchableOpacity>
-            )})}
+                    <Text style={styles.articleToggle}>
+                      {expandedArticle === a.id ? '접기 ▲' : '더보기 ▼'}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })
+            )}
+
+            {!loadingArticles && articles.length === 0 && (
+              <View style={styles.empty}>
+                <Text style={styles.emptyText}>검색된 정보 아티클이 없어요</Text>
+              </View>
+            )}
+
+            <View style={styles.disclaimerBox}>
+              <Text style={styles.disclaimerText}>
+                ⚠️ 본 아티클은 의학적 지침을 제공하기 위함이 아니며 참고용 정보입니다. 건강 상의 이상 혹은 시술 과정에서의 상담은 전적으로 의학 전문가와의 직접 진료를 통해서 결정되어야 합니다.
+              </Text>
+            </View>
           </>
         )}
 
       </ScrollView>
+
+      {/* ── 병원 등록 제의 모달 ── */}
+      <Modal
+        visible={suggestModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSuggestModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalBox}>
+            <Text style={styles.modalTitle}>🏥 다니시는 병원 등록 요청</Text>
+            <Text style={styles.modalDesc}>
+              BOM에 등록되어 있지 않은 병원이 있다면 알려주세요. 확인 후 정성껏 업데이트하겠습니다.
+            </Text>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={styles.modalScroll}>
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>병원명 *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="예: 강남마리아여성의원"
+                  placeholderTextColor={MUTED}
+                  value={suggestName}
+                  onChangeText={setSuggestName}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>지역 *</Text>
+                <View style={styles.regionSelector}>
+                  {REGIONS.slice(1).map(r => (
+                    <TouchableOpacity
+                      key={r}
+                      style={[styles.regionSelectChip, suggestRegion === r && styles.regionSelectChipActive]}
+                      onPress={() => setSuggestRegion(r)}
+                    >
+                      <Text style={[styles.regionSelectChipText, suggestRegion === r && styles.regionSelectChipTextActive]}>{r}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>병원 주소 (선택)</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="예: 서울시 강남구 도산대로 418"
+                  placeholderTextColor={MUTED}
+                  value={suggestAddress}
+                  onChangeText={setSuggestAddress}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>전화번호 (선택)</Text>
+                <TextInput
+                  style={styles.formInput}
+                  placeholder="예: 02-1234-5678"
+                  placeholderTextColor={MUTED}
+                  value={suggestPhone}
+                  onChangeText={setSuggestPhone}
+                  keyboardType="phone-pad"
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>주요 시술 분야 (중복 선택)</Text>
+                <View style={styles.regionSelector}>
+                  {['IVF', 'IUI', 'FET', 'PGT', '남성난임'].map(s => {
+                    const isSel = suggestSpecialties.includes(s as HospitalSpecialty)
+                    return (
+                      <TouchableOpacity
+                        key={s}
+                        style={[styles.regionSelectChip, isSel && styles.regionSelectChipActive]}
+                        onPress={() => toggleSuggestSpecialty(s as HospitalSpecialty)}
+                      >
+                        <Text style={[styles.regionSelectChipText, isSel && styles.regionSelectChipTextActive]}>{s}</Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.formLabel}>남기실 말씀 (선택)</Text>
+                <TextInput
+                  style={[styles.formInput, styles.formInputMultiline]}
+                  placeholder="추가하고 싶은 의료진 이름이나 정보를 자유롭게 적어주세요."
+                  placeholderTextColor={MUTED}
+                  value={suggestNote}
+                  onChangeText={setSuggestNote}
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalBtns}>
+              <TouchableOpacity
+                style={styles.modalCancel}
+                onPress={() => setSuggestModalVisible(false)}
+                disabled={submittingSuggest}
+              >
+                <Text style={styles.modalCancelText}>취소</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalConfirm}
+                onPress={handleSuggestSubmit}
+                disabled={submittingSuggest}
+              >
+                {submittingSuggest ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.modalConfirmText}>제출하기</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   )
 }
@@ -506,9 +656,10 @@ const styles = StyleSheet.create({
   searchIcon:  { fontSize: 14 },
   searchInput: { flex: 1, fontFamily: F.regular, fontSize: 13, color: DARK_ROSE },
 
-  chipScroll: { marginHorizontal: -20, paddingHorizontal: 20 },
+  chipScroll: { marginHorizontal: -20, paddingHorizontal: 20, marginVertical: 2 },
   filterChip:         { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, marginRight: 8 },
   filterChipActive:   { backgroundColor: PINK, borderColor: PINK },
+  filterChipActiveSpecialty: { backgroundColor: '#a855f7', borderColor: '#a855f7' },
   filterChipText:     { fontFamily: F.semiBold, fontSize: 12, color: MUTED },
   filterChipTextActive: { color: '#fff' },
 
@@ -540,6 +691,12 @@ const styles = StyleSheet.create({
 
   empty:     { alignItems: 'center', paddingVertical: 40 },
   emptyText: { fontFamily: F.regular, fontSize: 14, color: MUTED },
+
+  suggestCtaBtn: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: BORDER, borderStyle: 'dashed', borderRadius: 12, paddingVertical: 14, alignItems: 'center', marginTop: 8 },
+  suggestCtaBtnText: { fontFamily: F.bold, fontSize: 12, color: MUTED },
+
+  disclaimerBox: { backgroundColor: '#f8fafc', borderRadius: 12, padding: 12, marginTop: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  disclaimerText: { fontFamily: F.regular, fontSize: 10, color: '#64748b', lineHeight: 15 },
 
   // 비용·지원
   supportCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: BORDER },
@@ -573,19 +730,23 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: BORDER,
   },
   articleTop:  { flexDirection: 'row', gap: 12, alignItems: 'flex-start', marginBottom: 4 },
-  articleMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
+  articleMeta: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4, flexWrap: 'wrap' },
   categoryBadge:     { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   categoryBadgeText: { fontFamily: F.semiBold, fontSize: 10 },
+  authorBadge: { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' },
+  authorBadgeText: { fontFamily: F.semiBold, fontSize: 9, color: '#475569' },
   articleTitle:{ fontFamily: F.bold, fontSize: 13, color: DARK_ROSE, lineHeight: 18 },
   articleSummary: {
     fontFamily: F.regular, fontSize: 13, color: '#5a3042cc',
     lineHeight: 20, marginTop: 10, marginBottom: 10,
   },
+  articleContent: {
+    fontFamily: F.regular, fontSize: 12, color: '#475569',
+    lineHeight: 18, marginBottom: 12,
+  },
   articleTags: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 10 },
   articleTag:  { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2 },
   articleTagText: { fontFamily: F.semiBold, fontSize: 11 },
-  readBtn:     { borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginBottom: 6 },
-  readBtnText: { fontFamily: F.bold, fontSize: 13 },
   articleToggle: { fontFamily: F.regular, fontSize: 11, color: MUTED, textAlign: 'right', marginTop: 6 },
 
   // 제휴 상품
@@ -603,4 +764,40 @@ const styles = StyleSheet.create({
   platformBadgeText: { fontFamily: F.bold, fontSize: 10, color: PINK },
   productBadge:     { borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: LIGHT_PINK, borderWidth: 1, borderColor: BORDER },
   productBadgeText: { fontFamily: F.semiBold, fontSize: 9, color: MUTED },
+
+  // 모달 스타일
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  modalBox: {
+    backgroundColor: '#fff', borderRadius: 20, padding: 20,
+    width: '90%', maxHeight: '80%',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
+  },
+  modalTitle:  { fontFamily: F.bold, fontSize: 16, color: DARK_ROSE, marginBottom: 6 },
+  modalDesc:   { fontFamily: F.regular, fontSize: 11, color: MUTED, lineHeight: 16, marginBottom: 14 },
+  modalScroll: { flexGrow: 0, marginBottom: 14 },
+  formGroup: { marginBottom: 12 },
+  formLabel: { fontFamily: F.semiBold, fontSize: 12, color: DARK_ROSE, marginBottom: 4 },
+  formInput: {
+    backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0',
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+    fontFamily: F.regular, fontSize: 12, color: DARK_ROSE,
+  },
+  formInputMultiline: { textAlignVertical: 'top', height: 60 },
+  regionSelector: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  regionSelectChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' },
+  regionSelectChipActive: { backgroundColor: PINK, borderColor: PINK },
+  regionSelectChipText: { fontFamily: F.regular, fontSize: 11, color: '#475569' },
+  regionSelectChipTextActive: { color: '#fff', fontFamily: F.bold },
+  modalBtns:   { flexDirection: 'row', gap: 10 },
+  modalCancel: {
+    flex: 1, backgroundColor: LIGHT_PINK, borderRadius: 10,
+    paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: BORDER,
+  },
+  modalCancelText:  { fontFamily: F.semiBold, fontSize: 13, color: DARK_ROSE },
+  modalConfirm:     { flex: 1, backgroundColor: DARK_ROSE, borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  modalConfirmText: { fontFamily: F.bold, fontSize: 13, color: '#fff' },
 })

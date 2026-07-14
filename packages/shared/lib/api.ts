@@ -2,6 +2,12 @@
 // BOM 백엔드 API 클라이언트
 // 웹: NEXT_PUBLIC_API_URL  모바일: EXPO_PUBLIC_API_URL
 // ==========================================
+import type {
+  CoupleStatusResponse,
+  Hospital,
+  HospitalSuggestPayload,
+  MedicalArticle,
+} from '../types'
 
 const getBaseUrl = () => {
   if (typeof process !== 'undefined') {
@@ -241,3 +247,50 @@ export type AffiliateProductsMap = Record<string, AffiliateProduct[]>
 export const infoApi = {
   getProducts: () => request<AffiliateProductsMap>('GET', '/info/products'),
 }
+
+// ==========================================
+// 부부 공유 API
+// ==========================================
+
+export const couplesApi = {
+  /** OWNER: 초대코드 생성 (기존 코드 있으면 재발급) */
+  invite: () => request<{ inviteCode: string; expiresAt: string }>('POST', '/couples/invite'),
+
+  /** PARTNER: 초대코드로 연결 */
+  join: (code: string) => request<{ coupleId: string; partnerName: string }>('POST', '/couples/join', { code }),
+
+  /** 현재 연결 상태 조회 */
+  me: () => request<CoupleStatusResponse>('GET', '/couples/me'),
+
+  /** 연결 해제 (양쪽 모두 가능) */
+  unlink: (coupleId: string) => request<void>('DELETE', `/couples/${coupleId}`),
+}
+
+// ==========================================
+// 병원찾기 & 전문의 자문 아티클 API
+// ==========================================
+
+export const hospitalsApi = {
+  getAll: (params?: { region?: string; specialty?: string; search?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.region) q.set('region', params.region)
+    if (params?.specialty) q.set('specialty', params.specialty)
+    if (params?.search) q.set('search', params.search)
+    const qs = q.toString()
+    return request<Hospital[]>('GET', `/hospitals${qs ? `?${qs}` : ''}`)
+  },
+  getById: (id: string) => request<Hospital>('GET', `/hospitals/${id}`),
+  suggest: (data: HospitalSuggestPayload) => request<void>('POST', '/hospitals/suggest', data),
+}
+
+export const articlesApi = {
+  getAll: (params?: { category?: string; search?: string }) => {
+    const q = new URLSearchParams()
+    if (params?.category) q.set('category', params.category)
+    if (params?.search) q.set('search', params.search)
+    const qs = q.toString()
+    return request<MedicalArticle[]>('GET', `/articles${qs ? `?${qs}` : ''}`)
+  },
+  getById: (id: string) => request<MedicalArticle>('GET', `/articles/${id}`),
+}
+

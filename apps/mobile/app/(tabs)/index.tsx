@@ -7,10 +7,11 @@ import {
   useHomeData, authApi, usersApi, cyclesApi, hormonesApi, treatmentApi, diaryApi,
   useUserStore, getQuickActions, getStageLabelKo, getStageProgress,
   IUI_STAGE_ORDER, IVF_STAGE_ORDER, getScheduleMarkerStyle,
+  couplesApi,
 } from '@fertility/shared'
 import type {
   MenstrualCycle, HormoneRecord, TreatmentSchedule, DiaryEntry,
-  TreatmentMode, CurrentStage,
+  TreatmentMode, CurrentStage, CoupleStatusResponse,
 } from '@fertility/shared'
 import { router, useFocusEffect } from 'expo-router'
 import { loadStoredToken, clearAuth } from '../../lib/auth'
@@ -269,9 +270,12 @@ export default function HomeScreen() {
     return unsub
   }, [])
 
-  // 다른 화면에서 돌아올 때마다 프로필 최신화 (단계 변경 반영)
+  const [coupleStatus, setCoupleStatus] = useState<CoupleStatusResponse | null>(null)
+
+  // 다른 화면에서 돌아올 때마다 프로필 및 배우자 연결 상태 최신화
   useFocusEffect(useCallback(() => {
     syncProfile()
+    couplesApi.me().then(setCoupleStatus).catch(() => {})
   }, [syncProfile]))
 
   useEffect(() => {
@@ -291,16 +295,18 @@ export default function HomeScreen() {
         setServerProfile(prof)
         await syncProfile()
 
-        const [c, h, s, d] = await Promise.all([
+        const [c, h, s, d, cp] = await Promise.all([
           cyclesApi.getAll(),
           hormonesApi.getAll(),
           treatmentApi.getAll(),
           diaryApi.getAll(),
+          couplesApi.me().catch(() => null),
         ])
 
         const unwrap = (r: any) => Array.isArray(r) ? r : (r?.data ?? [])
         setCycles(unwrap(c)); setHormones(unwrap(h))
         setSchedules(unwrap(s)); setDiaries(unwrap(d))
+        if (cp) setCoupleStatus(cp)
 
         await initPurchases(me.id).catch(() => {})
         identifyUser(me.id).catch(() => {})
@@ -384,6 +390,39 @@ export default function HomeScreen() {
             <Text style={{ fontSize: 18 }}>⚙️</Text>
           </TouchableOpacity>
         </View>
+
+        {/* 배우자 연결 상태 배지 */}
+        {coupleStatus?.linked ? (
+          <TouchableOpacity
+            onPress={() => router.push('/couple' as any)}
+            style={s.coupleBadgeLinked}
+            activeOpacity={0.85}
+          >
+            <View style={s.coupleBadgeLinkedContent}>
+              <Text style={s.coupleBadgeEmoji}>💑</Text>
+              <Text style={s.coupleBadgeLinkedText}>
+                {coupleStatus.partnerName || '배우자'}님과 연결됨
+              </Text>
+            </View>
+            <Text style={s.coupleBadgeArrow}>›</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={() => router.push('/couple' as any)}
+            style={s.coupleBadgeUnlinked}
+            activeOpacity={0.85}
+          >
+            <View style={s.coupleBadgeLinkedContent}>
+              <Text style={s.coupleBadgeEmoji}>💑</Text>
+              <Text style={s.coupleBadgeUnlinkedText}>
+                배우자 초대하기 (함께 일정·기록 공유)
+              </Text>
+            </View>
+            <View style={s.coupleBadgeUnlinkedCta}>
+              <Text style={s.coupleBadgeCtaText}>초대하기</Text>
+            </View>
+          </TouchableOpacity>
+        )}
 
         {/* 섹션 B — 히어로 카드 */}
         <HeroCard
@@ -610,6 +649,23 @@ const hero = StyleSheet.create({
   },
   scheduleExtraDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   scheduleExtraText: { fontFamily: F.regular, fontSize: 12, color: 'rgba(255,255,255,0.9)', flex: 1 },
+  coupleBadgeLinked: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: '#ffd6e0', marginBottom: 12,
+  },
+  coupleBadgeLinkedContent: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  coupleBadgeEmoji: { fontSize: 14 },
+  coupleBadgeLinkedText: { fontFamily: F.semiBold, fontSize: 12, color: '#5a3042' },
+  coupleBadgeArrow: { fontFamily: F.bold, fontSize: 16, color: '#b07080' },
+  coupleBadgeUnlinked: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fff0f4', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: '#ffd6e0', marginBottom: 12,
+  },
+  coupleBadgeUnlinkedText: { fontFamily: F.regular, fontSize: 12, color: '#b07080' },
+  coupleBadgeUnlinkedCta: { backgroundColor: '#ff8fab', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+  coupleBadgeCtaText: { fontFamily: F.semiBold, fontSize: 10, color: '#fff' },
 })
 
 const q = StyleSheet.create({
