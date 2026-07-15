@@ -1,6 +1,6 @@
 import 'reflect-metadata'
 import { NestFactory } from '@nestjs/core'
-import { ValidationPipe, Logger } from '@nestjs/common'
+import { ValidationPipe, BadRequestException, Logger } from '@nestjs/common'
 import { AppModule } from './app.module'
 import { GlobalExceptionFilter } from './common/global-exception.filter'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
@@ -38,7 +38,20 @@ async function bootstrap() {
   })
 
   app.useGlobalFilters(new GlobalExceptionFilter())  // [ARCH-002] 일관된 에러 응답 포맷
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }))
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      // [I18N-001] class-validator 기본 메시지는 영어 — 커스텀 한글 메시지(예: JoinCoupleDto)는
+      // 그대로 살리고, 나머지 필드는 일반 한글 안내문으로 대체해 클라이언트에 영어 원문이 노출되지 않게 한다.
+      exceptionFactory: (errors) => {
+        const messages = errors
+          .flatMap((e) => Object.values(e.constraints ?? {}))
+          .filter((msg) => /[가-힣]/.test(msg))
+        return new BadRequestException(messages.length > 0 ? messages.join(', ') : '입력값을 확인해주세요')
+      },
+    }),
+  )
   app.setGlobalPrefix('api')
 
   const port = process.env.PORT || 3001

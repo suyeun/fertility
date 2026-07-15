@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler'
+import { ThrottlerModule } from '@nestjs/throttler'
 import { APP_GUARD } from '@nestjs/core'
 import * as Joi from 'joi'
+import { KoreanThrottlerGuard } from './common/korean-throttler.guard'
 import { FirebaseModule } from './firebase/firebase.module'
 import { AuthModule } from './auth/auth.module'
 import { UsersModule } from './users/users.module'
@@ -73,7 +74,8 @@ const envValidationSchema = Joi.object({
   ],
   providers: [
     // [SEC-007] ThrottlerGuard를 글로벌로 적용 — 모든 엔드포인트 기본 60회/분 제한
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    // [I18N-001] 429 메시지 한글화를 위해 KoreanThrottlerGuard 사용
+    { provide: APP_GUARD, useClass: KoreanThrottlerGuard },
   ],
 })
 export class AppModule {}

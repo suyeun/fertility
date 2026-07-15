@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../state/providers.dart';
 
@@ -65,8 +66,14 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
       });
       widget.onSaved();
       if (mounted) Navigator.of(context).pop();
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } catch (_) {
-      // swallow, matches RN handleHormoneSubmit
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('기록을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.')));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }

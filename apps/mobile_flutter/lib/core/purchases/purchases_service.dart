@@ -69,8 +69,9 @@ class PurchasesService {
   }
 
   Future<PurchaseResult> purchasePackage(Package pkg) async {
-    if (!_initialized)
+    if (!_initialized) {
       return const PurchaseResult(success: false, error: '결제 모듈이 초기화되지 않았어요.');
+    }
     try {
       final info = await Purchases.purchasePackage(pkg);
       final isActive = info.entitlements.active.containsKey(entitlementId);
@@ -80,9 +81,11 @@ class PurchasesService {
       if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
         return const PurchaseResult(success: false, error: 'cancelled');
       }
-      return PurchaseResult(
+      // RevenueCat's PlatformException.message is vendor/English text (store
+      // response codes etc.) — never surface it directly, always the Korean fallback.
+      return const PurchaseResult(
         success: false,
-        error: e.message ?? '결제 중 오류가 발생했어요.',
+        error: '결제 중 오류가 발생했어요.',
       );
     }
   }

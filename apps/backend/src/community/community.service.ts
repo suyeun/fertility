@@ -78,7 +78,7 @@ export class CommunityService {
     uid: string,
     realName: string,          // 프로필 실명
     anonymousName: string,     // 익명 닉네임
-    body: { tag: PostTag; content: string },
+    body: { tag: PostTag; title: string; content: string },
   ) {
     const { category, targetMode } = resolveTagMeta(body.tag)
     const isAnonymous = CATEGORY_ANONYMOUS[category]
@@ -92,6 +92,7 @@ export class CommunityService {
       category,
       tag: body.tag,
       targetMode,
+      title: sanitize(body.title),
       content: sanitize(body.content),
       commentsCount: 0,
       reactions: { cheer: [], empathy: [], pray: [] },

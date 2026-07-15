@@ -206,7 +206,7 @@ export const communityApi = {
     const qs = q.toString()
     return request('GET', `/community/posts${qs ? `?${qs}` : ''}`)
   },
-  createPost: (data: { tag: string; content: string; anonymousName?: string }) =>
+  createPost: (data: { tag: string; title: string; content: string; anonymousName?: string }) =>
     request('POST', '/community/posts', data),
   reactPost: (id: string, reaction: 'cheer' | 'empathy' | 'pray') =>
     request('POST', `/community/posts/${id}/react`, { reaction }),

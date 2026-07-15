@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/api/client.dart';
 import '../../core/domain/clinic_gate.dart';
 import '../../core/models/models.dart';
 import '../../core/theme/app_theme.dart';
@@ -158,8 +159,9 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
     final saved = await ref
         .read(localCacheProvider)
         .getMedicationChecked(widget.selectedDateStr);
-    if (mounted)
+    if (mounted) {
       setState(() => _checkedMeds = {for (final k in saved) k: true});
+    }
   }
 
   Future<void> _loadDiary() async {
@@ -197,8 +199,14 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
       Future.delayed(const Duration(seconds: 2), () {
         if (mounted) setState(() => _diarySaved = false);
       });
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } catch (_) {
-      // swallow, matches RN
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('기분 & 메모 저장에 실패했어요.')));
+      }
     } finally {
       if (mounted) setState(() => _savingDiary = false);
     }

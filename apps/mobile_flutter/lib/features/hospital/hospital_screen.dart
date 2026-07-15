@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/api/client.dart';
 import '../../core/api/misc_api.dart' show AffiliateProduct;
 import '../../core/models/models.dart';
 import '../../core/theme/app_theme.dart';
@@ -1145,7 +1146,11 @@ class _SuggestHospitalModalState extends ConsumerState<_SuggestHospitalModal> {
           ),
         );
       }
-    } catch (e) {
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,

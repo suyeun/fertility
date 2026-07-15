@@ -80,8 +80,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       setState(() => _notifPermission = granted);
       if (granted) {
         await LocalNotifications.instance.registerPushToken();
-        if (_dailyBbt)
+        if (_dailyBbt) {
           await LocalNotifications.instance.scheduleDailyBBTReminder();
+        }
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('기기 설정에서 BOM 앱의 알림을 허용해 주세요.')),

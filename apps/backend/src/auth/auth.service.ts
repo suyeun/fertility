@@ -75,12 +75,12 @@ export class AuthService {
   async getMe(uid: string) {
     try {
       const doc = await this.firebase.collection('users').doc(uid).get()
-      if (!doc.exists) throw new UnauthorizedException()
+      if (!doc.exists) throw new UnauthorizedException('사용자를 찾을 수 없습니다')
       return sanitizeUser(doc.data() as Record<string, any>) // [DRY-001] 공통 헬퍼 사용
     } catch (err) {
       if (err instanceof UnauthorizedException) throw err
       this.logger.error('getMe 오류:', err)
-      throw new InternalServerErrorException()
+      throw new InternalServerErrorException('사용자 정보를 불러오는 중 오류가 발생했습니다')
     }
   }
 

@@ -47,6 +47,7 @@ export default function CommunityPage() {
   // 글쓰기 모달
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newTag, setNewTag] = useState<PostTag>(CATEGORY_TAGS[orderedCategories[0]][0])
+  const [newTitle, setNewTitle] = useState('')
   const [newContent, setNewContent] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -78,10 +79,11 @@ export default function CommunityPage() {
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !newContent.trim()) return
+    if (!user || !newTitle.trim() || !newContent.trim()) return
     setSaving(true)
     try {
-      await communityApi.createPost({ tag: newTag, content: newContent })
+      await communityApi.createPost({ tag: newTag, title: newTitle, content: newContent })
+      setNewTitle('')
       setNewContent('')
       setIsModalOpen(false)
       await fetchPosts()
@@ -244,7 +246,10 @@ export default function CommunityPage() {
                   <span className="text-[10px] text-[#c4a0ae]">{timeAgo(post.createdAt)}</span>
                 </div>
 
-                {/* 본문 */}
+                {/* 제목 + 본문 */}
+                {post.title && (
+                  <h4 className="text-sm font-bold text-[#5a3042]">{post.title}</h4>
+                )}
                 <p className="text-sm text-[#5a3042] leading-relaxed whitespace-pre-wrap">{post.content}</p>
 
                 {/* 반응 + 댓글 버튼 */}
@@ -356,6 +361,19 @@ export default function CommunityPage() {
                 </div>
               </div>
 
+              {/* 제목 */}
+              <div>
+                <p className="text-xs font-bold text-[#5a3042] mb-2">제목 <span className="text-[#ff8fab]">*</span></p>
+                <input
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  placeholder="제목을 입력해주세요"
+                  maxLength={100}
+                  required
+                  className="w-full text-sm px-4 py-3 rounded-2xl border border-[#ffd6e0] bg-[#fff8f9] focus:outline-none focus:ring-2 focus:ring-[#ff8fab]"
+                />
+              </div>
+
               {/* 내용 */}
               <div>
                 <p className="text-xs font-bold text-[#5a3042] mb-2">내용 <span className="text-[#ff8fab]">*</span></p>
@@ -371,7 +389,7 @@ export default function CommunityPage() {
 
               <button
                 type="submit"
-                disabled={saving || !newContent.trim()}
+                disabled={saving || !newTitle.trim() || !newContent.trim()}
                 className="w-full py-3.5 bg-[#ff8fab] text-white rounded-2xl text-sm font-bold disabled:opacity-40 active:scale-[0.98] transition-all"
               >
                 {saving ? '등록 중...' : '게시하기'}

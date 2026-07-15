@@ -278,6 +278,7 @@ export interface CommunityPost {
   category: PostCategory
   tag: PostTag
   targetMode: PostTargetMode
+  title?: string          // 신규 글은 필수 입력 — 구버전 글은 없을 수 있어 optional
   content: string
   commentsCount: number
   reactions: { cheer: string[]; empathy: string[]; pray: string[] }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../core/api/client.dart';
 import '../../core/models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../state/providers.dart';
@@ -91,7 +92,11 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
           ),
         );
       }
-    } catch (e) {
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -132,7 +137,11 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
         );
       }
       _codeCtrl.clear();
-    } catch (e) {
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -155,7 +164,11 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
           const SnackBar(content: Text('연결 해제 완료 — 과거 공유 기록은 유지됩니다.')),
         );
       }
-    } catch (e) {
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,

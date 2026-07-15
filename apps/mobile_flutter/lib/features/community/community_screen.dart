@@ -158,6 +158,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                         category: p.category,
                         tag: p.tag,
                         targetMode: p.targetMode,
+                        title: p.title,
                         content: p.content,
                         commentsCount: p.commentsCount + 1,
                         reactions: p.reactions,
@@ -535,6 +536,17 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
             ],
           ),
           const SizedBox(height: 10),
+          if (post.title != null && post.title!.isNotEmpty) ...[
+            Text(
+              post.title!,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 6),
+          ],
           Text(
             post.content,
             style: const TextStyle(
@@ -726,22 +738,26 @@ class _WriteModal extends ConsumerStatefulWidget {
 
 class _WriteModalState extends ConsumerState<_WriteModal> {
   late PostTag _tag = (_categoryTags[widget.category] ?? const ['#아무말']).first;
+  final _titleCtrl = TextEditingController();
   final _contentCtrl = TextEditingController();
   bool _saving = false;
 
   @override
   void dispose() {
+    _titleCtrl.dispose();
     _contentCtrl.dispose();
     super.dispose();
   }
 
+  bool get _canSubmit => _titleCtrl.text.trim().isNotEmpty && _contentCtrl.text.trim().isNotEmpty;
+
   Future<void> _submit() async {
-    if (_contentCtrl.text.trim().isEmpty) return;
+    if (!_canSubmit) return;
     setState(() => _saving = true);
     try {
       await ref
           .read(communityApiProvider)
-          .createPost(tag: _tag, content: _contentCtrl.text.trim());
+          .createPost(tag: _tag, title: _titleCtrl.text.trim(), content: _contentCtrl.text.trim());
       widget.onCreated();
     } catch (_) {
       if (mounted) {
@@ -870,6 +886,26 @@ class _WriteModalState extends ConsumerState<_WriteModal> {
             ),
             const SizedBox(height: 16),
             const Text(
+              '제목 *',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _titleCtrl,
+              maxLength: 100,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                hintText: '제목을 입력해주세요',
+                hintStyle: TextStyle(color: Color(0xFFC4A0AE)),
+              ),
+              style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+            ),
+            const SizedBox(height: 8),
+            const Text(
               '내용 *',
               style: TextStyle(
                 fontSize: 12,
@@ -891,9 +927,7 @@ class _WriteModalState extends ConsumerState<_WriteModal> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (_contentCtrl.text.trim().isEmpty || _saving)
-                    ? null
-                    : _submit,
+                onPressed: (!_canSubmit || _saving) ? null : _submit,
                 child: _saving
                     ? const SizedBox(
                         width: 18,

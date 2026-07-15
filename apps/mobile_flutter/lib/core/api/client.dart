@@ -79,7 +79,13 @@ class ApiClient {
         error: ApiException(message, statusCode: response.statusCode),
       );
     }
-    return error;
+    // No HTTP response was ever received (DNS failure, connection refused,
+    // certificate error, request cancelled, ...). Dio's own `.message` here
+    // is raw/English (e.g. "SocketException: Failed host lookup"), so
+    // substitute a curated Korean message instead of leaking it to the UI.
+    return error.copyWith(
+      error: ApiException('네트워크에 연결할 수 없어요. 인터넷 연결을 확인해주세요.'),
+    );
   }
 
   Future<Response<T>> get<T>(String path, {Map<String, dynamic>? query}) {

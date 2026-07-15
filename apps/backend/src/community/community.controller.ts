@@ -35,6 +35,7 @@ export class CommunityController {
     const anonymousName = makeAnonName(user.sub, 'community')
     return this.community.createPost(user.sub, realName, anonymousName, {
       tag: body.tag,
+      title: body.title,
       content: body.content,
     })
   }

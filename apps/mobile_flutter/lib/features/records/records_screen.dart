@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/api/client.dart';
 import '../../core/domain/mock_diary_feedback.dart';
 import '../../core/domain/record_fields.dart';
 import '../../core/models/models.dart';
@@ -113,8 +114,9 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
   HormoneRecord? get _todayRecord {
     for (final r in _records) {
       if (r.recordedAt == _todayStr() ||
-          r.recordedAt.split('T')[0] == _todayStr())
+          r.recordedAt.split('T')[0] == _todayStr()) {
         return r;
+      }
     }
     return null;
   }
@@ -133,8 +135,14 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
       await ref.read(hormonesApiProvider).save(json);
       final updated = await ref.read(hormonesApiProvider).getAll();
       if (mounted) setState(() => _records = updated);
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+      }
     } catch (_) {
-      // swallow, matches RN saveDailyField
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('기록 저장에 실패했어요.')));
+      }
     }
   }
 
@@ -185,7 +193,9 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
       });
       final diaries = await ref.read(diaryApiProvider).getAll();
       if (mounted) setState(() => _diaries = diaries);
-    } catch (e) {
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _diaryError = e.message);
+    } catch (_) {
       if (mounted) setState(() => _diaryError = '일기 저장에 실패했습니다.');
     } finally {
       if (mounted) setState(() => _savingDiary = false);
@@ -735,7 +745,7 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
           Builder(
             builder: (context) {
               final fields = getHospitalFields(treatmentMode, currentStage);
-              if (fields.isEmpty)
+              if (fields.isEmpty) {
                 return const Text(
                   '이 단계에서 기록할 항목이 없습니다.',
                   style: TextStyle(
@@ -743,6 +753,7 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
                     color: AppColors.textMutedLight,
                   ),
                 );
+              }
               return Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(

@@ -1,6 +1,7 @@
 import { IsString, IsNotEmpty, MaxLength, IsIn } from 'class-validator'
+import type { PostTag } from '@fertility/shared'
 
-const POST_TAGS = [
+const POST_TAGS: PostTag[] = [
   '#감정토닥', '#남편_시댁', '#아무말',
   '#시험관_신선', '#시험관_동결', '#인공수정', '#병원추천',
   '#배테기_기초체온', '#영양제추천', '#운동_식단',
@@ -8,7 +9,12 @@ const POST_TAGS = [
 
 export class CreatePostDto {
   @IsIn(POST_TAGS)
-  tag: string
+  tag: PostTag
+
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  title: string
 
   @IsString()
   @IsNotEmpty()

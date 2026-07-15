@@ -25,6 +25,7 @@ class CommunityApi {
 
   Future<CommunityPost> createPost({
     required String tag,
+    required String title,
     required String content,
     String? anonymousName,
   }) async {
@@ -32,6 +33,7 @@ class CommunityApi {
       '/community/posts',
       data: {
         'tag': tag,
+        'title': title,
         'content': content,
         if (anonymousName != null) 'anonymousName': anonymousName,
       },

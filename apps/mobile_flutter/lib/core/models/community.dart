@@ -42,6 +42,7 @@ class CommunityPost {
     required this.category,
     required this.tag,
     required this.targetMode,
+    this.title,
     required this.content,
     required this.commentsCount,
     required this.reactions,
@@ -56,6 +57,8 @@ class CommunityPost {
   final PostCategory category;
   final PostTag tag;
   final PostTargetMode targetMode;
+  /// 신규 글은 항상 값이 있음 — 구버전 글은 없을 수 있어 nullable.
+  final String? title;
   final String content;
   final int commentsCount;
   final Reactions reactions;
@@ -70,6 +73,7 @@ class CommunityPost {
     category: j['category'] as String? ?? 'DAILY',
     tag: j['tag'] as String? ?? '',
     targetMode: j['targetMode'] as String? ?? 'ALL',
+    title: j['title'] as String?,
     content: j['content'] as String? ?? '',
     commentsCount: (j['commentsCount'] as num?)?.toInt() ?? 0,
     reactions: Reactions.fromJson(j['reactions'] as Map<String, dynamic>?),

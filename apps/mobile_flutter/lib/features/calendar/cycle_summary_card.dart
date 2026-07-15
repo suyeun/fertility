@@ -43,8 +43,9 @@ class CycleSummaryCard extends StatelessWidget {
       return _card('✨ 이번 달 요약', rows);
     }
 
-    if (currentStage == null && upcomingScheduleTitle == null)
+    if (currentStage == null && upcomingScheduleTitle == null) {
       return const SizedBox.shrink();
+    }
 
     final stageLabel = currentStage != null
         ? getStageLabelKo(mode, currentStage)
