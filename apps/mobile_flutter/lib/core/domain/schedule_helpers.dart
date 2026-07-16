@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import '../models/enums.dart';
 
 /// Port of packages/shared/lib/scheduleHelpers.ts.
@@ -6,13 +8,13 @@ class ScheduleChip {
     required this.value,
     required this.label,
     required this.backendType,
-    required this.emoji,
+    required this.icon,
   });
 
   final String value;
   final String label;
   final TreatmentType backendType; // IVF | IUI | FET | monitoring | other
-  final String emoji;
+  final IconData icon;
 }
 
 class ScheduleChipsResult {
@@ -29,31 +31,31 @@ ScheduleChipsResult getScheduleChips(TreatmentMode mode) {
           value: 'period',
           label: '생리 시작',
           backendType: 'other',
-          emoji: '🌸',
+          icon: Icons.water_drop_rounded,
         ),
         ScheduleChip(
           value: 'ovulation',
           label: '배란 확인',
           backendType: 'other',
-          emoji: '🥚',
+          icon: Icons.egg_rounded,
         ),
         ScheduleChip(
           value: 'intercourse',
           label: '관계일',
           backendType: 'other',
-          emoji: '❤️',
+          icon: Icons.favorite_rounded,
         ),
         ScheduleChip(
           value: 'hospital',
           label: '병원 방문',
           backendType: 'other',
-          emoji: '🏥',
+          icon: Icons.local_hospital_rounded,
         ),
         ScheduleChip(
           value: 'other',
           label: '기타',
           backendType: 'other',
-          emoji: '📅',
+          icon: Icons.event_rounded,
         ),
       ],
       defaultValue: null,
@@ -66,31 +68,31 @@ ScheduleChipsResult getScheduleChips(TreatmentMode mode) {
           value: 'iui',
           label: '인공수정',
           backendType: 'IUI',
-          emoji: '💫',
+          icon: Icons.medical_services_rounded,
         ),
         ScheduleChip(
           value: 'monitoring',
           label: '초음파',
           backendType: 'monitoring',
-          emoji: '🔊',
+          icon: Icons.monitor_heart_rounded,
         ),
         ScheduleChip(
           value: 'bloodtest',
           label: '채혈',
           backendType: 'monitoring',
-          emoji: '🧪',
+          icon: Icons.science_rounded,
         ),
         ScheduleChip(
           value: 'injection',
           label: '주사',
           backendType: 'other',
-          emoji: '💉',
+          icon: Icons.vaccines_rounded,
         ),
         ScheduleChip(
           value: 'other',
           label: '기타',
           backendType: 'other',
-          emoji: '📅',
+          icon: Icons.event_rounded,
         ),
       ],
       defaultValue: 'iui',
@@ -98,42 +100,42 @@ ScheduleChipsResult getScheduleChips(TreatmentMode mode) {
   }
   return const ScheduleChipsResult(
     chips: [
-      ScheduleChip(value: 'ivf', label: '시험관', backendType: 'IVF', emoji: '🔬'),
+      ScheduleChip(value: 'ivf', label: '시험관', backendType: 'IVF', icon: Icons.biotech_rounded),
       ScheduleChip(
         value: 'monitoring',
         label: '초음파',
         backendType: 'monitoring',
-        emoji: '🔊',
+        icon: Icons.monitor_heart_rounded,
       ),
       ScheduleChip(
         value: 'bloodtest',
         label: '채혈',
         backendType: 'monitoring',
-        emoji: '🧪',
+        icon: Icons.science_rounded,
       ),
       ScheduleChip(
         value: 'transfer',
         label: '이식',
         backendType: 'FET',
-        emoji: '🌱',
+        icon: Icons.eco_rounded,
       ),
       ScheduleChip(
         value: 'retrieval',
         label: '채취',
         backendType: 'IVF',
-        emoji: '🥚',
+        icon: Icons.egg_rounded,
       ),
       ScheduleChip(
         value: 'injection',
         label: '주사',
         backendType: 'other',
-        emoji: '💉',
+        icon: Icons.vaccines_rounded,
       ),
       ScheduleChip(
         value: 'other',
         label: '기타',
         backendType: 'other',
-        emoji: '📅',
+        icon: Icons.event_rounded,
       ),
     ],
     defaultValue: 'ivf',
@@ -184,11 +186,11 @@ StageSuggestion? getNextStageSuggestion(
 
 class MarkerStyle {
   const MarkerStyle({
-    required this.emoji,
+    required this.icon,
     required this.color,
     required this.label,
   });
-  final String emoji;
+  final IconData icon;
   final String color; // hex string, e.g. '#ff8fab'
   final String label;
 }
@@ -196,24 +198,64 @@ class MarkerStyle {
 MarkerStyle getScheduleMarkerStyle(String scheduleType, [String? title]) {
   switch (scheduleType) {
     case 'injection':
-      return const MarkerStyle(emoji: '●', color: '#60a5fa', label: '주사');
+      return const MarkerStyle(
+        icon: Icons.circle_rounded,
+        color: '#60a5fa',
+        label: '주사',
+      );
     case 'bloodtest':
-      return const MarkerStyle(emoji: '●', color: '#a855f7', label: '채혈');
+      return const MarkerStyle(
+        icon: Icons.circle_rounded,
+        color: '#a855f7',
+        label: '채혈',
+      );
     case 'monitoring':
-      return const MarkerStyle(emoji: '●', color: '#a855f7', label: '초음파');
+      return const MarkerStyle(
+        icon: Icons.circle_rounded,
+        color: '#a855f7',
+        label: '초음파',
+      );
     case 'iui':
-      return const MarkerStyle(emoji: '★', color: '#ff8fab', label: '인공수정');
+      return const MarkerStyle(
+        icon: Icons.star_rounded,
+        color: '#ff8fab',
+        label: '인공수정',
+      );
     case 'transfer':
-      return const MarkerStyle(emoji: '♥', color: '#2dd4bf', label: '이식');
+      return const MarkerStyle(
+        icon: Icons.favorite_rounded,
+        color: '#2dd4bf',
+        label: '이식',
+      );
     case 'retrieval':
-      return const MarkerStyle(emoji: '◎', color: '#f97316', label: '채취');
+      return const MarkerStyle(
+        icon: Icons.adjust_rounded,
+        color: '#f97316',
+        label: '채취',
+      );
     case 'IUI':
-      return const MarkerStyle(emoji: '★', color: '#ff8fab', label: '인공수정');
+      return const MarkerStyle(
+        icon: Icons.star_rounded,
+        color: '#ff8fab',
+        label: '인공수정',
+      );
     case 'IVF':
-      return const MarkerStyle(emoji: '★', color: '#ff8fab', label: '시험관');
+      return const MarkerStyle(
+        icon: Icons.star_rounded,
+        color: '#ff8fab',
+        label: '시험관',
+      );
     case 'FET':
-      return const MarkerStyle(emoji: '♥', color: '#2dd4bf', label: '이식');
+      return const MarkerStyle(
+        icon: Icons.favorite_rounded,
+        color: '#2dd4bf',
+        label: '이식',
+      );
     default:
-      return const MarkerStyle(emoji: '●', color: '#94a3b8', label: '일정');
+      return const MarkerStyle(
+        icon: Icons.circle_rounded,
+        color: '#94a3b8',
+        label: '일정',
+      );
   }
 }

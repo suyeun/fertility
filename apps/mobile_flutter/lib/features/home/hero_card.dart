@@ -6,11 +6,11 @@ import '../../core/models/enums.dart';
 import '../../core/models/treatment.dart';
 import '../../core/theme/color_utils.dart';
 
-const Map<String, ({String emoji, String label})> _phaseBadge = {
-  'menstrual': (emoji: '🔴', label: '생리기'),
-  'follicular': (emoji: '🟢', label: '난포기'),
-  'ovulation': (emoji: '⭐', label: '배란기'),
-  'luteal': (emoji: '🟡', label: '황체기'),
+const Map<String, ({IconData icon, String label})> _phaseBadge = {
+  'menstrual': (icon: Icons.water_drop_rounded, label: '생리기'),
+  'follicular': (icon: Icons.eco_rounded, label: '난포기'),
+  'ovulation': (icon: Icons.star_rounded, label: '배란기'),
+  'luteal': (icon: Icons.wb_sunny_rounded, label: '황체기'),
 };
 
 String _getDDay(DateTime target) {
@@ -123,13 +123,20 @@ class HeroCard extends StatelessWidget {
                     color: Colors.white.withValues(alpha: isGaim ? 0.28 : 0.22),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text(
-                    '${badge.emoji} ${isGaim ? '가임기' : badge.label}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(badge.icon, size: 14, color: Colors.white),
+                      const SizedBox(width: 5),
+                      Text(
+                        isGaim ? '가임기' : badge.label,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -196,7 +203,9 @@ class HeroCard extends StatelessWidget {
 
     // IUI/IVF
     final modeLabel = treatmentMode == 'iui' ? 'IUI 인공수정' : 'IVF 시험관';
-    final modeIcon = treatmentMode == 'iui' ? '💉' : '🔬';
+    final modeIcon = treatmentMode == 'iui'
+        ? Icons.vaccines_rounded
+        : Icons.biotech_rounded;
     final bgColor = treatmentMode == 'iui'
         ? const Color(0xFFA855F7)
         : const Color(0xFF7C3AED);
@@ -208,9 +217,19 @@ class HeroCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '$modeIcon $modeLabel',
-              style: const TextStyle(fontSize: 11, color: Color(0xBFFFFFFF)),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(modeIcon, size: 12, color: const Color(0xBFFFFFFF)),
+                const SizedBox(width: 5),
+                Text(
+                  modeLabel,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xBFFFFFFF),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             const Text(
@@ -238,9 +257,9 @@ class HeroCard extends StatelessWidget {
     final nextDateStr = '${nextDate.month}월 ${nextDate.day}일';
     final nextDDay = _getDDay(nextDate);
     final nextMarker = getScheduleMarkerStyle(next.type);
-    final showEmoji = ['★', '♥', '◎'].contains(nextMarker.emoji)
-        ? nextMarker.emoji
-        : '📅';
+    final showIcon = nextMarker.icon == Icons.circle_rounded
+        ? Icons.event_rounded
+        : nextMarker.icon;
 
     return _card(
       color: bgColor,
@@ -248,9 +267,16 @@ class HeroCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$modeIcon $modeLabel · 다가오는 일정',
-            style: const TextStyle(fontSize: 11, color: Color(0xBFFFFFFF)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(modeIcon, size: 12, color: const Color(0xBFFFFFFF)),
+              const SizedBox(width: 5),
+              Text(
+                '$modeLabel · 다가오는 일정',
+                style: const TextStyle(fontSize: 11, color: Color(0xBFFFFFFF)),
+              ),
+            ],
           ),
           Container(
             margin: const EdgeInsets.only(top: 10, bottom: 8),
@@ -269,10 +295,7 @@ class HeroCard extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    showEmoji,
-                    style: const TextStyle(fontSize: 18, color: Colors.white),
-                  ),
+                  child: Icon(showIcon, size: 18, color: Colors.white),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -297,12 +320,22 @@ class HeroCard extends StatelessWidget {
                       ),
                       if (next.hospitalName != null) ...[
                         const SizedBox(height: 2),
-                        Text(
-                          '🏥 ${next.hospitalName}',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Color(0xB3FFFFFF),
-                          ),
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.local_hospital_rounded,
+                              size: 11,
+                              color: Color(0xB3FFFFFF),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              next.hospitalName!,
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: Color(0xB3FFFFFF),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ],

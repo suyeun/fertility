@@ -2,9 +2,9 @@ import { IsString, IsNotEmpty, MaxLength, IsIn } from 'class-validator'
 import type { PostTag } from '@fertility/shared'
 
 const POST_TAGS: PostTag[] = [
-  '#감정토닥', '#남편_시댁', '#아무말',
-  '#시험관_신선', '#시험관_동결', '#인공수정', '#병원추천',
-  '#배테기_기초체온', '#영양제추천', '#운동_식단',
+  '#감정토닥', '#남편_시댁', '#아무말', '#소소한일상', '#고민상담',
+  '#시험관_신선', '#시험관_동결', '#인공수정', '#병원추천', '#판정대기',
+  '#배테기_기초체온', '#영양제추천', '#운동_식단', '#한방차_한의원', '#스트레스관리',
 ]
 
 export class CreatePostDto {

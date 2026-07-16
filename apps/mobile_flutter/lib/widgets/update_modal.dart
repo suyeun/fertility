@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
+import 'bom_logo.dart';
 
 /// Port of apps/mobile/components/UpdateModal.tsx + lib/useVersionCheck.ts,
 /// consolidated into a single implementation (the RN app had two competing
@@ -41,7 +42,7 @@ class UpdateModalOverlay extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('🌸', style: TextStyle(fontSize: 44)),
+                const BomLogoMark(size: 56),
                 const SizedBox(height: 12),
                 Text(
                   isForce ? '업데이트가 필요해요' : '새 버전이 출시됐어요',

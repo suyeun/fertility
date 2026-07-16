@@ -5,13 +5,14 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 
 import '../../core/purchases/purchases_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../widgets/bom_logo.dart';
 
 const _features = [
-  (emoji: '🤖', text: 'AI 채팅 무제한 — 수치·주기·시술 Q&A'),
-  (emoji: '🌡️', text: '호르몬 수치 트렌드 분석 리포트'),
-  (emoji: '💊', text: '약물 복용 알림 + 시술 일정 관리'),
-  (emoji: '📊', text: '사이클 패턴 심층 분석'),
-  (emoji: '🌸', text: '감정 일기 AI 분석 — 매일 응원 메시지'),
+  (icon: Icons.smart_toy_rounded, text: 'AI 채팅 무제한 — 수치·주기·시술 Q&A'),
+  (icon: Icons.thermostat_rounded, text: '호르몬 수치 트렌드 분석 리포트'),
+  (icon: Icons.medication_rounded, text: '약물 복용 알림 + 시술 일정 관리'),
+  (icon: Icons.bar_chart_rounded, text: '사이클 패턴 심층 분석'),
+  (icon: Icons.auto_awesome_rounded, text: '감정 일기 AI 분석 — 매일 응원 메시지'),
 ];
 
 /// Port of apps/mobile/app/subscription/index.tsx.
@@ -156,11 +157,7 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                 icon: const Icon(Icons.close, color: AppColors.textMuted),
               ),
             ),
-            const Text(
-              '🌸',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 52),
-            ),
+            const Center(child: BomLogoMark(size: 64)),
             const SizedBox(height: 8),
             const Text(
               'BOM 프리미엄',
@@ -216,9 +213,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                           children: [
                             SizedBox(
                               width: 28,
-                              child: Text(
-                                f.emoji,
-                                style: const TextStyle(fontSize: 20),
+                              child: Icon(
+                                f.icon,
+                                size: 20,
+                                color: AppColors.primary,
                               ),
                             ),
                             const SizedBox(width: 10),

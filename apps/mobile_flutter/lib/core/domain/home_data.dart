@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 import '../models/cycle.dart';
 import '../models/diary.dart';
 import '../models/enums.dart';
@@ -9,7 +11,7 @@ import 'cycle.dart';
 class HomeTask {
   const HomeTask({
     required this.id,
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.colorKey, // 'pink' | 'indigo'
@@ -18,7 +20,7 @@ class HomeTask {
   });
 
   final String id;
-  final String emoji;
+  final IconData icon;
   final String title;
   final String subtitle;
   final String colorKey;
@@ -28,12 +30,12 @@ class HomeTask {
 
 class QuickAction {
   const QuickAction({
-    required this.emoji,
+    required this.icon,
     required this.label,
     required this.route,
     this.value,
   });
-  final String emoji;
+  final IconData icon;
   final String label;
   final String route;
   final String? value;
@@ -49,7 +51,7 @@ class WeekDay {
   final String label;
   final bool isToday;
   final bool recorded;
-  final String? recordIcon;
+  final IconData? recordIcon;
 }
 
 class HomeData {
@@ -146,63 +148,63 @@ StageProgress getStageProgress(TreatmentMode mode, CurrentStage stage) {
 List<QuickAction> getQuickActions(TreatmentMode mode, CurrentStage stage) {
   if (mode == 'natural' || stage == null) {
     return const [
-      QuickAction(emoji: '🌡️', label: '기초체온 기록', route: '/records'),
-      QuickAction(emoji: '🥚', label: '배란테스트기 기록', route: '/records'),
+      QuickAction(icon: Icons.thermostat_rounded, label: '기초체온 기록', route: '/records'),
+      QuickAction(icon: Icons.egg_rounded, label: '배란테스트기 기록', route: '/records'),
     ];
   }
   if (mode == 'iui') {
     const map = {
       'stimulation': [
-        QuickAction(emoji: '🌡️', label: '기초체온 기록', route: '/records'),
-        QuickAction(emoji: '💉', label: '주사 기록하기', route: '/records'),
+        QuickAction(icon: Icons.thermostat_rounded, label: '기초체온 기록', route: '/records'),
+        QuickAction(icon: Icons.vaccines_rounded, label: '주사 기록하기', route: '/records'),
       ],
       'monitoring': [
-        QuickAction(emoji: '🌡️', label: '기초체온 기록', route: '/records'),
-        QuickAction(emoji: '🥚', label: '배란테스트기 기록', route: '/records'),
+        QuickAction(icon: Icons.thermostat_rounded, label: '기초체온 기록', route: '/records'),
+        QuickAction(icon: Icons.egg_rounded, label: '배란테스트기 기록', route: '/records'),
       ],
       'procedure': [
-        QuickAction(emoji: '🏥', label: '오늘 시술 기록', route: '/records'),
-        QuickAction(emoji: '📝', label: '증상 기록', route: '/records'),
+        QuickAction(icon: Icons.local_hospital_rounded, label: '오늘 시술 기록', route: '/records'),
+        QuickAction(icon: Icons.edit_note_rounded, label: '증상 기록', route: '/records'),
       ],
       'luteal': [
-        QuickAction(emoji: '📝', label: '증상 기록', route: '/records'),
-        QuickAction(emoji: '💊', label: '약물 체크', route: '/records'),
+        QuickAction(icon: Icons.edit_note_rounded, label: '증상 기록', route: '/records'),
+        QuickAction(icon: Icons.medication_rounded, label: '약물 체크', route: '/records'),
       ],
       'result': [
-        QuickAction(emoji: '🩺', label: 'hCG 수치 기록', route: '/records'),
-        QuickAction(emoji: '📓', label: '메모 남기기', route: '/records'),
+        QuickAction(icon: Icons.medical_information_rounded, label: 'hCG 수치 기록', route: '/records'),
+        QuickAction(icon: Icons.sticky_note_2_rounded, label: '메모 남기기', route: '/records'),
       ],
     };
     return map[stage] ?? map['stimulation']!;
   }
   const map = {
     'stimulation': [
-      QuickAction(emoji: '🌡️', label: '기초체온 기록', route: '/records'),
-      QuickAction(emoji: '💉', label: '주사 기록하기', route: '/records'),
+      QuickAction(icon: Icons.thermostat_rounded, label: '기초체온 기록', route: '/records'),
+      QuickAction(icon: Icons.vaccines_rounded, label: '주사 기록하기', route: '/records'),
     ],
     'monitoring': [
-      QuickAction(emoji: '📊', label: '수치 기록 (E2·난포)', route: '/records'),
-      QuickAction(emoji: '🌡️', label: '기초체온 기록', route: '/records'),
+      QuickAction(icon: Icons.bar_chart_rounded, label: '수치 기록 (E2·난포)', route: '/records'),
+      QuickAction(icon: Icons.thermostat_rounded, label: '기초체온 기록', route: '/records'),
     ],
     'retrieval': [
-      QuickAction(emoji: '📋', label: '채취 결과 기록', route: '/records'),
-      QuickAction(emoji: '📝', label: '컨디션 기록', route: '/records'),
+      QuickAction(icon: Icons.assignment_rounded, label: '채취 결과 기록', route: '/records'),
+      QuickAction(icon: Icons.edit_note_rounded, label: '컨디션 기록', route: '/records'),
     ],
     'culture': [
-      QuickAction(emoji: '🧫', label: '배아 상태 기록', route: '/records'),
-      QuickAction(emoji: '📓', label: '메모 남기기', route: '/records'),
+      QuickAction(icon: Icons.biotech_rounded, label: '배아 상태 기록', route: '/records'),
+      QuickAction(icon: Icons.sticky_note_2_rounded, label: '메모 남기기', route: '/records'),
     ],
     'transfer': [
-      QuickAction(emoji: '🏥', label: '이식 결과 기록', route: '/records'),
-      QuickAction(emoji: '📝', label: '증상 기록', route: '/records'),
+      QuickAction(icon: Icons.local_hospital_rounded, label: '이식 결과 기록', route: '/records'),
+      QuickAction(icon: Icons.edit_note_rounded, label: '증상 기록', route: '/records'),
     ],
     'luteal': [
-      QuickAction(emoji: '📝', label: '증상 기록', route: '/records'),
-      QuickAction(emoji: '💊', label: '약물 체크', route: '/records'),
+      QuickAction(icon: Icons.edit_note_rounded, label: '증상 기록', route: '/records'),
+      QuickAction(icon: Icons.medication_rounded, label: '약물 체크', route: '/records'),
     ],
     'result': [
-      QuickAction(emoji: '🩺', label: 'hCG 수치 기록', route: '/records'),
-      QuickAction(emoji: '📓', label: '다음 계획 메모', route: '/records'),
+      QuickAction(icon: Icons.medical_information_rounded, label: 'hCG 수치 기록', route: '/records'),
+      QuickAction(icon: Icons.sticky_note_2_rounded, label: '다음 계획 메모', route: '/records'),
     ],
   };
   return map[stage] ?? map['stimulation']!;
@@ -215,7 +217,7 @@ List<HomeTask> _getDefaultTasks(
 ) {
   final bbt = HomeTask(
     id: 'bbt',
-    emoji: '🌡️',
+    icon: Icons.thermostat_rounded,
     title: '기초체온 기록',
     subtitle: todayHormone?.bbt != null
         ? '${todayHormone!.bbt}°C 기록됨'
@@ -226,7 +228,7 @@ List<HomeTask> _getDefaultTasks(
   );
   final opk = HomeTask(
     id: 'opk',
-    emoji: '🥚',
+    icon: Icons.egg_rounded,
     title: '배란테스트기 기록',
     subtitle: todayHormone?.opkIndex != null
         ? 'OPK ${todayHormone!.opkIndex}/10'
@@ -241,7 +243,7 @@ List<HomeTask> _getDefaultTasks(
       bbt,
       const HomeTask(
         id: 'folic',
-        emoji: '💊',
+        icon: Icons.medication_rounded,
         title: '엽산 챙기기',
         subtitle: '매일 꾸준히 복용해요',
         colorKey: 'indigo',
@@ -255,7 +257,7 @@ List<HomeTask> _getDefaultTasks(
     'stimulation': [
       const HomeTask(
         id: 'injection',
-        emoji: '💉',
+        icon: Icons.vaccines_rounded,
         title: '주사 맞기 확인',
         subtitle: '처방된 시간에 맞춰요',
         colorKey: 'pink',
@@ -268,7 +270,7 @@ List<HomeTask> _getDefaultTasks(
     'procedure': const [
       HomeTask(
         id: 'clinic',
-        emoji: '🏥',
+        icon: Icons.local_hospital_rounded,
         title: '시술 당일 — 병원 방문',
         subtitle: '예약 시간 확인하세요',
         colorKey: 'indigo',
@@ -276,7 +278,7 @@ List<HomeTask> _getDefaultTasks(
       ),
       HomeTask(
         id: 'fasting',
-        emoji: '⚠️',
+        icon: Icons.warning_amber_rounded,
         title: '공복 여부 확인',
         subtitle: '시술 전 금식 여부 확인',
         colorKey: 'pink',
@@ -286,7 +288,7 @@ List<HomeTask> _getDefaultTasks(
     'luteal': const [
       HomeTask(
         id: 'prog',
-        emoji: '💊',
+        icon: Icons.medication_rounded,
         title: '황체 보강제 복용 체크',
         subtitle: '처방대로 꾸준히',
         colorKey: 'pink',
@@ -295,7 +297,7 @@ List<HomeTask> _getDefaultTasks(
       ),
       HomeTask(
         id: 'sym',
-        emoji: '📝',
+        icon: Icons.edit_note_rounded,
         title: '오늘 증상 기록',
         subtitle: '복통, 부기 등',
         colorKey: 'indigo',
@@ -306,7 +308,7 @@ List<HomeTask> _getDefaultTasks(
     'result': const [
       HomeTask(
         id: 'hcg',
-        emoji: '🩺',
+        icon: Icons.medical_information_rounded,
         title: 'β-hCG 채혈 결과 기록',
         subtitle: '오늘의 수치를 기록해요',
         colorKey: 'pink',
@@ -319,7 +321,7 @@ List<HomeTask> _getDefaultTasks(
     'stimulation': [
       const HomeTask(
         id: 'injection',
-        emoji: '💉',
+        icon: Icons.vaccines_rounded,
         title: '주사 맞기 확인',
         subtitle: '처방된 시간에 맞춰요',
         colorKey: 'pink',
@@ -331,7 +333,7 @@ List<HomeTask> _getDefaultTasks(
     'monitoring': const [
       HomeTask(
         id: 'clinic',
-        emoji: '🏥',
+        icon: Icons.local_hospital_rounded,
         title: '초음파·채혈 일정',
         subtitle: '오늘 검사가 있는지 확인',
         colorKey: 'indigo',
@@ -339,7 +341,7 @@ List<HomeTask> _getDefaultTasks(
       ),
       HomeTask(
         id: 'hormone',
-        emoji: '📊',
+        icon: Icons.bar_chart_rounded,
         title: '수치 기록',
         subtitle: 'E2·난포 크기 기록',
         colorKey: 'pink',
@@ -350,7 +352,7 @@ List<HomeTask> _getDefaultTasks(
     'retrieval': const [
       HomeTask(
         id: 'ret_clinic',
-        emoji: '🏥',
+        icon: Icons.local_hospital_rounded,
         title: '채취 당일',
         subtitle: '병원 방문 준비',
         colorKey: 'indigo',
@@ -358,7 +360,7 @@ List<HomeTask> _getDefaultTasks(
       ),
       HomeTask(
         id: 'fasting',
-        emoji: '⚠️',
+        icon: Icons.warning_amber_rounded,
         title: '공복 필수',
         subtitle: '마취 전 금식 지켜요',
         colorKey: 'pink',
@@ -368,7 +370,7 @@ List<HomeTask> _getDefaultTasks(
     'culture': const [
       HomeTask(
         id: 'status',
-        emoji: '📞',
+        icon: Icons.call_rounded,
         title: '배아 상태 확인',
         subtitle: '병원 연락 여부 확인',
         colorKey: 'indigo',
@@ -376,7 +378,7 @@ List<HomeTask> _getDefaultTasks(
       ),
       HomeTask(
         id: 'record',
-        emoji: '📝',
+        icon: Icons.edit_note_rounded,
         title: '수정 결과 기록',
         subtitle: '수정란 개수·상태',
         colorKey: 'pink',
@@ -387,7 +389,7 @@ List<HomeTask> _getDefaultTasks(
     'transfer': const [
       HomeTask(
         id: 'tr_clinic',
-        emoji: '🏥',
+        icon: Icons.local_hospital_rounded,
         title: '이식 당일',
         subtitle: '병원 방문 준비',
         colorKey: 'indigo',
@@ -395,7 +397,7 @@ List<HomeTask> _getDefaultTasks(
       ),
       HomeTask(
         id: 'rest',
-        emoji: '💊',
+        icon: Icons.medication_rounded,
         title: '이식 후 안정',
         subtitle: '안정을 취해요',
         colorKey: 'pink',
@@ -405,7 +407,7 @@ List<HomeTask> _getDefaultTasks(
     'luteal': const [
       HomeTask(
         id: 'prog',
-        emoji: '💊',
+        icon: Icons.medication_rounded,
         title: '황체 보강제 복용',
         subtitle: '처방대로 꾸준히',
         colorKey: 'pink',
@@ -414,7 +416,7 @@ List<HomeTask> _getDefaultTasks(
       ),
       HomeTask(
         id: 'sym',
-        emoji: '📝',
+        icon: Icons.edit_note_rounded,
         title: '증상 기록',
         subtitle: '착상 증상 체크',
         colorKey: 'indigo',
@@ -423,7 +425,7 @@ List<HomeTask> _getDefaultTasks(
       ),
       HomeTask(
         id: 'no_lift',
-        emoji: '🚫',
+        icon: Icons.block_rounded,
         title: '무리 금지',
         subtitle: '무거운 것 들지 않기',
         colorKey: 'pink',
@@ -433,7 +435,7 @@ List<HomeTask> _getDefaultTasks(
     'result': const [
       HomeTask(
         id: 'hcg',
-        emoji: '🩺',
+        icon: Icons.medical_information_rounded,
         title: 'β-hCG 수치 기록',
         subtitle: '오늘의 수치를 기록해요',
         colorKey: 'pink',
@@ -442,7 +444,7 @@ List<HomeTask> _getDefaultTasks(
       ),
       HomeTask(
         id: 'chat',
-        emoji: '💬',
+        icon: Icons.chat_bubble_rounded,
         title: '봄이에게 이야기하기',
         subtitle: 'AI 채팅으로 마음 나눠요',
         colorKey: 'indigo',
@@ -485,7 +487,7 @@ List<HomeTask> getTodayTasksByMode(
     tasks.add(
       HomeTask(
         id: 'sched_$i',
-        emoji: '🏥',
+        icon: Icons.local_hospital_rounded,
         title: s.title,
         subtitle: [
           s.hospitalName,
@@ -507,7 +509,7 @@ List<HomeTask> getTodayTasksByMode(
         tasks.add(
           HomeTask(
             id: 'med_${s.id}_${j}_$k',
-            emoji: '💉',
+            icon: Icons.vaccines_rounded,
             title: '${med.name} ${med.dose}',
             subtitle: med.times[k],
             colorKey: 'pink',
@@ -575,15 +577,15 @@ _WeekStreakResult _buildWeekStreak(
     }
   }
 
-  final scheduleIconMap = <String, String>{};
+  final scheduleIconMap = <String, IconData>{};
   for (final s in schedules.where((s) => s.status == 'completed')) {
-    scheduleIconMap[s.scheduledAt.split('T')[0]] = '🏥';
+    scheduleIconMap[s.scheduledAt.split('T')[0]] = Icons.local_hospital_rounded;
   }
   for (final h in hormones) {
     final d = h.recordedAt.split('T')[0];
     if ((h.injectionDrug != null || h.injectionDose != null) &&
         !scheduleIconMap.containsKey(d)) {
-      scheduleIconMap[d] = '💉';
+      scheduleIconMap[d] = Icons.vaccines_rounded;
     }
   }
 

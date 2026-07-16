@@ -23,7 +23,7 @@ class LegendItem {
   const LegendItem({required this.color, required this.label, this.icon});
   final Color color;
   final String label;
-  final String? icon;
+  final IconData? icon;
 }
 
 List<LegendItem> getLegend(TreatmentMode mode) {
@@ -32,7 +32,11 @@ List<LegendItem> getLegend(TreatmentMode mode) {
       LegendItem(color: Color(0xFFFECDD3), label: '생리'),
       LegendItem(color: Color(0xFFEDE9FE), label: '가임기'),
       LegendItem(color: Color(0xFFFF8FAB), label: '배란일'),
-      LegendItem(color: Color(0xFFFB7185), label: '관계일', icon: '❤️'),
+      LegendItem(
+        color: Color(0xFFFB7185),
+        label: '관계일',
+        icon: Icons.favorite_rounded,
+      ),
     ];
   }
   if (mode == 'iui') {
@@ -40,18 +44,50 @@ List<LegendItem> getLegend(TreatmentMode mode) {
       LegendItem(color: Color(0xFFFECDD3), label: '생리'),
       LegendItem(color: Color(0xFFEDE9FE), label: '가임기'),
       LegendItem(color: Color(0xFFFF8FAB), label: '배란일'),
-      LegendItem(color: Color(0xFFFF8FAB), label: '인공수정', icon: '★'),
-      LegendItem(color: Color(0xFFA855F7), label: '초음파', icon: '●'),
-      LegendItem(color: Color(0xFF60A5FA), label: '주사', icon: '●'),
+      LegendItem(
+        color: Color(0xFFFF8FAB),
+        label: '인공수정',
+        icon: Icons.star_rounded,
+      ),
+      LegendItem(
+        color: Color(0xFFA855F7),
+        label: '초음파',
+        icon: Icons.circle_rounded,
+      ),
+      LegendItem(
+        color: Color(0xFF60A5FA),
+        label: '주사',
+        icon: Icons.circle_rounded,
+      ),
     ];
   }
   return const [
     LegendItem(color: Color(0xFFFECDD3), label: '생리'),
-    LegendItem(color: Color(0xFF2DD4BF), label: '이식', icon: '♥'),
-    LegendItem(color: Color(0xFFF97316), label: '채취', icon: '◎'),
-    LegendItem(color: Color(0xFFA855F7), label: '초음파', icon: '●'),
-    LegendItem(color: Color(0xFF60A5FA), label: '주사', icon: '●'),
-    LegendItem(color: Color(0xFFFBBF24), label: '판정일', icon: '☆'),
+    LegendItem(
+      color: Color(0xFF2DD4BF),
+      label: '이식',
+      icon: Icons.favorite_rounded,
+    ),
+    LegendItem(
+      color: Color(0xFFF97316),
+      label: '채취',
+      icon: Icons.adjust_rounded,
+    ),
+    LegendItem(
+      color: Color(0xFFA855F7),
+      label: '초음파',
+      icon: Icons.circle_rounded,
+    ),
+    LegendItem(
+      color: Color(0xFF60A5FA),
+      label: '주사',
+      icon: Icons.circle_rounded,
+    ),
+    LegendItem(
+      color: Color(0xFFFBBF24),
+      label: '판정일',
+      icon: Icons.star_outline_rounded,
+    ),
   ];
 }
 
@@ -59,7 +95,7 @@ const moods = [
   (mood: 'great', emoji: '😄', label: '최고'),
   (mood: 'good', emoji: '🙂', label: '좋아'),
   (mood: 'excited', emoji: '🥰', label: '설레'),
-  (mood: 'hopeful', emoji: '🌸', label: '기대'),
+  (mood: 'hopeful', emoji: '🤞', label: '기대'),
   (mood: 'neutral', emoji: '😐', label: '그냥'),
   (mood: 'tired', emoji: '😴', label: '피곤'),
   (mood: 'anxious', emoji: '😟', label: '불안'),
@@ -332,11 +368,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           _headerBtn(
-                            '🗒️ 기록하기',
+                            Icons.edit_note_rounded,
+                            '기록하기',
                             () => context.push('/records'),
                           ),
                           const SizedBox(width: 8),
-                          _headerBtn('+ 일정 추가', () => _openScheduleModal()),
+                          _headerBtn(
+                            Icons.add_rounded,
+                            '일정 추가',
+                            () => _openScheduleModal(),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -386,7 +427,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   final style = getScheduleMarkerStyle(s.type);
                                   return DayMarker(
                                     color: colorFromHex(style.color),
-                                    icon: style.emoji,
+                                    icon: style.icon,
                                   );
                                 }),
                                 if (dayHormone?.injectionDrug != null ||
@@ -419,12 +460,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   child: Row(
                                     children: [
                                       l.icon != null
-                                          ? Text(
+                                          ? Icon(
                                               l.icon!,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: l.color,
-                                              ),
+                                              size: 12,
+                                              color: l.color,
                                             )
                                           : Container(
                                               width: 8,
@@ -463,16 +502,18 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       ),
                       if (showNaturalCta)
                         _ctaBox(
-                          title: '🌸 생리 시작일을 기록해보세요',
+                          icon: Icons.water_drop_rounded,
+                          title: '생리 시작일을 기록해보세요',
                           sub: '첫 생리 시작일을 기록하면\n가임기·배란일 예측을 시작해드려요.',
                           ctaText: '+ 첫 생리 시작일 기록하기',
                           onCta: () => _openScheduleModal(),
                         ),
                       if (showClinicCta)
                         _ctaBox(
-                          title: _treatmentMode == 'iui'
-                              ? '💉 오늘 시술 일정을 등록해보세요'
-                              : '🔬 오늘 시술 일정을 등록해보세요',
+                          icon: _treatmentMode == 'iui'
+                              ? Icons.vaccines_rounded
+                              : Icons.biotech_rounded,
+                          title: '오늘 시술 일정을 등록해보세요',
                           sub: _treatmentMode == 'iui'
                               ? '초음파, 채혈, 주사 일정을 기록하면 치료 흐름을 한눈에 볼 수 있어요.'
                               : '난포 모니터링, 이식, 채취 일정을 기록해요.',
@@ -504,7 +545,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     );
   }
 
-  Widget _headerBtn(String label, VoidCallback onTap) {
+  Widget _headerBtn(IconData icon, String label, VoidCallback onTap) {
     return InkWell(
       borderRadius: BorderRadius.circular(14),
       onTap: onTap,
@@ -514,19 +555,27 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textDark,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: AppColors.textDark),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _ctaBox({
+    required IconData icon,
     required String title,
     required String sub,
     required String ctaText,
@@ -544,13 +593,20 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       ),
       child: Column(
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 6),
           Text(

@@ -301,13 +301,19 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '오늘의 신체 기록 📊',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
-          ),
+        const Row(
+          children: [
+            Icon(Icons.bar_chart_rounded, size: 18, color: AppColors.primary),
+            SizedBox(width: 6),
+            Text(
+              '오늘의 신체 기록',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
         ),
         const Text(
           '매일의 신체 변화를 기록합니다',
@@ -324,12 +330,14 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
           child: Column(
             children: [
               _dailyRow(
-                '🌡️ 기초체온',
+                Icons.thermostat_rounded,
+                '기초체온',
                 _numberInputRow(today?.bbt?.toString(), 'bbt', '°C 입력', '36.5'),
               ),
               const Divider(height: 24),
               _dailyRow(
-                '🥚 배란 테스트기',
+                Icons.egg_rounded,
+                '배란 테스트기',
                 Row(
                   children: [
                     _opkBtn(
@@ -354,7 +362,8 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
               ),
               const Divider(height: 24),
               _dailyRow(
-                '⚖️ 몸무게',
+                Icons.monitor_weight_rounded,
+                '몸무게',
                 _numberInputRow(
                   today?.weight?.toString(),
                   'weight',
@@ -364,7 +373,8 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
               ),
               const Divider(height: 24),
               _dailyRow(
-                '😴 수면 시간',
+                Icons.bedtime_rounded,
+                '수면 시간',
                 _numberInputRow(
                   today?.sleepHours?.toString(),
                   'sleepHours',
@@ -384,7 +394,11 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
           ),
           child: const Row(
             children: [
-              Text('💡', style: TextStyle(fontSize: 16)),
+              Icon(
+                Icons.lightbulb_rounded,
+                size: 16,
+                color: AppColors.primary,
+              ),
               SizedBox(width: 8),
               Expanded(
                 child: Text(
@@ -401,17 +415,23 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     );
   }
 
-  Widget _dailyRow(String label, Widget trailing) {
+  Widget _dailyRow(IconData icon, String label, Widget trailing) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textDark,
-          ),
+        Row(
+          children: [
+            Icon(icon, size: 16, color: AppColors.primary),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
         ),
         trailing,
       ],
@@ -492,13 +512,19 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '📋 과거 수치 기록 내역',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textDark,
-            ),
+          const Row(
+            children: [
+              Icon(Icons.assignment_rounded, size: 15, color: AppColors.primary),
+              SizedBox(width: 6),
+              Text(
+                '과거 수치 기록 내역',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textDark,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           if (_records.isEmpty)
@@ -698,13 +724,23 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '🏥 병원 수치 기록',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
-          ),
+        const Row(
+          children: [
+            Icon(
+              Icons.local_hospital_rounded,
+              size: 18,
+              color: AppColors.primary,
+            ),
+            SizedBox(width: 6),
+            Text(
+              '병원 수치 기록',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
         ),
         const Text(
           '현재 단계의 주요 검사 수치를 입력합니다',
@@ -722,7 +758,11 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
             ),
             child: Column(
               children: const [
-                Text('⚙️', style: TextStyle(fontSize: 28)),
+                Icon(
+                  Icons.settings_rounded,
+                  size: 28,
+                  color: AppColors.textMuted,
+                ),
                 SizedBox(height: 8),
                 Text(
                   '치료 단계가 설정되지 않았습니다',
@@ -834,13 +874,19 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '💉 시술 지표 기록',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
-          ),
+        const Row(
+          children: [
+            Icon(Icons.vaccines_rounded, size: 18, color: AppColors.primary),
+            SizedBox(width: 6),
+            Text(
+              '시술 지표 기록',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
         ),
         const Text(
           '채취, 이식 등 주요 시술 결과를 기록합니다',
@@ -857,13 +903,23 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '📋 최근 기록',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                ),
+              const Row(
+                children: [
+                  Icon(
+                    Icons.assignment_rounded,
+                    size: 15,
+                    color: AppColors.primary,
+                  ),
+                  SizedBox(width: 6),
+                  Text(
+                    '최근 기록',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
               if (filtered.isEmpty)
@@ -923,13 +979,19 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '오늘의 마음 일기 📝',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
-          ),
+        const Row(
+          children: [
+            Icon(Icons.edit_note_rounded, size: 18, color: AppColors.primary),
+            SizedBox(width: 6),
+            Text(
+              '오늘의 마음 일기',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+          ],
         ),
         const Text(
           '시술 중 겪는 미묘한 감정을 기록하고 위로받으세요',
@@ -1003,9 +1065,19 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
               ),
               if (_diaryError != null) ...[
                 const SizedBox(height: 6),
-                Text(
-                  '⚠️ $_diaryError',
-                  style: const TextStyle(fontSize: 12, color: Colors.red),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.warning_amber_rounded,
+                      size: 14,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _diaryError!,
+                      style: const TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                  ],
                 ),
               ],
               const SizedBox(height: 12),
@@ -1040,13 +1112,19 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  '💌 AI 동반자가 보낸 편지',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
+                const Row(
+                  children: [
+                    Icon(Icons.mail_rounded, size: 15, color: AppColors.primary),
+                    SizedBox(width: 6),
+                    Text(
+                      'AI 동반자가 보낸 편지',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -1080,13 +1158,19 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '📅 과거의 마음 기록들',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                ),
+              const Row(
+                children: [
+                  Icon(Icons.event_rounded, size: 15, color: AppColors.primary),
+                  SizedBox(width: 6),
+                  Text(
+                    '과거의 마음 기록들',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 10),
               if (_diaries.isEmpty)
@@ -1141,12 +1225,25 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
                               color: AppColors.surface,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            child: Text(
-                              '💌 ${d.aiAnalysis}',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textDark,
-                              ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.mail_rounded,
+                                  size: 12,
+                                  color: AppColors.textDark,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    d.aiAnalysis!,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],

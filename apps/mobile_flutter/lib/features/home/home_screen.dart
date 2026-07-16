@@ -132,13 +132,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     final quickAValue =
         (treatmentMode == 'natural' &&
-            quickA.emoji == '🌡️' &&
+            quickA.icon == Icons.thermostat_rounded &&
             todayHormone?.bbt != null)
         ? '${todayHormone!.bbt}°C'
         : null;
     final quickBValue =
         (treatmentMode == 'natural' &&
-            quickB.emoji == '🥚' &&
+            quickB.icon == Icons.egg_rounded &&
             todayHormone?.opkIndex != null)
         ? 'OPK ${todayHormone!.opkIndex}/10'
         : null;
@@ -161,13 +161,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '🌸 봄  |  ${profile?.name ?? '테스터'}님, 안녕하세요',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textDark,
-                              ),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.local_florist_rounded,
+                                  size: 18,
+                                  color: AppColors.primary,
+                                ),
+                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(
+                                    '봄  |  ${profile?.name ?? '테스터'}님, 안녕하세요',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 2),
                             const Text(
@@ -182,7 +194,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       IconButton(
                         onPressed: () => context.push('/settings'),
-                        icon: const Text('⚙️', style: TextStyle(fontSize: 18)),
+                        icon: const Icon(
+                          Icons.settings_rounded,
+                          size: 20,
+                          color: AppColors.textMuted,
+                        ),
                       ),
                     ],
                   ),
@@ -203,13 +219,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     upcomingSchedules: upcomingSchedules,
                   ),
                   const SizedBox(height: 14),
-                  const _SectionHeader(title: '⚡ 빠른 기록'),
+                  const _SectionHeader(
+                    icon: Icons.flash_on_rounded,
+                    title: '빠른 기록',
+                  ),
                   const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
                         child: _QuickCard(
-                          emoji: quickA.emoji,
+                          icon: quickA.icon,
                           label: quickA.label,
                           value: quickAValue,
                           onTap: () => context.push(quickA.route),
@@ -218,7 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: _QuickCard(
-                          emoji: quickB.emoji,
+                          icon: quickB.icon,
                           label: quickB.label,
                           value: quickBValue,
                           onTap: () => context.push(quickB.route),
@@ -227,11 +246,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const _SectionHeader(title: '🗓️ 오늘 할 일'),
+                  const _SectionHeader(
+                    icon: Icons.calendar_today_rounded,
+                    title: '오늘 할 일',
+                  ),
                   const SizedBox(height: 10),
                   if (treatmentMode != 'natural' && currentStage == null)
                     _TaskRow(
-                      emoji: '🗓️',
+                      icon: Icons.calendar_month_rounded,
                       title: '치료 단계를 설정하면 맞춤 할 일이 나와요',
                       subtitle: '지금 설정하러 가기 →',
                       done: false,
@@ -245,7 +267,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             (task) => Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: _TaskRow(
-                                emoji: task.emoji,
+                                icon: task.icon,
                                 title: task.title,
                                 subtitle: task.subtitle,
                                 done: task.done,
@@ -267,13 +289,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        '📈 이번 주 기록',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
-                        ),
+                      const Row(
+                        children: [
+                          Icon(
+                            Icons.trending_up_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            '이번 주 기록',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ],
                       ),
                       TextButton(
                         onPressed: () => context.push('/records'),
@@ -309,18 +341,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
+  const _SectionHeader({required this.icon, required this.title});
+  final IconData icon;
   final String title;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textDark,
-      ),
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.primary),
+        const SizedBox(width: 6),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textDark,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -350,7 +389,11 @@ class _CoupleBadge extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Text('💑', style: TextStyle(fontSize: 14)),
+              const Icon(
+                Icons.favorite_rounded,
+                size: 14,
+                color: AppColors.primary,
+              ),
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
@@ -402,12 +445,12 @@ class _CoupleBadge extends StatelessWidget {
 
 class _QuickCard extends StatelessWidget {
   const _QuickCard({
-    required this.emoji,
+    required this.icon,
     required this.label,
     this.value,
     required this.onTap,
   });
-  final String emoji;
+  final IconData icon;
   final String label;
   final String? value;
   final VoidCallback onTap;
@@ -427,7 +470,7 @@ class _QuickCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 22)),
+            Icon(icon, size: 22, color: AppColors.primary),
             const SizedBox(height: 8),
             Text(
               label,
@@ -451,7 +494,7 @@ class _QuickCard extends StatelessWidget {
 
 class _TaskRow extends StatelessWidget {
   const _TaskRow({
-    required this.emoji,
+    required this.icon,
     required this.title,
     required this.subtitle,
     required this.done,
@@ -459,7 +502,7 @@ class _TaskRow extends StatelessWidget {
     this.onTap,
   });
 
-  final String emoji;
+  final IconData icon;
   final String title;
   final String subtitle;
   final bool done;
@@ -471,6 +514,9 @@ class _TaskRow extends StatelessWidget {
     final iconBg = colorKey == 'pink'
         ? AppColors.surface
         : AppColors.surfaceAlt;
+    final iconFg = colorKey == 'pink'
+        ? AppColors.primary
+        : AppColors.accentIndigo;
     final dotBg = done
         ? AppColors.textMutedLight
         : (colorKey == 'pink' ? AppColors.primary : AppColors.accentIndigo);
@@ -494,7 +540,7 @@ class _TaskRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(12),
               ),
               alignment: Alignment.center,
-              child: Text(emoji, style: const TextStyle(fontSize: 18)),
+              child: Icon(icon, size: 18, color: iconFg),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -556,13 +602,23 @@ class _MindCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: const [
-                Text(
-                  '📝 오늘의 마음',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.edit_note_rounded,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      '오늘의 마음',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                      ),
+                    ),
+                  ],
                 ),
                 Text(
                   '기록하러 가기 →',
@@ -578,9 +634,12 @@ class _MindCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  diary != null ? '😊' : '💭',
-                  style: const TextStyle(fontSize: 26),
+                Icon(
+                  diary != null
+                      ? Icons.sentiment_satisfied_alt_rounded
+                      : Icons.chat_bubble_outline_rounded,
+                  size: 26,
+                  color: AppColors.primary,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -681,17 +740,14 @@ class _StreakCard extends StatelessWidget {
                     ),
                     alignment: Alignment.center,
                     child: day.recorded
-                        ? Text(
-                            day.recordIcon ?? '✓',
-                            style: TextStyle(
-                              fontSize: day.recordIcon != null ? 13 : 11,
-                              color: day.recordIcon != null
-                                  ? null
-                                  : (day.isToday
-                                        ? AppColors.primary
-                                        : Colors.white),
-                              fontWeight: FontWeight.w700,
-                            ),
+                        ? Icon(
+                            day.recordIcon ?? Icons.check_rounded,
+                            size: day.recordIcon != null ? 15 : 13,
+                            color: day.recordIcon != null
+                                ? Colors.white
+                                : (day.isToday
+                                      ? AppColors.primary
+                                      : Colors.white),
                           )
                         : null,
                   ),
@@ -737,7 +793,7 @@ class _Fab extends StatelessWidget {
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('🤖', style: TextStyle(fontSize: 18)),
+            Icon(Icons.smart_toy_rounded, size: 18, color: Colors.white),
             SizedBox(width: 6),
             Text(
               'AI 상담',

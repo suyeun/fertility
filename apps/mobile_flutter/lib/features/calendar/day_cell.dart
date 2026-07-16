@@ -5,7 +5,7 @@ import '../../core/domain/calendar_data.dart';
 class DayMarker {
   const DayMarker({required this.color, this.icon});
   final Color color;
-  final String? icon;
+  final IconData? icon;
 }
 
 /// Port of apps/mobile/components/calendar/DayCell.tsx.
@@ -79,11 +79,12 @@ class DayCell extends StatelessWidget {
     }
 
     String? badge;
+    bool ovulationBadge = false;
     Color badgeColor = Colors.transparent;
     Color badgeFg = numColor;
     double badgeFontSize = 9;
     if (isOvulation) {
-      badge = '🌸';
+      ovulationBadge = true;
       badgeFontSize = 11;
     } else if (isMenstruation) {
       badge = '생리';
@@ -136,11 +137,32 @@ class DayCell extends StatelessWidget {
                   if (hasIntercourse)
                     const Padding(
                       padding: EdgeInsets.only(left: 2),
-                      child: Text('❤️', style: TextStyle(fontSize: 7)),
+                      child: Icon(
+                        Icons.favorite_rounded,
+                        size: 7,
+                        color: Color(0xFFFB7185),
+                      ),
                     ),
                 ],
               ),
-              if (badge != null)
+              if (ovulationBadge)
+                Container(
+                  margin: const EdgeInsets.only(top: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    Icons.local_florist_rounded,
+                    size: badgeFontSize,
+                    color: badgeFg,
+                  ),
+                )
+              else if (badge != null)
                 Container(
                   margin: const EdgeInsets.only(top: 3),
                   padding: const EdgeInsets.symmetric(
@@ -183,14 +205,7 @@ class DayCell extends StatelessWidget {
                         (m) => Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 1),
                           child: m.icon != null
-                              ? Text(
-                                  m.icon!,
-                                  style: TextStyle(
-                                    fontSize: 7,
-                                    color: m.color,
-                                    height: 1.1,
-                                  ),
-                                )
+                              ? Icon(m.icon!, size: 7, color: m.color)
                               : Container(
                                   width: 5,
                                   height: 5,

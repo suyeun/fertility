@@ -7,6 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../state/auth_controller.dart';
 import '../../state/profile_controller.dart';
 import '../../state/providers.dart';
+import '../../widgets/bom_logo.dart';
 import 'onboarding_data.dart';
 import 'progress_bar.dart';
 
@@ -69,8 +70,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: const [
-            Text('🌸', style: TextStyle(fontSize: 22)),
-            SizedBox(width: 4),
+            BomLogoMark(size: 28),
+            SizedBox(width: 6),
             Text(
               'BOM',
               style: TextStyle(

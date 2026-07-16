@@ -114,13 +114,23 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    '기록 수치 추가 🧬',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.biotech_rounded,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        '기록 수치 추가',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ],
                   ),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -182,13 +192,19 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '🌱 홈케어 지표 기록 (자연임신)',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF881337),
-              ),
+            const Row(
+              children: [
+                Icon(Icons.eco_rounded, size: 14, color: Color(0xFF881337)),
+                SizedBox(width: 6),
+                Text(
+                  '홈케어 지표 기록 (자연임신)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF881337),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 10),
             Row(
@@ -245,7 +261,7 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
         ),
       ),
       const SizedBox(height: 12),
-      _accordion('🏥 상세 병원 검사 결과 (호르몬) 추가', [
+      _accordion(Icons.local_hospital_rounded, '상세 병원 검사 결과 (호르몬) 추가', [
         Row(
           children: [
             Expanded(
@@ -343,7 +359,7 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
         ],
       ),
       const SizedBox(height: 12),
-      _accordion('🌱 홈케어 지표 (체온, 배테기, 몸무게, 수면) 추가', [
+      _accordion(Icons.eco_rounded, '홈케어 지표 (체온, 배테기, 몸무게, 수면) 추가', [
         Row(
           children: [
             Expanded(
@@ -430,7 +446,7 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
     );
   }
 
-  Widget _accordion(String title, List<Widget> children) {
+  Widget _accordion(IconData icon, String title, List<Widget> children) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFFF3F4F6)),
@@ -448,13 +464,19 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF4B5563),
-                      ),
+                    child: Row(
+                      children: [
+                        Icon(icon, size: 13, color: const Color(0xFF4B5563)),
+                        const SizedBox(width: 5),
+                        Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF4B5563),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Text(

@@ -40,7 +40,7 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
 
   final _medNameCtrl = TextEditingController();
   final _medDoseCtrl = TextEditingController();
-  final _medTimesCtrl = TextEditingController(text: '08:00');
+  final List<String> _medTimes = ['08:00'];
   final List<Medication> _medications = [];
 
   bool _saving = false;
@@ -53,23 +53,49 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
     _notesCtrl.dispose();
     _medNameCtrl.dispose();
     _medDoseCtrl.dispose();
-    _medTimesCtrl.dispose();
     super.dispose();
   }
 
+  Future<void> _pickMedTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 8, minute: 0),
+    );
+    if (picked == null) return;
+    final formatted =
+        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+    setState(() {
+      if (!_medTimes.contains(formatted)) {
+        _medTimes.add(formatted);
+        _medTimes.sort();
+      }
+    });
+  }
+
+  void _removeMedTime(String time) {
+    setState(() => _medTimes.remove(time));
+  }
+
   void _addMedication() {
-    if (_medNameCtrl.text.isEmpty || _medDoseCtrl.text.isEmpty) return;
+    if (_medNameCtrl.text.isEmpty ||
+        _medDoseCtrl.text.isEmpty ||
+        _medTimes.isEmpty) {
+      return;
+    }
     setState(() {
       _medications.add(
         Medication(
           name: _medNameCtrl.text,
           dose: _medDoseCtrl.text,
-          times: _medTimesCtrl.text.split(',').map((e) => e.trim()).toList(),
+          times: List<String>.from(_medTimes),
           startDate: widget.selectedDateStr,
         ),
       );
       _medNameCtrl.clear();
       _medDoseCtrl.clear();
+      _medTimes
+        ..clear()
+        ..add('08:00');
     });
   }
 
@@ -155,13 +181,25 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                    child: Text(
-                      '새 일정 추가 (${widget.selectedDateStr}) 📅',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                      ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.event_rounded,
+                          size: 18,
+                          color: AppColors.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            '새 일정 추가 (${widget.selectedDateStr})',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   TextButton(
@@ -194,15 +232,28 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
                                   : AppColors.surface,
                               borderRadius: BorderRadius.circular(20),
                             ),
-                            child: Text(
-                              '${chip.emoji} ${chip.label}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: active
-                                    ? Colors.white
-                                    : AppColors.textDark,
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  chip.icon,
+                                  size: 14,
+                                  color: active
+                                      ? Colors.white
+                                      : AppColors.textDark,
+                                ),
+                                const SizedBox(width: 5),
+                                Text(
+                                  chip.label,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: active
+                                        ? Colors.white
+                                        : AppColors.textDark,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         );
@@ -254,45 +305,76 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    '💊 동반 복용/투약 약물 추가',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textDark,
-                                    ),
+                                  const Row(
+                                    children: [
+                                      Icon(
+                                        Icons.medication_rounded,
+                                        size: 15,
+                                        color: AppColors.primary,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        '동반 복용/투약 약물 추가',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textDark,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 10),
                                   Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Expanded(
-                                        child: _textField(
-                                          _medNameCtrl,
-                                          '약물/주사명',
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            _label('약물/주사명'),
+                                            _textField(
+                                              _medNameCtrl,
+                                              '예: 고나도트로핀',
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 8),
                                       Expanded(
-                                        child: _textField(
-                                          _medDoseCtrl,
-                                          '용량 (예: 150IU)',
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            _label('용량'),
+                                            _textField(
+                                              _medDoseCtrl,
+                                              '예: 150IU',
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
+                                  _label('투약 시간 (여러 개 선택 가능)'),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      ..._medTimes.map(_timeChip),
+                                      _addTimeChip(),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: _textField(
-                                          _medTimesCtrl,
-                                          '투약 시간 (예: 08:00)',
+                                        child: ElevatedButton(
+                                          onPressed: _addMedication,
+                                          child: const Text('약물 추가'),
                                         ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      ElevatedButton(
-                                        onPressed: _addMedication,
-                                        child: const Text('추가'),
                                       ),
                                     ],
                                   ),
@@ -302,12 +384,32 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
                                       child: Row(
                                         children: [
                                           Expanded(
-                                            child: Text(
-                                              '${e.value.name} (${e.value.dose}) — 🕒 ${e.value.times.join(', ')}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                color: AppColors.textDark,
-                                              ),
+                                            child: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    '${e.value.name} (${e.value.dose})',
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color:
+                                                          AppColors.textDark,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const Icon(
+                                                  Icons.access_time_rounded,
+                                                  size: 12,
+                                                  color: AppColors.textMuted,
+                                                ),
+                                                const SizedBox(width: 3),
+                                                Text(
+                                                  e.value.times.join(', '),
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: AppColors.textDark,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                           TextButton(
@@ -338,13 +440,24 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text(
-                                    '💊 복용 알림은 프리미엄 기능이에요',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textDark,
-                                    ),
+                                  const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.medication_rounded,
+                                        size: 14,
+                                        color: AppColors.textDark,
+                                      ),
+                                      SizedBox(width: 5),
+                                      Text(
+                                        '복용 알림은 프리미엄 기능이에요',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppColors.textDark,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   TextButton(
                                     onPressed: () => widget.onPaywall(
@@ -418,6 +531,67 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
         hintStyle: const TextStyle(color: AppColors.primaryLight),
       ),
       style: const TextStyle(fontSize: 13, color: AppColors.textDark),
+    );
+  }
+
+  Widget _timeChip(String time) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.primary,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            time,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () => _removeMedTime(time),
+            child: const Icon(
+              Icons.close_rounded,
+              size: 14,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _addTimeChip() {
+    return GestureDetector(
+      onTap: _pickMedTime,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.primaryLight),
+        ),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add_rounded, size: 14, color: AppColors.primary),
+            SizedBox(width: 3),
+            Text(
+              '시간 추가',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -7,9 +7,9 @@ import '../../core/theme/app_theme.dart';
 import '../../state/providers.dart';
 
 const Map<PostCategory, List<PostTag>> _categoryTags = {
-  'DAILY': ['#감정토닥', '#남편_시댁', '#아무말'],
-  'CLINIC': ['#시험관_신선', '#시험관_동결', '#인공수정', '#병원추천'],
-  'INFO': ['#배테기_기초체온', '#영양제추천', '#운동_식단'],
+  'DAILY': ['#감정토닥', '#남편_시댁', '#아무말', '#소소한일상', '#고민상담'],
+  'CLINIC': ['#시험관_신선', '#시험관_동결', '#인공수정', '#병원추천', '#판정대기'],
+  'INFO': ['#배테기_기초체온', '#영양제추천', '#운동_식단', '#한방차_한의원', '#스트레스관리'],
 };
 
 const _reactionConfig = {
@@ -213,30 +213,44 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
           padding: const EdgeInsets.all(20),
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
                   onPressed: () => context.pop(),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                   icon: const Icon(
                     Icons.chevron_left,
                     color: AppColors.textMuted,
                   ),
                 ),
+                const SizedBox(width: 4),
                 const Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        '👥 공감 커뮤니티',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.textDark,
-                        ),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.forum_rounded,
+                            size: 18,
+                            color: AppColors.primary,
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            '공감 커뮤니티',
+                            style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ],
                       ),
+                      SizedBox(height: 3),
                       Text(
                         '같은 길을 걷는 분들과 마음을 나눠요',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 11,
                           color: AppColors.textMuted,
                         ),
                       ),
@@ -245,29 +259,24 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                 ),
                 InkWell(
                   onTap: _openWriteModal,
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(22),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
-                    ),
-                    decoration: BoxDecoration(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
                       color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(14),
+                      shape: BoxShape.circle,
                     ),
-                    child: const Text(
-                      '+ 글쓰기',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                      ),
+                    child: const Icon(
+                      Icons.edit_rounded,
+                      color: Colors.white,
+                      size: 20,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(

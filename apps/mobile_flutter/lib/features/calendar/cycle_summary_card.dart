@@ -40,7 +40,7 @@ class CycleSummaryCard extends StatelessWidget {
         ('사이클 평균', '$cycleLength일'),
         ('오늘 사이클', '$currentCycleDay일째'),
       ];
-      return _card('✨ 이번 달 요약', rows);
+      return _card(Icons.auto_awesome_rounded, '이번 달 요약', rows);
     }
 
     if (currentStage == null && upcomingScheduleTitle == null) {
@@ -72,10 +72,10 @@ class CycleSummaryCard extends StatelessWidget {
         ('다음 일정', '$upcomingDDay $upcomingScheduleTitle'),
     ];
 
-    return _card('📊 치료 요약', rows);
+    return _card(Icons.bar_chart_rounded, '치료 요약', rows);
   }
 
-  Widget _card(String title, List<(String, String)> rows) {
+  Widget _card(IconData icon, String title, List<(String, String)> rows) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12).copyWith(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -87,13 +87,19 @@ class CycleSummaryCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: AppColors.primary,
-            ),
+          Row(
+            children: [
+              Icon(icon, size: 13, color: AppColors.primary),
+              const SizedBox(width: 5),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           for (var i = 0; i < rows.length; i++)

@@ -321,7 +321,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ],
                     ),
                   ),
-                _sectionTitle('🌸 나의 치료 정보'),
+                _sectionTitle(Icons.medical_information_rounded, '나의 치료 정보'),
                 _row(
                   label: '현재 모드',
                   desc: modeLabel,
@@ -340,7 +340,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         setState(() => _sheet = ModeChangeSheetKind.stage),
                   ),
                 const SizedBox(height: 20),
-                _sectionTitle('💑 부부 공유'),
+                _sectionTitle(Icons.favorite_rounded, '부부 공유'),
                 _row(
                   label: '배우자 연결 관리',
                   desc: '배우자 초대 및 연결 상태 설정',
@@ -348,7 +348,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onTap: () => context.push('/couple'),
                 ),
                 const SizedBox(height: 20),
-                _sectionTitle('🔔 알림 설정'),
+                _sectionTitle(Icons.notifications_rounded, '알림 설정'),
                 _switchRow(
                   label: '앱 알림 활성화',
                   desc: '시술 일정·약물·기록 독려 알림',
@@ -365,7 +365,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 if (isPremium)
                   _switchRow(
-                    label: '💊 약물 복용 알림',
+                    label: '약물 복용 알림',
                     desc: '등록된 약물 정시 투약 알림',
                     value: _medReminder,
                     onChanged: _notifPermission
@@ -375,7 +375,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   )
                 else
                   _row(
-                    label: '🔒 약물 복용 알림',
+                    label: '약물 복용 알림',
                     labelColor: AppColors.primary,
                     desc: '프리미엄으로 정시 투약 알림 활성화',
                     cta: '켜기 ›',
@@ -390,7 +390,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Text(
-                    '🌸 시술 D-1 알림은 시술 일정을 등록하면 자동으로 스케줄링돼요.',
+                    '시술 D-1 알림은 시술 일정을 등록하면 자동으로 스케줄링돼요.',
                     style: TextStyle(
                       fontSize: 12,
                       color: AppColors.textMuted,
@@ -399,7 +399,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                _sectionTitle('💎 구독'),
+                _sectionTitle(Icons.workspace_premium_rounded, '구독'),
                 if (_subStatus.isActive)
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -445,13 +445,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: const [
-                          Text(
-                            '🌸 프리미엄 구독하기',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.workspace_premium_rounded,
+                                size: 16,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                '프리미엄 구독하기',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                           Text(
                             '›',
@@ -465,7 +475,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                   ),
                 const SizedBox(height: 20),
-                _sectionTitle('👤 계정'),
+                _sectionTitle(Icons.person_rounded, '계정'),
                 GestureDetector(
                   onTap: _handleLogout,
                   child: Container(
@@ -487,7 +497,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                _sectionTitle('📋 약관 및 정책'),
+                _sectionTitle(Icons.description_rounded, '약관 및 정책'),
                 _row(
                   label: '개인정보처리방침',
                   cta: '›',
@@ -512,15 +522,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return '${dt.year}.${dt.month}.${dt.day}';
   }
 
-  Widget _sectionTitle(String text) => Padding(
+  Widget _sectionTitle(IconData icon, String text) => Padding(
     padding: const EdgeInsets.only(bottom: 12),
-    child: Text(
-      text,
-      style: const TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textDark,
-      ),
+    child: Row(
+      children: [
+        Icon(icon, size: 15, color: AppColors.primary),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textDark,
+          ),
+        ),
+      ],
     ),
   );
 
@@ -716,7 +732,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 border: Border.all(color: AppColors.primaryLight),
               ),
               child: const Text(
-                '🌸 시술 관련 기록은 모두 유지됩니다.\n모드만 자연임신 준비로 변경할게요.',
+                '시술 관련 기록은 모두 유지됩니다.\n모드만 자연임신 준비로 변경할게요.',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textDark,

@@ -8,18 +8,18 @@ import '../../core/theme/app_theme.dart';
 import '../../state/providers.dart';
 import 'calendar_screen.dart' show moods;
 
-String _typeBadge(String type) {
+({IconData icon, String label}) _typeBadge(String type) {
   switch (type) {
     case 'IVF':
-      return '🧬 시험관';
+      return (icon: Icons.biotech_rounded, label: '시험관');
     case 'IUI':
-      return '🧪 인공수정';
+      return (icon: Icons.medical_services_rounded, label: '인공수정');
     case 'FET':
-      return '❄️ 동결이식';
+      return (icon: Icons.ac_unit_rounded, label: '동결이식');
     case 'monitoring':
-      return '🩺 초음파 검진';
+      return (icon: Icons.monitor_heart_rounded, label: '초음파 검진');
     default:
-      return '📅 일반 진료';
+      return (icon: Icons.event_rounded, label: '일반 진료');
   }
 }
 
@@ -300,25 +300,45 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                       if (_selectedCycleRecord != null)
                         const Padding(
                           padding: EdgeInsets.only(top: 4),
-                          child: Text(
-                            '🌷 생리 기간',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFFB91C1C),
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.water_drop_rounded,
+                                size: 12,
+                                color: Color(0xFFB91C1C),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                '생리 기간',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Color(0xFFB91C1C),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         )
                       else if ((_selectedDayHormone?.opkIndex ?? 0) >= 8)
                         const Padding(
                           padding: EdgeInsets.only(top: 4),
-                          child: Text(
-                            '🌸 배란 가능성 높음',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.egg_rounded,
+                                size: 12,
+                                color: AppColors.primary,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                '배란 가능성 높음',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],
@@ -334,7 +354,8 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                   controller: scrollController,
                   children: [
                     _section(
-                      '😊 오늘 기분 & 메모',
+                      Icons.mood_rounded,
+                      '오늘 기분 & 메모',
                       Column(
                         children: [
                           Wrap(
@@ -459,7 +480,8 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                           ),
                         );
                         return _section(
-                          '🌷 생리 기록',
+                          Icons.water_drop_rounded,
+                          '생리 기록',
                           (_selectedCycleRecord != null && !_isEditingPeriod)
                               ? Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -584,7 +606,8 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                       },
                     ),
                     _section(
-                      '🌡️ 건강 기록',
+                      Icons.thermostat_rounded,
+                      '건강 기록',
                       _selectedDayHormone != null
                           ? Wrap(
                               spacing: 8,
@@ -592,17 +615,22 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                               children: [
                                 if (_selectedDayHormone!.bbt != null)
                                   _healthChip(
-                                    '🌡️ ${_selectedDayHormone!.bbt}°C',
+                                    '${_selectedDayHormone!.bbt}°C',
+                                    icon: Icons.thermostat_rounded,
                                   ),
                                 if (_selectedDayHormone!.opkIndex != null)
                                   _healthChip(
-                                    '🥚 OPK ${_selectedDayHormone!.opkIndex}/10',
+                                    'OPK ${_selectedDayHormone!.opkIndex}/10',
+                                    icon: Icons.egg_rounded,
                                   ),
                                 if (_selectedDayHormone!.intercourse != null)
                                   _healthChip(
                                     _selectedDayHormone!.intercourse!
-                                        ? '❤️ 관계 있음'
-                                        : '🤍 관계 없음',
+                                        ? '관계 있음'
+                                        : '관계 없음',
+                                    icon: _selectedDayHormone!.intercourse!
+                                        ? Icons.favorite_rounded
+                                        : Icons.favorite_border_rounded,
                                   ),
                               ],
                             )
@@ -616,7 +644,8 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                     ),
                     if (_dateMedications.isNotEmpty)
                       _section(
-                        '💊 복용 체크리스트',
+                        Icons.medication_rounded,
+                        '복용 체크리스트',
                         Column(
                           children: [
                             ..._dateMedications.map((med) {
@@ -691,12 +720,22 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                             ],
                                           ),
                                         ),
-                                        Text(
-                                          '🕒 ${med.times.join(', ')}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.textMuted,
-                                          ),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.access_time_rounded,
+                                              size: 11,
+                                              color: AppColors.textMuted,
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              med.times.join(', '),
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.textMuted,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
@@ -710,7 +749,18 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                 width: double.infinity,
                                 child: OutlinedButton(
                                   onPressed: () {},
-                                  child: const Text('🔔 약물 알림 켜기'),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.notifications_active_rounded,
+                                        size: 15,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text('약물 알림 켜기'),
+                                    ],
+                                  ),
                                 ),
                               )
                             else
@@ -726,9 +776,10 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                   ),
                                   child: Row(
                                     children: [
-                                      const Text(
-                                        '🔒',
-                                        style: TextStyle(fontSize: 16),
+                                      const Icon(
+                                        Icons.lock_rounded,
+                                        size: 16,
+                                        color: AppColors.textMuted,
                                       ),
                                       const SizedBox(width: 10),
                                       const Expanded(
@@ -769,7 +820,8 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                         ),
                       ),
                     _section(
-                      '📅 시술 일정',
+                      Icons.event_rounded,
+                      '시술 일정',
                       _dateSchedules.isNotEmpty
                           ? Column(
                               children: _dateSchedules.map((sc) {
@@ -803,13 +855,24 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                               borderRadius:
                                                   BorderRadius.circular(8),
                                             ),
-                                            child: Text(
-                                              _typeBadge(sc.type),
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w700,
-                                                color: style.fg,
-                                              ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(
+                                                  _typeBadge(sc.type).icon,
+                                                  size: 11,
+                                                  color: style.fg,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  _typeBadge(sc.type).label,
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: style.fg,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ),
                                           Text(
@@ -831,12 +894,22 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                         ),
                                       ),
                                       if (sc.hospitalName != null)
-                                        Text(
-                                          '🏢 ${sc.hospitalName}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.textMuted,
-                                          ),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.local_hospital_rounded,
+                                              size: 11,
+                                              color: AppColors.textMuted,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              sc.hospitalName!,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.textMuted,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                     ],
                                   ),
@@ -899,19 +972,33 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
     );
   }
 
-  Widget _healthChip(String text) => Container(
+  Widget _healthChip(String text, {IconData? icon}) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(10),
     ),
-    child: Text(
-      text,
-      style: const TextStyle(fontSize: 12, color: AppColors.textDark),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 13, color: AppColors.textDark),
+          const SizedBox(width: 5),
+        ],
+        Text(
+          text,
+          style: const TextStyle(fontSize: 12, color: AppColors.textDark),
+        ),
+      ],
     ),
   );
 
-  Widget _section(String title, Widget body, {Widget? trailing}) {
+  Widget _section(
+    IconData icon,
+    String title,
+    Widget body, {
+    Widget? trailing,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       child: Column(
@@ -920,13 +1007,19 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textDark,
-                ),
+              Row(
+                children: [
+                  Icon(icon, size: 14, color: AppColors.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                ],
               ),
               if (trailing != null) trailing,
             ],

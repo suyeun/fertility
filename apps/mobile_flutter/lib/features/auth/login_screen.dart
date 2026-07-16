@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/api/client.dart';
 import '../../core/theme/app_theme.dart';
 import '../../state/auth_controller.dart';
+import '../../widgets/bom_logo.dart';
 
 /// Port of apps/mobile/app/login/index.tsx — single screen toggling
 /// login/signup mode.
@@ -79,12 +80,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  '🌸',
-                  style: TextStyle(fontSize: 52),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 4),
+                const Center(child: BomLogoMark(size: 72)),
+                const SizedBox(height: 12),
                 const Text(
                   'BOM',
                   textAlign: TextAlign.center,

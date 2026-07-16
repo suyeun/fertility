@@ -282,7 +282,7 @@ export default function CoupleScreen() {
         {/* 면책 안내 */}
         <View style={styles.disclaimer}>
           <Text style={styles.disclaimerText}>
-            🔒 배우자와 공유된 정보는 제3자에게 공개되지 않으며 기존 인증 체계(JWT)로 보호됩니다.
+            배우자와 공유된 정보는 제3자에게 공개되지 않으며 기존 인증 체계로 보호됩니다.
           </Text>
         </View>
       </ScrollView>

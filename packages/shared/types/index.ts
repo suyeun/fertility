@@ -227,28 +227,38 @@ export type PostTag =
   | '#감정토닥'
   | '#남편_시댁'
   | '#아무말'
+  | '#소소한일상'
+  | '#고민상담'
   // CLINIC (시험관/시술) → CLINIC 전용
   | '#시험관_신선'
   | '#시험관_동결'
   | '#인공수정'
   | '#병원추천'
+  | '#판정대기'
   // INFO (꿀팁/정보공유) → NATURAL or ALL
   | '#배테기_기초체온'
   | '#영양제추천'
   | '#운동_식단'
+  | '#한방차_한의원'
+  | '#스트레스관리'
 
 // 태그 → targetMode 자동 매핑 (글 저장 시 서버에서 세팅)
 export const TAG_META: Record<PostTag, { category: PostCategory; targetMode: PostTargetMode }> = {
   '#감정토닥':       { category: 'DAILY',  targetMode: 'ALL'     },
   '#남편_시댁':      { category: 'DAILY',  targetMode: 'ALL'     },
   '#아무말':         { category: 'DAILY',  targetMode: 'ALL'     },
+  '#소소한일상':     { category: 'DAILY',  targetMode: 'ALL'     },
+  '#고민상담':       { category: 'DAILY',  targetMode: 'ALL'     },
   '#시험관_신선':    { category: 'CLINIC', targetMode: 'CLINIC'  },
   '#시험관_동결':    { category: 'CLINIC', targetMode: 'CLINIC'  },
   '#인공수정':       { category: 'CLINIC', targetMode: 'CLINIC'  },
   '#병원추천':       { category: 'CLINIC', targetMode: 'CLINIC'  },
+  '#판정대기':       { category: 'CLINIC', targetMode: 'CLINIC'  },
   '#배테기_기초체온':{ category: 'INFO',   targetMode: 'NATURAL' },
   '#영양제추천':     { category: 'INFO',   targetMode: 'ALL'     },
   '#운동_식단':      { category: 'INFO',   targetMode: 'ALL'     },
+  '#한방차_한의원':  { category: 'INFO',   targetMode: 'ALL'     },
+  '#스트레스관리':   { category: 'INFO',   targetMode: 'ALL'     },
 }
 
 // 카테고리 탭 순서 — 유저 모드에 따라 동적 정렬

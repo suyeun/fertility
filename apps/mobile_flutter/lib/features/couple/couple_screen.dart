@@ -94,7 +94,9 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (_) {
       if (mounted) {
@@ -139,7 +141,9 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
       _codeCtrl.clear();
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (_) {
       if (mounted) {
@@ -166,7 +170,9 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (_) {
       if (mounted) {
@@ -208,7 +214,7 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: AppColors.surface,
+        backgroundColor: Color(0xFFFFFBFC),
         body: Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
@@ -219,7 +225,7 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
     final isPending = !isLinked && _status?.inviteCode != null;
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: const Color(0xFFFFFBFC),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -265,7 +271,7 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
-                '🔒 배우자와 공유된 정보는 제3자에게 공개되지 않으며 기존 인증 체계(JWT)로 보호됩니다.',
+                '배우자와 공유된 정보는 제3자에게 공개되지 않으며 기존 인증 체계로 보호됩니다.',
                 style: TextStyle(
                   fontSize: 11,
                   color: Color(0xFF166534),
@@ -303,7 +309,11 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
                     border: Border.all(color: AppColors.primaryLight, width: 2),
                   ),
                   alignment: Alignment.center,
-                  child: const Text('💑', style: TextStyle(fontSize: 28)),
+                  child: const Icon(
+                    Icons.favorite_rounded,
+                    color: AppColors.primary,
+                    size: 26,
+                  ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -499,8 +509,22 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
         ),
         child: Column(
           children: const [
-            Text('💑', style: TextStyle(fontSize: 48)),
-            SizedBox(height: 10),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.favorite_rounded, size: 15, color: Colors.white),
+                SizedBox(width: 6),
+                Text(
+                  '함께하는 기록',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xE6FFFFFF),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
             Text(
               '배우자와 함께 기록하세요',
               style: TextStyle(

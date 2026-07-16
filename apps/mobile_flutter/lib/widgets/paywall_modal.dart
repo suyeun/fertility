@@ -5,36 +5,36 @@ import '../core/domain/clinic_gate.dart';
 import '../core/purchases/purchases_service.dart';
 import '../core/theme/app_theme.dart';
 
-const Map<PaywallSource, ({String emoji, String title, String desc})>
+const Map<PaywallSource, ({IconData icon, String title, String desc})>
 _sourceContent = {
   PaywallSource.medicationReminder: (
-    emoji: '💊',
+    icon: Icons.medication_rounded,
     title: '약물 알림은\n프리미엄 기능이에요',
     desc: '주사·질정·경구약 투여 시각에 맞춰\n정시 푸시 알림을 보내드려요.',
   ),
   PaywallSource.multiSchedule: (
-    emoji: '📅',
+    icon: Icons.calendar_month_rounded,
     title: '다회차 일정 관리는\n프리미엄 기능이에요',
     desc: '2회차부터는 프리미엄으로\n모든 시술 일정을 한눈에 관리하세요.',
   ),
   PaywallSource.analytics: (
-    emoji: '📊',
+    icon: Icons.insights_rounded,
     title: '추이 분석은\n프리미엄 기능이에요',
     desc: '호르몬 수치·주기 패턴·시술 결과를\n장기 차트로 분석해드려요.',
   ),
   PaywallSource.generic: (
-    emoji: '🌸',
+    icon: Icons.auto_awesome_rounded,
     title: '프리미엄 기능이에요',
     desc: '더 많은 기능을 이용하려면\nBOM 프리미엄을 시작해보세요.',
   ),
 };
 
 const _premiumFeatures = [
-  (emoji: '💊', text: '약물·주사 정시 알림 (핵심)'),
-  (emoji: '📅', text: '다회차 시술 일정 무제한 등록'),
-  (emoji: '📊', text: '호르몬·주기 추이 분석 차트'),
-  (emoji: '🤖', text: 'AI 채팅 무제한 — 수치·시술 Q&A'),
-  (emoji: '🌸', text: '감정 일기 AI 분석 + 매일 응원'),
+  (icon: Icons.medication_rounded, text: '약물·주사 정시 알림 (핵심)'),
+  (icon: Icons.calendar_month_rounded, text: '다회차 시술 일정 무제한 등록'),
+  (icon: Icons.insights_rounded, text: '호르몬·주기 추이 분석 차트'),
+  (icon: Icons.smart_toy_rounded, text: 'AI 채팅 무제한 — 수치·시술 Q&A'),
+  (icon: Icons.auto_awesome_rounded, text: '감정 일기 AI 분석 + 매일 응원'),
 ];
 
 /// Port of apps/mobile/components/PaywallModal.tsx.
@@ -178,9 +178,10 @@ class _PaywallSheetState extends State<_PaywallSheet> {
                     ),
                     Column(
                       children: [
-                        Text(
-                          content.emoji,
-                          style: const TextStyle(fontSize: 40),
+                        Icon(
+                          content.icon,
+                          size: 40,
+                          color: AppColors.primary,
                         ),
                         const SizedBox(height: 10),
                         Container(
@@ -259,9 +260,10 @@ class _PaywallSheetState extends State<_PaywallSheet> {
                                   children: [
                                     SizedBox(
                                       width: 26,
-                                      child: Text(
-                                        f.emoji,
-                                        style: const TextStyle(fontSize: 18),
+                                      child: Icon(
+                                        f.icon,
+                                        size: 18,
+                                        color: AppColors.primary,
                                       ),
                                     ),
                                     const SizedBox(width: 10),
