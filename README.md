@@ -9,9 +9,9 @@
 ```
 fertility-app/
 ├── apps/
-│   ├── web/        ← Next.js 14 (웹)
-│   ├── mobile/     ← Expo React Native (iOS + Android)
-│   └── backend/    ← NestJS API 서버 (포트 3001)
+│   ├── web/            ← Next.js 14 (웹)
+│   ├── mobile_flutter/ ← Flutter (iOS + Android)
+│   └── backend/        ← NestJS API 서버 (포트 3001)
 └── packages/
     └── shared/     ← 공유 타입 + API 클라이언트
 ```
@@ -60,14 +60,17 @@ ANTHROPIC_API_KEY=sk-ant-...
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
 ```
 
-### 모바일 (`apps/mobile/.env`)
+### 모바일 (Flutter — `--dart-define`)
 
-```env
-EXPO_PUBLIC_API_URL=http://localhost:3001/api
+Flutter 앱은 `.env` 파일 대신 빌드 시점의 `--dart-define`으로 API 주소를 주입합니다.
+
+```bash
+flutter run --dart-define=API_BASE_URL=http://localhost:3001/api
 ```
 
-> 실기기 테스트 시 `localhost` 대신 개발 PC의 로컬 IP 주소를 사용하세요.  
-> 예: `EXPO_PUBLIC_API_URL=http://192.168.0.10:3001/api`
+> 안드로이드 에뮬레이터는 `localhost` 대신 `10.0.2.2`를 사용하세요 (미지정 시 자동 처리됨).  
+> 실기기 테스트 시 개발 PC의 로컬 IP 주소를 사용하세요.  
+> 예: `--dart-define=API_BASE_URL=http://192.168.0.10:3001/api`
 
 ---
 
@@ -84,9 +87,9 @@ npm run backend
 npm run web
 # → http://localhost:3000
 
-# 터미널 3 — 모바일 (Expo)
-npm run mobile
-# → Expo Go 앱으로 QR 코드 스캔
+# 터미널 3 — 모바일 (Flutter)
+cd apps/mobile_flutter
+flutter run --dart-define=API_BASE_URL=http://localhost:3001/api
 ```
 
 ---
@@ -129,9 +132,9 @@ firebase deploy --only firestore:rules
 5. **환경변수 설정**
 
 ```bash
-# apps/mobile/.env
-EXPO_PUBLIC_RC_API_KEY_IOS=appl_xxxx
-EXPO_PUBLIC_RC_API_KEY_ANDROID=goog_xxxx
+# 모바일 — flutter run/build 시 --dart-define으로 전달
+--dart-define=RC_API_KEY_IOS=appl_xxxx
+--dart-define=RC_API_KEY_ANDROID=goog_xxxx
 
 # apps/backend/.env
 REVENUECAT_WEBHOOK_SECRET=your_webhook_secret
@@ -201,18 +204,23 @@ ANTHROPIC_API_KEY=sk-ant-...   # /api/ai 라우트가 남아있는 경우
 
 ---
 
-### 모바일 — EAS Build
+### 모바일 — Flutter Build
 
 ```bash
-npm install -g eas-cli
-eas login
+cd apps/mobile_flutter
 
-cd apps/mobile
-eas build --platform ios      # App Store 제출용
-eas build --platform android  # Google Play 제출용
+# Android — Google Play 제출용 (App Bundle)
+flutter build appbundle --release \
+  --dart-define=API_BASE_URL=https://bom-backend.onrender.com/api \
+  --dart-define=RC_API_KEY_ANDROID=goog_xxxx
+
+# iOS — App Store 제출용
+flutter build ipa --release \
+  --dart-define=API_BASE_URL=https://bom-backend.onrender.com/api \
+  --dart-define=RC_API_KEY_IOS=appl_xxxx
 ```
 
-> EAS 빌드 전 `apps/mobile/.env`의 `EXPO_PUBLIC_API_URL`을 Render 서버 URL로 변경하세요.
+> 빌드 시 `API_BASE_URL`을 반드시 Render 서버 URL로 지정하세요 — 미지정 시 로컬 개발용 주소로 폴백됩니다.
 
 ---
 
@@ -249,7 +257,7 @@ eas build --platform android  # Google Play 제출용
 - [x] 커뮤니티 (일반 + 비밀 대화방)
 - [x] AI 채팅 화면 (모바일)
 - [x] NestJS 백엔드 (모든 데이터 서버 경유)
-- [x] 푸시 알림 (로컬: 약물·D-1·BBT 독려 / 원격: Expo Push API + FCM)
+- [x] 푸시 알림 (로컬: 약물·D-1·BBT 독려 / 원격: FCM)
 - [x] 인앱결제 (RevenueCat — 페이월 화면, 구매/복원, 백엔드 웹훅)
 - [ ] Vercel 웹 배포
-- [ ] EAS 앱 빌드 (iOS / Android)
+- [ ] Flutter 앱 빌드 · 스토어 제출 (iOS / Android)

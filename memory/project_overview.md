@@ -14,24 +14,26 @@ metadata:
 | 계층 | 기술 |
 |------|------|
 | Web | Next.js 14, React, TypeScript, Tailwind CSS |
-| Mobile | Expo (React Native), expo-router |
+| Mobile | Flutter (Dart), Riverpod, go_router |
 | Backend | NestJS 10, TypeScript |
 | DB | Firestore (Cloud Firestore) |
 | Auth | JWT (자체 구현, Passport) |
-| State | Context API (web), 로컬 state (mobile) |
+| State | Context API (web), Riverpod (mobile) |
 | 결제 | RevenueCat (인앱결제 iOS/Android) |
-| 알림 | Expo Push API + Firebase Admin FCM |
+| 알림 | Firebase Admin FCM (네이티브, 원격) + flutter_local_notifications (로컬) |
 | AI | Claude API (@anthropic-ai/sdk) |
 
 ## 모노레포 구조
 
 ```
 fertility-app/
-├── apps/web/          — Next.js 웹앱
-├── apps/mobile/       — Expo React Native
-├── apps/backend/      — NestJS API
-└── packages/shared/   — 공유 타입/유틸 (@fertility/shared)
+├── apps/web/            — Next.js 웹앱
+├── apps/mobile_flutter/ — Flutter 앱 (iOS + Android)
+├── apps/backend/        — NestJS API
+└── packages/shared/     — 공유 타입/유틸 (@fertility/shared, apps/web 전용)
 ```
+
+**RN(Expo) 앱은 폐기됨** (2026-07). 기존 `apps/mobile`은 `archive/rn-mobile` 브랜치에만 보존되어 있고 main에는 없음. 모바일은 Flutter 하나만 유지·개발한다 — 신규 모바일 기능은 `apps/mobile_flutter`에만 구현.
 
 ## 핵심 도메인 타입
 
@@ -66,14 +68,19 @@ currentMode: 'NATURAL' | 'CLINIC'
 - 차트/추이 분석
 - 알림 실제 발송 (백엔드에서도 재검증)
 
-### 구현 파일 위치
+### 구현 파일 위치 (web)
 - `packages/shared/lib/clinicGate.ts` — ClinicFeature enum, canUseClinicScheduler(), isPremiumProfile()
 - `packages/shared/lib/clinicGate.spec.ts` — 23개 단위 테스트 (모두 통과)
 - `apps/web/components/PaywallModal.tsx` — 페이월 모달 UI
 - `apps/web/app/(dashboard)/treatment/page.tsx` — 게이트 연동 + 잠금 프리뷰
-- `apps/backend/src/notifications/notifications.service.ts` — sendMedicationReminder 서버 재검증
 
-**How to apply:** 새 프리미엄 기능 추가 시 ClinicFeature enum 확장 + canUseClinicScheduler switch 추가. 데이터 읽기 경로에는 게이트 함수 절대 사용 금지.
+### 구현 파일 위치 (Flutter — clinicGate.ts를 Dart로 동일 이식)
+- `apps/mobile_flutter/lib/core/domain/clinic_gate.dart` — ClinicFeature, canUseClinicScheduler() 등 동일 로직 포팅
+- `apps/mobile_flutter/lib/widgets/paywall_modal.dart` — 페이월 바텀시트 UI
+- `apps/mobile_flutter/lib/features/subscription/subscription_screen.dart` — 구독 화면
+- `apps/backend/src/notifications/notifications.service.ts` — sendMedicationReminder 서버 재검증 (플랫폼 공통)
+
+**How to apply:** 새 프리미엄 기능 추가 시 web(`clinicGate.ts`)과 Flutter(`clinic_gate.dart`) 양쪽에 ClinicFeature 확장 + canUseClinicScheduler switch를 동일하게 추가해야 함 — 두 구현이 별도 코드베이스라 자동 동기화되지 않음. 데이터 읽기 경로에는 게이트 함수 절대 사용 금지.
 
 ## 테스트 설정
 
