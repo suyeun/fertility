@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'node:crypto'
 import * as crypto from 'crypto'
 import sanitizeHtml from 'sanitize-html'
 
@@ -82,7 +82,7 @@ export class CommunityService {
   ) {
     const { category, targetMode } = resolveTagMeta(body.tag)
     const isAnonymous = CATEGORY_ANONYMOUS[category]
-    const id = uuidv4()
+    const id = randomUUID()
 
     const post = {
       id,
@@ -163,7 +163,7 @@ export class CommunityService {
     // 댓글도 게시글 카테고리 기준으로 익명 여부 결정
     const isAnonymous: boolean = postData.isAnonymous ?? CATEGORY_ANONYMOUS[postData.category]
 
-    const id = uuidv4()
+    const id = randomUUID()
     const comment = {
       id, postId,
       authorToken: hashUid(uid),

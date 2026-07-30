@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:dio/dio.dart';
 
-import '../models/diary.dart';
+import '../models/chat_message.dart';
 import 'client.dart';
 
 /// Note: aiApi.streamChat exists here for contract-parity with

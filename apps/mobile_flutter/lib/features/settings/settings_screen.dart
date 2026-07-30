@@ -29,6 +29,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notifPermission = false;
   bool _dailyBbt = false;
   bool _medReminder = false;
+  bool _subsidyReminder = true;
   bool _checkingPermission = false;
   SubscriptionStatus _subStatus = const SubscriptionStatus(isActive: false);
   bool _loading = true;
@@ -54,6 +55,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         .isDailyBBTScheduled();
     final medScheduled = await LocalNotifications.instance
         .isMedicationReminderScheduled();
+    final subsidyReminderEnabled = await LocalNotifications.instance
+        .isSubsidyReminderEnabled();
     final sub = await PurchasesService.instance.getSubscriptionStatus();
 
     if (mounted) {
@@ -61,6 +64,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _notifPermission = hasPermission;
         _dailyBbt = dailyScheduled;
         _medReminder = medScheduled;
+        _subsidyReminder = subsidyReminderEnabled;
         _subStatus = sub;
         _loading = false;
       });
@@ -136,6 +140,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       } catch (_) {}
     } else {
       await LocalNotifications.instance.cancelMedicationReminders();
+    }
+  }
+
+  Future<void> _handleSubsidyReminderToggle(bool value) async {
+    if (!_notifPermission) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('먼저 알림을 활성화해 주세요.')));
+      return;
+    }
+    if (!_subStatus.isActive) {
+      _openPaywall(PaywallSource.subsidyCalculator);
+      return;
+    }
+    setState(() => _subsidyReminder = value);
+    await LocalNotifications.instance.setSubsidyReminderEnabled(value);
+    if (value) {
+      try {
+        final schedules = await ref.read(treatmentApiProvider).getAll();
+        await LocalNotifications.instance.rescheduleSubsidyAlerts(schedules);
+      } catch (_) {}
     }
   }
 
@@ -382,6 +407,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     background: AppColors.surface,
                     onTap: () => _openPaywall(PaywallSource.medicationReminder),
                   ),
+                if (isPremium)
+                  _switchRow(
+                    label: '지원금 마감 알림',
+                    desc: '지원결정통지서 발급·청구 서류 준비 알림',
+                    value: _subsidyReminder,
+                    onChanged: _notifPermission
+                        ? _handleSubsidyReminderToggle
+                        : null,
+                    disabled: !_notifPermission,
+                  )
+                else
+                  _row(
+                    label: '지원금 마감 알림',
+                    labelColor: AppColors.primary,
+                    desc: '프리미엄으로 지원금 마감 알림 활성화',
+                    cta: '켜기 ›',
+                    background: AppColors.surface,
+                    onTap: () => _openPaywall(PaywallSource.subsidyCalculator),
+                  ),
                 Container(
                   padding: const EdgeInsets.all(14),
                   margin: const EdgeInsets.only(top: 4),
@@ -498,6 +542,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const SizedBox(height: 20),
                 _sectionTitle(Icons.description_rounded, '약관 및 정책'),
+                _row(
+                  label: '이용약관',
+                  cta: '›',
+                  onTap: () => launchUrl(
+                    Uri.parse(
+                      'https://cuboid-string-459.notion.site/BOM-3ab4e4079c788019b0e9e946d351ca7f',
+                    ),
+                  ),
+                ),
                 _row(
                   label: '개인정보처리방침',
                   cta: '›',

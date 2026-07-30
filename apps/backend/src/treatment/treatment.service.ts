@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ForbiddenException, InternalServerErrorE
 import { FirebaseService } from '../firebase/firebase.service'
 import { NotificationsService } from '../notifications/notifications.service'
 import { CouplesService } from '../couples/couples.service'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'node:crypto'
 
 @Injectable()
 export class TreatmentService {
@@ -49,7 +49,7 @@ export class TreatmentService {
 
   async save(uid: string, data: any) {
     try {
-      const id = data.id || uuidv4()
+      const id = data.id || randomUUID()
 
       // 커플링 상태 조회: coupleId 자동 주입
       const userDoc = await this.firebase.collection('users').doc(uid).get()

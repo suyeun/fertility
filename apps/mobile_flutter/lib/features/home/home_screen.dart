@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/domain/clinic_gate.dart';
 import '../../core/domain/home_data.dart';
 import '../../core/models/models.dart';
+import '../../core/models/subsidy.dart';
 import '../../core/push/local_notifications.dart';
 import '../../core/purchases/purchases_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../state/auth_controller.dart';
 import '../../state/profile_controller.dart';
 import '../../state/providers.dart';
+import '../subsidy/widgets/subsidy_hero_card.dart';
 import 'hero_card.dart';
 
 /// Port of apps/mobile/app/(tabs)/index.tsx.
@@ -24,8 +27,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   List<MenstrualCycle> _cycles = [];
   List<HormoneRecord> _hormones = [];
   List<TreatmentSchedule> _schedules = [];
-  List<DiaryEntry> _diaries = [];
+  List<DailyNote> _dailyNotes = [];
   CoupleStatusResponse? _coupleStatus;
+  UserSubsidyProfile? _subsidyProfile;
   bool _loading = true;
 
   @override
@@ -41,16 +45,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ref.read(cyclesApiProvider).getAll(),
         ref.read(hormonesApiProvider).getAll(),
         ref.read(treatmentApiProvider).getAll(),
-        ref.read(diaryApiProvider).getAll(),
+        ref.read(dailyNotesApiProvider).getAll(),
       ]);
       final couple = await ref.read(couplesApiProvider).me().catchNull();
+      final subsidyProfile = await ref
+          .read(subsidyApiProvider)
+          .getProfile()
+          .catchNull();
       if (!mounted) return;
       setState(() {
         _cycles = results[0] as List<MenstrualCycle>;
         _hormones = results[1] as List<HormoneRecord>;
         _schedules = results[2] as List<TreatmentSchedule>;
-        _diaries = results[3] as List<DiaryEntry>;
+        _dailyNotes = results[3] as List<DailyNote>;
         _coupleStatus = couple;
+        _subsidyProfile = subsidyProfile;
         _loading = false;
       });
 
@@ -58,8 +67,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (uid != null) {
         PurchasesService.instance.identifyUser(uid).catchError((_) {});
       }
+      final currentProfile = ref.read(profileControllerProvider);
+      final isPremium =
+          currentProfile != null && isPremiumProfile(currentProfile);
       LocalNotifications.instance
-          .initNotifications(_schedules)
+          .initNotifications(_schedules, isPremium: isPremium)
           .catchError((_) {});
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -92,16 +104,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       cycles: _cycles,
       hormones: _hormones,
       schedules: _schedules,
-      diaries: _diaries,
+      diaries: _dailyNotes,
     );
 
     final now = DateTime.now();
     final todayStr =
         '${now.year.toString().padLeft(4, '0')}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
-    DiaryEntry? todayDiary;
-    for (final d in _diaries) {
+    DailyNote? todayNote;
+    for (final d in _dailyNotes) {
       if (d.date == todayStr) {
-        todayDiary = d;
+        todayNote = d;
         break;
       }
     }
@@ -206,17 +218,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     status: _coupleStatus,
                     onReturn: _refreshCoupleStatus,
                   ),
-                  HeroCard(
-                    treatmentMode: treatmentMode,
-                    currentStage: currentStage,
-                    phase: home.todayCycleInfo?.phase ?? 'follicular',
-                    cycleDay: home.currentCycleDay,
-                    tip: home.todayTip,
-                    dDay: home.ovulationDDay,
-                    periodDDay: home.periodDDay,
-                    isFertileWindow: home.isFertileWindow,
-                    hasCycleData: hasCycleData,
-                    upcomingSchedules: upcomingSchedules,
+                  Builder(
+                    builder: (context) {
+                      final isPremium =
+                          profile != null && isPremiumProfile(profile);
+                      final subsidyCard = SubsidyHeroCard(
+                        profile: _subsidyProfile,
+                        schedules: _schedules,
+                        isPremium: isPremium,
+                        onTap: () => context.push('/subsidy-calculator'),
+                      );
+                      final urgent = isSubsidyDeadlineUrgent(
+                        _subsidyProfile,
+                        _schedules,
+                        isPremium,
+                      );
+                      final heroCard = HeroCard(
+                        treatmentMode: treatmentMode,
+                        currentStage: currentStage,
+                        phase: home.todayCycleInfo?.phase ?? 'follicular',
+                        cycleDay: home.currentCycleDay,
+                        tip: home.todayTip,
+                        dDay: home.ovulationDDay,
+                        periodDDay: home.periodDDay,
+                        isFertileWindow: home.isFertileWindow,
+                        hasCycleData: hasCycleData,
+                        upcomingSchedules: upcomingSchedules,
+                      );
+                      return Column(
+                        children: urgent
+                            ? [
+                                subsidyCard,
+                                const SizedBox(height: 10),
+                                heroCard,
+                              ]
+                            : [
+                                heroCard,
+                                const SizedBox(height: 10),
+                                subsidyCard,
+                              ],
+                      );
+                    },
                   ),
                   const SizedBox(height: 14),
                   const _SectionHeader(
@@ -282,8 +324,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   const SizedBox(height: 16),
                   _MindCard(
-                    diary: todayDiary,
-                    onTap: () => context.push('/records'),
+                    note: todayNote,
+                    onTap: () {
+                      ref
+                          .read(pendingCalendarOpenDateProvider.notifier)
+                          .state = todayStr;
+                      context.go('/calendar');
+                    },
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -580,8 +627,8 @@ class _TaskRow extends StatelessWidget {
 }
 
 class _MindCard extends StatelessWidget {
-  const _MindCard({required this.diary, required this.onTap});
-  final DiaryEntry? diary;
+  const _MindCard({required this.note, required this.onTap});
+  final DailyNote? note;
   final VoidCallback onTap;
 
   @override
@@ -635,7 +682,7 @@ class _MindCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Icon(
-                  diary != null
+                  (note?.memo.isNotEmpty ?? false)
                       ? Icons.sentiment_satisfied_alt_rounded
                       : Icons.chat_bubble_outline_rounded,
                   size: 26,
@@ -643,9 +690,9 @@ class _MindCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: diary != null
+                  child: (note?.memo.isNotEmpty ?? false)
                       ? Text(
-                          diary!.content,
+                          note!.memo,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(

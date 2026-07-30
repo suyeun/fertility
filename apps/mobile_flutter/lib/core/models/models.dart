@@ -1,8 +1,9 @@
 export 'article.dart';
+export 'chat_message.dart';
 export 'community.dart';
 export 'couple.dart';
 export 'cycle.dart';
-export 'diary.dart';
+export 'daily_note.dart';
 export 'enums.dart';
 export 'hormone_record.dart';
 export 'hospital.dart';

@@ -11,7 +11,6 @@ import { CouplesModule } from './couples/couples.module'
 import { CyclesModule } from './cycles/cycles.module'
 import { HormonesModule } from './hormones/hormones.module'
 import { TreatmentModule } from './treatment/treatment.module'
-import { DiaryModule } from './diary/diary.module'
 import { AiModule } from './ai/ai.module'
 import { CommunityModule } from './community/community.module'
 import { NotificationsModule } from './notifications/notifications.module'
@@ -19,6 +18,8 @@ import { PaymentsModule } from './payments/payments.module'
 import { AppVersionModule } from './app-version/app-version.module'
 import { InfoModule } from './info/info.module'
 import { HospitalsModule } from './hospitals/hospitals.module'
+import { SubsidyModule } from './subsidy/subsidy.module'
+import { DailyNotesModule } from './daily-notes/daily-notes.module'
 
 // [ARCH-004] 필수 환경변수 검증 — 누락 시 서버 시작 즉시 오류 발생
 const envValidationSchema = Joi.object({
@@ -63,7 +64,6 @@ const envValidationSchema = Joi.object({
     CyclesModule,
     HormonesModule,
     TreatmentModule,
-    DiaryModule,
     AiModule,
     CommunityModule,
     NotificationsModule,
@@ -71,6 +71,8 @@ const envValidationSchema = Joi.object({
     AppVersionModule,
     InfoModule,
     HospitalsModule,
+    SubsidyModule,
+    DailyNotesModule,
   ],
   providers: [
     // [SEC-007] ThrottlerGuard를 글로벌로 적용 — 모든 엔드포인트 기본 60회/분 제한

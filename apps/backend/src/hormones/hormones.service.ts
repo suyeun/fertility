@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
 import { CouplesService } from '../couples/couples.service'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'node:crypto'
 
 @Injectable()
 export class HormonesService {
@@ -34,7 +34,7 @@ export class HormonesService {
   }
 
   async save(uid: string, data: any) {
-    const id = data.id || uuidv4()
+    const id = data.id || randomUUID()
 
     // coupleId 자동 주입
     const userDoc = await this.firebase.collection('users').doc(uid).get()

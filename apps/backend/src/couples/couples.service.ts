@@ -8,7 +8,7 @@ import {
 } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
 import { NotificationsService } from '../notifications/notifications.service'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'node:crypto'
 
 /** 6자리 영숫자 대소문자 혼합 코드 생성 */
 function generateInviteCode(): string {
@@ -88,7 +88,7 @@ export class CouplesService {
         }
       }
 
-      const coupleId = uuidv4()
+      const coupleId = randomUUID()
       const inviteCode = generateInviteCode()
       const now = new Date()
       const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24시간 후

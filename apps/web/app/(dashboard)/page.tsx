@@ -3,14 +3,13 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
-  useHomeData, cyclesApi, treatmentApi, hormonesApi, diaryApi,
+  useHomeData, cyclesApi, treatmentApi, hormonesApi,
   useUserStore, getQuickActions,
 } from '@fertility/shared'
-import type { MenstrualCycle, TreatmentSchedule, HormoneRecord, DiaryEntry, TreatmentMode, CurrentStage } from '@fertility/shared'
+import type { MenstrualCycle, TreatmentSchedule, HormoneRecord, TreatmentMode, CurrentStage } from '@fertility/shared'
 import HeroCard from '../../components/home/HeroCard'
 import { NaturalChecklist, ClinicChecklist } from '../../components/home/TodayChecklist'
 import WeekStreakCard from '../../components/home/WeekStreakCard'
-import DiaryPrompt from '../../components/home/DiaryPrompt'
 import { CalendarCheck, Zap } from 'lucide-react'
 import Link from 'next/link'
 
@@ -21,22 +20,20 @@ export default function DashboardPage() {
   const [cycles,    setCycles]    = useState<MenstrualCycle[]>([])
   const [schedules, setSchedules] = useState<TreatmentSchedule[]>([])
   const [hormones,  setHormones]  = useState<HormoneRecord[]>([])
-  const [diaries,   setDiaries]   = useState<DiaryEntry[]>([])
   const [loading,   setLoading]   = useState(true)
 
   useEffect(() => {
     if (!user) return
     const load = async () => {
       try {
-        const [c, s, h, d] = await Promise.all([
+        const [c, s, h] = await Promise.all([
           cyclesApi.getAll(),
           treatmentApi.getAll(),
           hormonesApi.getAll(),
-          diaryApi.getAll(),
         ])
         const unwrap = (r: any) => Array.isArray(r) ? r : (r?.data ?? [])
         setCycles(unwrap(c)); setSchedules(unwrap(s))
-        setHormones(unwrap(h)); setDiaries(unwrap(d))
+        setHormones(unwrap(h))
       } catch (err) {
         console.error('홈 데이터 로드 실패:', err)
       } finally {
@@ -56,11 +53,10 @@ export default function DashboardPage() {
     ? Math.max(1, Math.floor((Date.now() - new Date(stageStartedAt).getTime()) / 86400000) + 1)
     : null
 
-  const home = useHomeData(treatmentMode, currentStage, cycles, hormones, schedules, diaries)
+  const home = useHomeData(treatmentMode, currentStage, cycles, hormones, schedules, [])
 
   const todayStr     = new Date().toISOString().split('T')[0]
   const todayHormone = hormones.find(h => h.recordedAt.split('T')[0] === todayStr)
-  const todayDiary   = diaries.find(d => d.date === todayStr) ?? undefined
 
   const hasCycleData = cycles.length > 0
 
@@ -166,9 +162,6 @@ export default function DashboardPage() {
           />
         )}
       </div>
-
-      {/* 섹션 E — 오늘의 마음 */}
-      <DiaryPrompt todayDiary={todayDiary} />
 
       {/* 섹션 F — 이번 주 기록 스트릭 */}
       <WeekStreakCard weekDays={home.weekStreak} streakCount={home.streakCount} />

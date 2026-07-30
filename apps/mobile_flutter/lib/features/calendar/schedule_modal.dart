@@ -18,6 +18,7 @@ class ScheduleModal extends ConsumerStatefulWidget {
     required this.existingScheduleCount,
     required this.onPaywall,
     required this.onSaved,
+    this.onSubsidyEligible,
   });
 
   final String selectedDateStr;
@@ -26,6 +27,9 @@ class ScheduleModal extends ConsumerStatefulWidget {
   final int existingScheduleCount;
   final void Function(PaywallSource source) onPaywall;
   final void Function(StageSuggestion? suggestion) onSaved;
+  /// 등록한 일정이 지원금 대상(IVF/FET/IUI) 유형일 때 호출 — 캘린더 화면이
+  /// 인라인 배너를 띄우고 필요 시 마감 알림을 예약한다.
+  final void Function(TreatmentSchedule schedule)? onSubsidyEligible;
 
   @override
   ConsumerState<ScheduleModal> createState() => _ScheduleModalState();
@@ -129,7 +133,7 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
 
       final fullDateTime =
           '${widget.selectedDateStr}T${_timeCtrl.text.isNotEmpty ? _timeCtrl.text : '09:00'}';
-      await ref.read(treatmentApiProvider).save({
+      final saved = await ref.read(treatmentApiProvider).save({
         'type': resolvedType,
         'title': _titleCtrl.text.trim(),
         'scheduledAt': fullDateTime,
@@ -145,6 +149,12 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
         widget.treatmentMode,
       );
       widget.onSaved(suggestion);
+
+      if (resolvedType == 'IVF' ||
+          resolvedType == 'FET' ||
+          resolvedType == 'IUI') {
+        widget.onSubsidyEligible?.call(saved);
+      }
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

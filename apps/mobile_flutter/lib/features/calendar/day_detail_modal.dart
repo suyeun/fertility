@@ -1,12 +1,13 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/api/client.dart';
 import '../../core/domain/clinic_gate.dart';
 import '../../core/models/models.dart';
 import '../../core/theme/app_theme.dart';
 import '../../state/providers.dart';
-import 'calendar_screen.dart' show moods;
+import 'calendar_screen.dart' show conditionOptions;
 
 ({IconData icon, String label}) _typeBadge(String type) {
   switch (type) {
@@ -55,6 +56,7 @@ class DayDetailModal extends ConsumerStatefulWidget {
     required this.onOpenScheduleModal,
     required this.onGoRecords,
     required this.onPaywall,
+    this.onNoteSaved,
   });
 
   final String selectedDateStr;
@@ -69,16 +71,21 @@ class DayDetailModal extends ConsumerStatefulWidget {
   final VoidCallback onOpenScheduleModal;
   final VoidCallback onGoRecords;
   final void Function(PaywallSource source) onPaywall;
+  /// 메모/컨디션 자동저장 후 호출 — 부모(캘린더)가 월뷰 dot을 갱신할 수 있게 함.
+  final VoidCallback? onNoteSaved;
 
   @override
   ConsumerState<DayDetailModal> createState() => _DayDetailModalState();
 }
 
 class _DayDetailModalState extends ConsumerState<DayDetailModal> {
-  String? _dayMood;
+  int? _condition;
   final _memoCtrl = TextEditingController();
-  bool _savingDiary = false;
-  bool _diarySaved = false;
+  final _memoFocusNode = FocusNode();
+  Timer? _debounce;
+  bool _suppressAutoSave = false;
+  bool _savingNote = false;
+  bool _noteSaved = false;
 
   final _periodStartCtrl = TextEditingController();
   final _periodEndCtrl = TextEditingController();
@@ -144,11 +151,19 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
     super.initState();
     _periodStartCtrl.text = widget.selectedDateStr;
     _loadCheckedMeds();
-    _loadDiary();
+    _loadDailyNote();
+    _memoFocusNode.addListener(() {
+      if (!_memoFocusNode.hasFocus) {
+        _debounce?.cancel();
+        _autoSave();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _memoFocusNode.dispose();
     _memoCtrl.dispose();
     _periodStartCtrl.dispose();
     _periodEndCtrl.dispose();
@@ -164,51 +179,54 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
     }
   }
 
-  Future<void> _loadDiary() async {
+  Future<void> _loadDailyNote() async {
     try {
-      final diaries = await ref.read(diaryApiProvider).getAll();
-      DiaryEntry? entry;
-      for (final d in diaries) {
-        if (d.date == widget.selectedDateStr) {
-          entry = d;
-          break;
-        }
-      }
+      final note = await ref
+          .read(dailyNotesApiProvider)
+          .getByDate(widget.selectedDateStr);
       if (mounted) {
         setState(() {
-          _dayMood = entry?.mood;
-          _memoCtrl.text = entry?.content ?? '';
+          _condition = note?.condition;
+          _suppressAutoSave = true;
+          _memoCtrl.text = note?.memo ?? '';
+          _suppressAutoSave = false;
         });
       }
     } catch (_) {
-      // leave mood/memo empty
+      // leave condition/memo empty
     }
   }
 
-  Future<void> _handleSaveDiary() async {
-    if (_dayMood == null && _memoCtrl.text.trim().isEmpty) return;
-    setState(() => _savingDiary = true);
+  void _scheduleAutoSave() {
+    if (_suppressAutoSave) return;
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 800), _autoSave);
+  }
+
+  void _selectCondition(int value) {
+    setState(() => _condition = _condition == value ? null : value);
+    _debounce?.cancel();
+    _autoSave();
+  }
+
+  Future<void> _autoSave() async {
+    setState(() => _savingNote = true);
     try {
-      await ref.read(diaryApiProvider).save(widget.selectedDateStr, {
-        'mood': _dayMood ?? 'neutral',
-        'content': _memoCtrl.text.trim().isNotEmpty
-            ? _memoCtrl.text.trim()
-            : '기분을 기록했어요.',
+      await ref.read(dailyNotesApiProvider).save(widget.selectedDateStr, {
+        'memo': _memoCtrl.text.trim(),
+        'condition': _condition,
       });
-      setState(() => _diarySaved = true);
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) setState(() => _diarySaved = false);
-      });
-    } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        setState(() => _noteSaved = true);
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _noteSaved = false);
+        });
       }
+      widget.onNoteSaved?.call();
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('기분 & 메모 저장에 실패했어요.')));
-      }
+      // 자동저장 실패는 조용히 무시 — 다음 변경 시 재시도됨.
     } finally {
-      if (mounted) setState(() => _savingDiary = false);
+      if (mounted) setState(() => _savingNote = false);
     }
   }
 
@@ -355,16 +373,17 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                   children: [
                     _section(
                       Icons.mood_rounded,
-                      '오늘 기분 & 메모',
+                      '오늘 컨디션 & 메모',
                       Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Wrap(
                             spacing: 6,
                             runSpacing: 6,
-                            children: moods.map((m) {
-                              final active = _dayMood == m.mood;
+                            children: conditionOptions.map((c) {
+                              final active = _condition == c.condition;
                               return GestureDetector(
-                                onTap: () => setState(() => _dayMood = m.mood),
+                                onTap: () => _selectCondition(c.condition),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 10,
@@ -379,11 +398,11 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                   child: Column(
                                     children: [
                                       Text(
-                                        m.emoji,
+                                        c.emoji,
                                         style: const TextStyle(fontSize: 18),
                                       ),
                                       Text(
-                                        m.label,
+                                        c.label,
                                         style: TextStyle(
                                           fontSize: 10,
                                           color: active
@@ -400,36 +419,26 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                           const SizedBox(height: 10),
                           TextField(
                             controller: _memoCtrl,
-                            maxLines: 2,
-                            onChanged: (_) => setState(() {}),
+                            focusNode: _memoFocusNode,
+                            maxLines: 4,
+                            minLines: 2,
+                            maxLength: 2000,
+                            onChanged: (_) => _scheduleAutoSave(),
                             decoration: const InputDecoration(
-                              hintText: '오늘 하루 한 줄 메모...',
+                              hintText: '오늘 하루를 짧게 남겨보세요',
                             ),
                           ),
-                          const SizedBox(height: 10),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed:
-                                  (_savingDiary ||
-                                      (_dayMood == null &&
-                                          _memoCtrl.text.trim().isEmpty))
-                                  ? null
-                                  : _handleSaveDiary,
-                              child: _savingDiary
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Text(
-                                      _diarySaved ? '✓ 저장됐어요!' : '기분 & 메모 저장',
-                                    ),
+                          if (_savingNote || _noteSaved)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4),
+                              child: Text(
+                                _savingNote ? '저장 중...' : '✓ 저장됐어요',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),

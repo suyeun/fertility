@@ -11,7 +11,11 @@ import 'fcm_service.dart';
 const _medChannelId = 'bom_medication';
 const _appointmentChannelId = 'bom_appointment';
 const _dailyChannelId = 'bom_daily';
+const _subsidyChannelId = 'bom_subsidy';
 const _dailyBbtId = 990001;
+
+// 지원금 배너 대상 시술 유형 — monitoring/other(초음파·채혈·주사·기타)은 제외.
+const _subsidyEligibleTypes = {'IVF', 'IUI', 'FET'};
 
 /// Port of apps/mobile/lib/notifications.ts's local-notification half
 /// (medication / D-1 appointment / daily BBT reminders), using
@@ -63,6 +67,13 @@ class LocalNotifications {
           _dailyChannelId,
           '일일 기록 독려',
           importance: Importance.defaultImportance,
+        ),
+      );
+      await androidPlugin?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _subsidyChannelId,
+          '지원금 알림',
+          importance: Importance.high,
         ),
       );
     }
@@ -175,6 +186,7 @@ class LocalNotifications {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('bom_med_notif_ids', []);
     await prefs.setStringList('bom_appointment_notif_ids', []);
+    await prefs.setStringList('bom_subsidy_notif_ids', []);
   }
 
   /// Cancels previously scheduled medication/appointment alerts and
@@ -215,6 +227,111 @@ class LocalNotifications {
       'bom_appointment_notif_ids',
       apptIds.map((e) => e.toString()).toList(),
     );
+  }
+
+  Future<bool> isSubsidyReminderEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool('bom_subsidy_notif_enabled') ?? true;
+  }
+
+  Future<void> setSubsidyReminderEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('bom_subsidy_notif_enabled', enabled);
+    if (!enabled) {
+      await _cancelSubsidyAlerts();
+    }
+  }
+
+  Future<void> _cancelSubsidyAlerts() async {
+    await _ensureInit();
+    final prefs = await SharedPreferences.getInstance();
+    final ids = prefs.getStringList('bom_subsidy_notif_ids') ?? const [];
+    for (final id in ids) {
+      await _plugin.cancel(int.parse(id));
+    }
+    await prefs.setStringList('bom_subsidy_notif_ids', []);
+  }
+
+  /// 지원금 대상 시술(IVF/FET/IUI) 일정마다 D-7 통지서 발급 알림, D+14 청구 서류
+  /// 준비 알림 2건을 예약한다 — 구독자 전용, 설정에서 끌 수 있다.
+  Future<void> rescheduleSubsidyAlerts(List<TreatmentSchedule> schedules) async {
+    await _ensureInit();
+    if (!(await isSubsidyReminderEnabled())) return;
+    await _cancelSubsidyAlerts();
+
+    final ids = <int>[];
+    final upcoming = schedules.where(
+      (s) => s.status == 'scheduled' && _subsidyEligibleTypes.contains(s.type),
+    );
+    for (final schedule in upcoming) {
+      ids.addAll(await _scheduleSubsidyReminders(schedule));
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+      'bom_subsidy_notif_ids',
+      ids.map((e) => e.toString()).toList(),
+    );
+  }
+
+  Future<List<int>> _scheduleSubsidyReminders(
+    TreatmentSchedule schedule,
+  ) async {
+    final scheduledAt = DateTime.tryParse(schedule.scheduledAt);
+    if (scheduledAt == null) return const [];
+
+    final ids = <int>[];
+    final now = DateTime.now();
+
+    final noticeTrigger = DateTime(
+      scheduledAt.year,
+      scheduledAt.month,
+      scheduledAt.day,
+      9,
+    ).subtract(const Duration(days: 7));
+    if (noticeTrigger.isAfter(now)) {
+      final noticeId = ('subsidy_notice_${schedule.id}').hashCode & 0x7fffffff;
+      await _plugin.zonedSchedule(
+        noticeId,
+        '💰 지원결정통지서, 아직이라면 지금 신청하세요',
+        '${schedule.title} 시술 전 발급이 필요해요 (정부24 · e보건소 · 관할 보건소)',
+        tz.TZDateTime.from(noticeTrigger, tz.local),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(_subsidyChannelId, '지원금 알림'),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      ids.add(noticeId);
+    }
+
+    final claimTrigger = DateTime(
+      scheduledAt.year,
+      scheduledAt.month,
+      scheduledAt.day,
+      9,
+    ).add(const Duration(days: 14));
+    if (claimTrigger.isAfter(now)) {
+      final claimId = ('subsidy_claim_${schedule.id}').hashCode & 0x7fffffff;
+      await _plugin.zonedSchedule(
+        claimId,
+        '📋 시술비 청구 서류를 준비하세요',
+        '영수증·세부내역서를 챙겨 지자체에 청구할 시기예요',
+        tz.TZDateTime.from(claimTrigger, tz.local),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(_subsidyChannelId, '지원금 알림'),
+          iOS: DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+      ids.add(claimId);
+    }
+
+    return ids;
   }
 
   Future<int?> _scheduleAppointmentReminder(TreatmentSchedule schedule) async {
@@ -292,13 +409,17 @@ class LocalNotifications {
     return ids;
   }
 
-  Future<void> initNotifications(List<TreatmentSchedule> schedules) async {
+  Future<void> initNotifications(
+    List<TreatmentSchedule> schedules, {
+    bool isPremium = false,
+  }) async {
     final granted = await requestNotificationPermission();
     if (!granted) return;
     await Future.wait([
       registerPushToken(),
       scheduleDailyBBTReminder(),
       rescheduleMedicationAlerts(schedules),
+      if (isPremium) rescheduleSubsidyAlerts(schedules),
     ]);
   }
 }

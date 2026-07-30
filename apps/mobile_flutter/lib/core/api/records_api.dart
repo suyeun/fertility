@@ -1,5 +1,5 @@
 import '../models/cycle.dart';
-import '../models/diary.dart';
+import '../models/daily_note.dart';
 import '../models/hormone_record.dart';
 import '../models/treatment.dart';
 import 'client.dart';
@@ -74,30 +74,30 @@ class TreatmentApi {
   Future<void> delete(String id) => _client.delete('/treatment/$id');
 }
 
-class DiaryApi {
-  DiaryApi(this._client);
+class DailyNotesApi {
+  DailyNotesApi(this._client);
   final ApiClient _client;
 
-  Future<List<DiaryEntry>> getAll({String? cursor, int? limit}) async {
-    final res = await _client.get<List<dynamic>>(
-      '/diary',
-      query: {
-        if (cursor != null) 'cursor': cursor,
-        if (limit != null) 'limit': limit,
-      },
-    );
+  Future<List<DailyNote>> getAll() async {
+    final res = await _client.get<List<dynamic>>('/daily-notes');
     return (res.data ?? const [])
-        .map((e) => DiaryEntry.fromJson(e as Map<String, dynamic>))
+        .map((e) => DailyNote.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 
-  Future<DiaryEntry> save(String date, Map<String, dynamic> data) async {
-    final res = await _client.post<Map<String, dynamic>>(
-      '/diary/$date',
-      data: data,
-    );
-    return DiaryEntry.fromJson(res.data!);
+  Future<DailyNote?> getByDate(String date) async {
+    final res = await _client.get<Map<String, dynamic>?>('/daily-notes/$date');
+    final data = res.data;
+    return data == null ? null : DailyNote.fromJson(data);
   }
 
-  Future<void> delete(String id) => _client.delete('/diary/$id');
+  Future<DailyNote> save(String date, Map<String, dynamic> data) async {
+    final res = await _client.post<Map<String, dynamic>>(
+      '/daily-notes/$date',
+      data: data,
+    );
+    return DailyNote.fromJson(res.data!);
+  }
+
+  Future<void> delete(String id) => _client.delete('/daily-notes/$id');
 }

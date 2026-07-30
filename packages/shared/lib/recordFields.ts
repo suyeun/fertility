@@ -10,14 +10,12 @@ export function getRecordTabs(mode: TreatmentMode): RecordTab[] {
   if (mode === 'natural') {
     return [
       { key: 'daily',  label: '일반 기록' },
-      { key: 'diary',  label: '감정·증상' },
     ]
   }
   return [
     { key: 'daily',     label: '일반 기록' },
     { key: 'hospital',  label: '병원 수치' },
     { key: 'procedure', label: '시술 지표' },
-    { key: 'diary',     label: '감정·증상' },
   ]
 }
 

@@ -12,6 +12,7 @@ import '../../core/theme/color_utils.dart';
 import '../../state/profile_controller.dart';
 import '../../state/providers.dart';
 import '../../widgets/paywall_modal.dart';
+import '../subsidy/widgets/subsidy_inline_banner.dart';
 import 'cycle_summary_card.dart';
 import 'day_cell.dart';
 import 'day_detail_modal.dart';
@@ -91,17 +92,13 @@ List<LegendItem> getLegend(TreatmentMode mode) {
   ];
 }
 
-const moods = [
-  (mood: 'great', emoji: '😄', label: '최고'),
-  (mood: 'good', emoji: '🙂', label: '좋아'),
-  (mood: 'excited', emoji: '🥰', label: '설레'),
-  (mood: 'hopeful', emoji: '🤞', label: '기대'),
-  (mood: 'neutral', emoji: '😐', label: '그냥'),
-  (mood: 'tired', emoji: '😴', label: '피곤'),
-  (mood: 'anxious', emoji: '😟', label: '불안'),
-  (mood: 'sad', emoji: '😢', label: '슬퍼'),
-  (mood: 'angry', emoji: '😠', label: '화나'),
-  (mood: 'sick', emoji: '🤒', label: '아파'),
+/// 캘린더 일별 상세의 5단계 감정 컨디션 (감정일기 mood를 대체).
+const conditionOptions = [
+  (condition: 5, emoji: '😊', label: '좋음'),
+  (condition: 4, emoji: '🙂', label: '괜찮음'),
+  (condition: 3, emoji: '😐', label: '보통'),
+  (condition: 2, emoji: '😔', label: '힘듦'),
+  (condition: 1, emoji: '😢', label: '많이 힘듦'),
 ];
 
 /// Port of apps/mobile/app/(tabs)/calendar/index.tsx — the largest screen.
@@ -116,12 +113,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   List<MenstrualCycle> _cycles = [];
   List<TreatmentSchedule> _schedules = [];
   List<HormoneRecord> _hormones = [];
+  List<DailyNote> _dailyNotes = [];
   bool _loading = true;
 
   DateTime _viewDate = DateTime(DateTime.now().year, DateTime.now().month, 1);
   DateTime? _selectedDate;
 
   StageSuggestion? _stageSuggestion;
+  TreatmentSchedule? _subsidyEligibleSchedule;
 
   @override
   void initState() {
@@ -135,12 +134,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         ref.read(cyclesApiProvider).getAll(),
         ref.read(hormonesApiProvider).getAll(),
         ref.read(treatmentApiProvider).getAll(),
+        ref.read(dailyNotesApiProvider).getAll(),
       ]);
       if (!mounted) return;
       setState(() {
         _cycles = results[0] as List<MenstrualCycle>;
         _hormones = results[1] as List<HormoneRecord>;
         _schedules = results[2] as List<TreatmentSchedule>;
+        _dailyNotes = results[3] as List<DailyNote>;
         _loading = false;
       });
     } catch (_) {
@@ -156,6 +157,11 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   Future<void> _refreshCycles() async {
     final updated = await ref.read(cyclesApiProvider).getAll();
     if (mounted) setState(() => _cycles = updated);
+  }
+
+  Future<void> _refreshDailyNotes() async {
+    final updated = await ref.read(dailyNotesApiProvider).getAll();
+    if (mounted) setState(() => _dailyNotes = updated);
   }
 
   String get _todayStr => toLocalDateStr(DateTime.now());
@@ -218,6 +224,16 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             setState(() => _stageSuggestion = suggestion);
           }
         },
+        onSubsidyEligible: (schedule) {
+          if (!mounted) return;
+          setState(() => _subsidyEligibleSchedule = schedule);
+          if (_isPremium) {
+            LocalNotifications.instance.rescheduleSubsidyAlerts([
+              ..._schedules,
+              schedule,
+            ]);
+          }
+        },
       ),
     );
   }
@@ -252,6 +268,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           Navigator.of(context).pop();
           showPaywallModal(context, source: source);
         },
+        onNoteSaved: _refreshDailyNotes,
       ),
     );
   }
@@ -263,6 +280,17 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String?>(pendingCalendarOpenDateProvider, (previous, next) {
+      if (next == null) return;
+      final date = DateTime.tryParse(next);
+      ref.read(pendingCalendarOpenDateProvider.notifier).state = null;
+      if (date == null) return;
+      setState(() => _viewDate = DateTime(date.year, date.month, 1));
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openDayDetailModal(date);
+      });
+    });
+
     if (_loading) {
       return const Scaffold(
         backgroundColor: AppColors.background,
@@ -422,6 +450,12 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                         s.scheduledAt.split('T')[0] == dateStr,
                                   )
                                   .toList();
+                              final hasNote = _dailyNotes.any(
+                                (n) =>
+                                    n.date == dateStr &&
+                                    (n.memo.isNotEmpty ||
+                                        n.condition != null),
+                              );
                               final markers = <DayMarker>[
                                 ...daySchedules.map((s) {
                                   final style = getScheduleMarkerStyle(s.type);
@@ -433,6 +467,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 if (dayHormone?.injectionDrug != null ||
                                     dayHormone?.injectionDose != null)
                                   const DayMarker(color: Color(0xFF60A5FA)),
+                                if (hasNote)
+                                  const DayMarker(
+                                    color: AppColors.accentPurpleLight,
+                                  ),
                               ];
                               return DayCell(
                                 day: day,
@@ -538,6 +576,26 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                 ),
               ],
             ),
+            if (_subsidyEligibleSchedule != null)
+              Positioned(
+                top: 8,
+                left: 16,
+                right: 16,
+                child: SubsidyInlineBanner(
+                  showRange: _subsidyEligibleSchedule!.type == 'IVF' ||
+                      _subsidyEligibleSchedule!.type == 'FET',
+                  onConfirm: () {
+                    final schedule = _subsidyEligibleSchedule!;
+                    setState(() => _subsidyEligibleSchedule = null);
+                    final query = schedule.type == 'IUI'
+                        ? '?procedure=iui'
+                        : '';
+                    context.push('/subsidy-calculator$query');
+                  },
+                  onDismiss: () =>
+                      setState(() => _subsidyEligibleSchedule = null),
+                ),
+              ),
             if (_stageSuggestion != null) _stageSuggestionSheet(),
           ],
         ),

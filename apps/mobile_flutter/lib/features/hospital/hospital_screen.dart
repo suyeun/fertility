@@ -5,7 +5,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/client.dart';
 import '../../core/api/misc_api.dart' show AffiliateProduct;
+import '../../core/api/subsidy_api.dart';
 import '../../core/models/models.dart';
+import '../../core/models/subsidy.dart';
 import '../../core/theme/app_theme.dart';
 import '../../state/providers.dart';
 
@@ -49,6 +51,30 @@ const _processSteps = [
   (step: '4', label: '시술 후 비용 청구', desc: '지정 의료기관에서 급여 적용'),
 ];
 
+const _subsidyArticles = [
+  (
+    id: 'notice',
+    title: '지원결정통지서, 시술 전에 꼭 받아야 하는 이유',
+    body:
+        '지원결정통지서는 시술을 시작하기 전에 발급받아야 해요. 이미 시작한 시술에는 소급 적용되지 않기 때문에, '
+        '시술 일정이 잡히면 가장 먼저 정부24·e보건소·관할 보건소 중 편한 곳에서 신청하는 게 중요해요.',
+  ),
+  (
+    id: 'medication',
+    title: '약제비도 청구 가능한 항목 정리',
+    body:
+        '유산방지제, 착상보조제 등 일부 약제비는 시술비와 별도로 청구할 수 있어요. 영수증과 처방 내역을 '
+        '잘 보관해두면 청구 시 도움이 돼요.',
+  ),
+  (
+    id: 'defacto',
+    title: '사실혼 부부 신청 방법',
+    body:
+        '법률혼이 아니어도 1년 이상 사실혼 관계라면 지원 대상이 될 수 있어요. 지자체별로 요구하는 증빙 서류가 '
+        '다를 수 있으니 신청 전 관할 보건소에 필요한 서류를 미리 확인해보세요.',
+  ),
+];
+
 /// Port of apps/mobile/app/(tabs)/hospital/index.tsx.
 class HospitalScreen extends ConsumerStatefulWidget {
   const HospitalScreen({super.key});
@@ -71,6 +97,10 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
   bool _loadingArticles = false;
   Map<String, List<AffiliateProduct>>? _remoteProducts;
 
+  SubsidyRules? _subsidyRules;
+  UserSubsidyProfile? _subsidyProfile;
+  String? _expandedSubsidyArticleId;
+
   @override
   void initState() {
     super.initState();
@@ -81,6 +111,7 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
           if (mounted) setState(() => _remoteProducts = p);
         })
         .catchError((_) {});
+    _fetchSubsidySummary();
     _fetchHospitals();
     _searchCtrl.addListener(() {
       if (_activeTab == 'hospitals') {
@@ -111,6 +142,22 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loadingHospitals = false);
+    }
+  }
+
+  Future<void> _fetchSubsidySummary() async {
+    try {
+      final results = await Future.wait([
+        ref.read(subsidyApiProvider).getRules(),
+        ref.read(subsidyApiProvider).getProfile(),
+      ]);
+      if (!mounted) return;
+      setState(() {
+        _subsidyRules = results[0] as SubsidyRules;
+        _subsidyProfile = results[1] as UserSubsidyProfile;
+      });
+    } catch (_) {
+      // 요약 카드는 정보성 표시일 뿐이므로 실패해도 화면 진입을 막지 않음.
     }
   }
 
@@ -583,8 +630,115 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
     );
   }
 
+  Widget _subsidyRegionSummaryCard() {
+    final region = _subsidyRules?.local.findByCode(_subsidyProfile?.regionCode);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppColors.accentGreenLight,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '💰 내 지역 지원 제도',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            region != null
+                ? '${region.regionName} — 국가 지원 + 지자체 추가 지원 ${region.additionalBenefits.isNotEmpty ? '있음' : '없음'}'
+                : '거주지를 설정하면 내 지역 지원 제도를 요약해드려요.',
+            style: const TextStyle(fontSize: 12, color: AppColors.textDark),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => context.push('/subsidy-calculator'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentGreen,
+              ),
+              child: const Text('지원금 계산기 열기'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _subsidyArticleCard(({String id, String title, String body}) a) {
+    final expanded = _expandedSubsidyArticleId == a.id;
+    return GestureDetector(
+      onTap: () => setState(
+        () => _expandedSubsidyArticleId = expanded ? null : a.id,
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.primaryLight),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              a.title,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textDark,
+              ),
+            ),
+            if (expanded) ...[
+              const SizedBox(height: 8),
+              Text(
+                a.body,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF475569),
+                  height: 1.5,
+                ),
+              ),
+            ],
+            const SizedBox(height: 4),
+            Text(
+              expanded ? '접기 ▲' : '더보기 ▼',
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   List<Widget> _costTabContent() {
     return [
+      _subsidyRegionSummaryCard(),
+      ..._subsidyArticles.map(_subsidyArticleCard),
+      const SizedBox(height: 4),
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: const Text(
+          '지원 기준은 지자체별로 다르며 변경될 수 있습니다. 최종 확인은 관할 보건소에 문의하세요.',
+          style: TextStyle(fontSize: 10, color: Color(0xFF64748B), height: 1.5),
+        ),
+      ),
+      const SizedBox(height: 12),
       Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(

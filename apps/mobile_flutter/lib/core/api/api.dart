@@ -6,4 +6,5 @@ export 'couples_api.dart';
 export 'hospitals_api.dart';
 export 'misc_api.dart';
 export 'records_api.dart';
+export 'subsidy_api.dart';
 export 'users_api.dart';

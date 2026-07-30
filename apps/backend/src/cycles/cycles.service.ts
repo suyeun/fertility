@@ -2,7 +2,7 @@ import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common
 import { FirebaseService } from '../firebase/firebase.service'
 import { CouplesService } from '../couples/couples.service'
 import { PaginatedResult, PaginationQueryDto } from '../common/pagination.dto'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'node:crypto'
 
 const DEFAULT_LIMIT = 20
 
@@ -67,7 +67,7 @@ export class CyclesService {
 
   async save(uid: string, data: any) {
     try {
-      const id = data.id || uuidv4()
+      const id = data.id || randomUUID()
       
       // coupleId 조회
       const userDoc = await this.firebase.collection('users').doc(uid).get()

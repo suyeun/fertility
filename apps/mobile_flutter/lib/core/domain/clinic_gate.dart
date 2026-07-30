@@ -12,7 +12,13 @@ enum ClinicFeature {
   analytics,
 }
 
-enum PaywallSource { medicationReminder, multiSchedule, analytics, generic }
+enum PaywallSource {
+  medicationReminder,
+  multiSchedule,
+  analytics,
+  subsidyCalculator,
+  generic,
+}
 
 class ClinicGateContext {
   const ClinicGateContext({

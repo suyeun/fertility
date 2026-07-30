@@ -26,8 +26,8 @@ final hormonesApiProvider = Provider<HormonesApi>(
 final treatmentApiProvider = Provider<TreatmentApi>(
   (ref) => TreatmentApi(ref.watch(apiClientProvider)),
 );
-final diaryApiProvider = Provider<DiaryApi>(
-  (ref) => DiaryApi(ref.watch(apiClientProvider)),
+final dailyNotesApiProvider = Provider<DailyNotesApi>(
+  (ref) => DailyNotesApi(ref.watch(apiClientProvider)),
 );
 final aiApiProvider = Provider<AiApi>(
   (ref) => AiApi(ref.watch(apiClientProvider)),
@@ -53,3 +53,11 @@ final hospitalsApiProvider = Provider<HospitalsApi>(
 final articlesApiProvider = Provider<ArticlesApi>(
   (ref) => ArticlesApi(ref.watch(apiClientProvider)),
 );
+final subsidyApiProvider = Provider<SubsidyApi>(
+  (ref) => SubsidyApi(ref.watch(apiClientProvider)),
+);
+
+/// 홈 화면 등 다른 탭에서 캘린더의 특정 날짜 일별 상세를 열어달라는 요청을
+/// 전달하는 상태. `StatefulShellRoute.indexedStack`은 브랜치 위젯을 계속
+/// 유지하므로 쿼리 파라미터 대신 이 provider를 캘린더 화면이 `ref.listen`한다.
+final pendingCalendarOpenDateProvider = StateProvider<String?>((ref) => null);

@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/domain/clinic_gate.dart';
 import '../core/purchases/purchases_service.dart';
 import '../core/theme/app_theme.dart';
+
+const _termsOfUseUrl =
+    'https://cuboid-string-459.notion.site/BOM-3ab4e4079c788019b0e9e946d351ca7f';
+const _privacyPolicyUrl =
+    'https://cuboid-string-459.notion.site/Lunera-3864e4079c7880699f4cf6ac9f9c7952';
 
 const Map<PaywallSource, ({IconData icon, String title, String desc})>
 _sourceContent = {
@@ -21,6 +27,11 @@ _sourceContent = {
     icon: Icons.insights_rounded,
     title: '추이 분석은\n프리미엄 기능이에요',
     desc: '호르몬 수치·주기 패턴·시술 결과를\n장기 차트로 분석해드려요.',
+  ),
+  PaywallSource.subsidyCalculator: (
+    icon: Icons.savings_rounded,
+    title: '지원금 상세 내역은\n프리미엄 기능이에요',
+    desc: '항목별 지원금 상세·신청 서류 체크리스트·\n마감 알림까지 한 번에 확인하세요.',
   ),
   PaywallSource.generic: (
     icon: Icons.auto_awesome_rounded,
@@ -96,6 +107,43 @@ class _PaywallSheetState extends State<_PaywallSheet> {
   bool _isAnnual(Package pkg) =>
       pkg.storeProduct.identifier.startsWith(PurchasesService.productIdAnnual);
 
+  String _trialDisclosure(Package pkg) {
+    final store = pkg.storeProduct;
+    final periodWord = _isAnnual(pkg) ? '매년' : '매월';
+    final intro = store.introductoryPrice;
+    if (intro != null && intro.price == 0) {
+      final trial = _periodLabel(intro.periodNumberOfUnits, intro.periodUnit);
+      return '$trial 무료체험 후 $periodWord ${store.priceString}이 자동 결제돼요.\n'
+          '체험 종료 전 언제든 해지하면 요금이 청구되지 않아요.';
+    }
+    return '$periodWord ${store.priceString}이 자동 결제돼요.\n'
+        '언제든지 App Store / Play Store에서 해지할 수 있어요.';
+  }
+
+  String _periodLabel(int units, PeriodUnit unit) {
+    switch (unit) {
+      case PeriodUnit.day:
+        return '$units일';
+      case PeriodUnit.week:
+        return '$units주';
+      case PeriodUnit.month:
+        return '$units개월';
+      case PeriodUnit.year:
+        return '$units년';
+      case PeriodUnit.unknown:
+        return '$units';
+    }
+  }
+
+  String _ctaLabel(Package? pkg) {
+    if (pkg == null) return '구독 시작';
+    final intro = pkg.storeProduct.introductoryPrice;
+    if (intro != null && intro.price == 0) {
+      return '${_periodLabel(intro.periodNumberOfUnits, intro.periodUnit)} 무료체험 시작';
+    }
+    return '구독 시작하기';
+  }
+
   Future<void> _handleStartTrial() async {
     final selected = _selected;
     if (selected == null) return;
@@ -109,7 +157,7 @@ class _PaywallSheetState extends State<_PaywallSheet> {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('구독 시작 🌸'),
-          content: const Text('14일 무료체험이 시작됐어요!\n약물 알림을 포함한 모든 기능을 사용해보세요.'),
+          content: const Text('약물 알림을 포함한 모든 프리미엄 기능을 사용해보세요.'),
           actions: [
             TextButton(
               onPressed: () {
@@ -437,9 +485,9 @@ class _PaywallSheetState extends State<_PaywallSheet> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text(
-                                '14일 무료체험 시작',
-                                style: TextStyle(
+                            : Text(
+                                _ctaLabel(_selected),
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -447,14 +495,52 @@ class _PaywallSheetState extends State<_PaywallSheet> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    const Text(
-                      '무료체험 후 자동 결제됩니다 · 언제든지 App Store / Play Store에서 해지 가능',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFFC4A0AE),
-                        height: 1.5,
+                    if (_selected != null)
+                      Text(
+                        _trialDisclosure(_selected!),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textDark,
+                          height: 1.5,
+                        ),
                       ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        TextButton(
+                          onPressed: () =>
+                              launchUrl(Uri.parse(_termsOfUseUrl)),
+                          child: const Text(
+                            '이용약관',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                        const Text(
+                          '·',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              launchUrl(Uri.parse(_privacyPolicyUrl)),
+                          child: const Text(
+                            '개인정보처리방침',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     Center(
                       child: TextButton(

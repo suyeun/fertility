@@ -1,10 +1,9 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/api/client.dart';
-import '../../core/domain/mock_diary_feedback.dart';
 import '../../core/domain/record_fields.dart';
 import '../../core/models/models.dart';
 import '../../core/theme/app_theme.dart';
@@ -12,33 +11,7 @@ import '../../state/profile_controller.dart';
 import '../../state/providers.dart';
 import 'hormone_modal.dart';
 
-const _diaryMoods = [
-  (value: 'great', icon: '😄', label: '행복'),
-  (value: 'good', icon: '😊', label: '평온'),
-  (value: 'neutral', icon: '😐', label: '보통'),
-  (value: 'sad', icon: '😢', label: '슬픔'),
-  (value: 'anxious', icon: '😰', label: '불안'),
-  (value: 'hopeful', icon: '💫', label: '기대'),
-];
-
-String _moodLabel(String mood) {
-  switch (mood) {
-    case 'great':
-      return '😄 행복';
-    case 'good':
-      return '😊 평온';
-    case 'neutral':
-      return '😐 보통';
-    case 'sad':
-      return '😢 슬픔';
-    case 'anxious':
-      return '😰 불안';
-    case 'hopeful':
-      return '💫 기대';
-    default:
-      return mood;
-  }
-}
+const _diaryMovedBannerDismissedKey = 'bom_diary_moved_banner_dismissed';
 
 String _todayStr() {
   final now = DateTime.now();
@@ -56,26 +29,14 @@ class RecordsScreen extends ConsumerStatefulWidget {
 class _RecordsScreenState extends ConsumerState<RecordsScreen> {
   String _activeTab = 'daily';
   List<HormoneRecord> _records = [];
-  List<DiaryEntry> _diaries = [];
   bool _loadingHormones = true;
-  bool _loadingDiaries = true;
-
-  String? _selectedMood;
-  final _diaryCtrl = TextEditingController();
-  String _aiFeedback = '';
-  bool _savingDiary = false;
-  String? _diaryError;
+  bool _showDiaryMovedBanner = false;
 
   @override
   void initState() {
     super.initState();
     _load();
-  }
-
-  @override
-  void dispose() {
-    _diaryCtrl.dispose();
-    super.dispose();
+    _checkDiaryMovedBanner();
   }
 
   Future<void> _load() async {
@@ -86,28 +47,34 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     } finally {
       if (mounted) setState(() => _loadingHormones = false);
     }
+  }
+
+  Future<void> _checkDiaryMovedBanner() async {
+    final prefs = await SharedPreferences.getInstance();
+    final dismissed = prefs.getBool(_diaryMovedBannerDismissedKey) ?? false;
+    if (mounted) setState(() => _showDiaryMovedBanner = !dismissed);
+  }
+
+  Future<void> _dismissDiaryMovedBanner() async {
+    setState(() => _showDiaryMovedBanner = false);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_diaryMovedBannerDismissedKey, true);
+  }
+
+  Future<void> _goToCalendarWithLatestNote() async {
     try {
-      final diaries = await ref.read(diaryApiProvider).getAll();
-      DiaryEntry? today;
-      for (final d in diaries) {
-        if (d.date == _todayStr()) {
-          today = d;
-          break;
-        }
-      }
-      if (mounted) {
-        setState(() {
-          _diaries = diaries;
-          if (today != null) {
-            _selectedMood = today.mood;
-            _diaryCtrl.text = today.content;
-            _aiFeedback = today.aiAnalysis ?? '';
-          }
-        });
-      }
+      final notes = await ref.read(dailyNotesApiProvider).getAll();
+      final withContent = notes
+          .where((n) => n.memo.isNotEmpty || n.condition != null)
+          .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+      final targetDate = withContent.isNotEmpty
+          ? withContent.first.date
+          : _todayStr();
+      ref.read(pendingCalendarOpenDateProvider.notifier).state = targetDate;
+      if (mounted) context.go('/calendar');
     } catch (_) {
-    } finally {
-      if (mounted) setState(() => _loadingDiaries = false);
+      if (mounted) context.go('/calendar');
     }
   }
 
@@ -146,60 +113,69 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     }
   }
 
-  Future<void> _handleSaveDiary() async {
-    if (_diaryCtrl.text.trim().isEmpty) {
-      setState(() => _diaryError = '오늘의 마음 일기 내용을 작성해 주세요.');
-      return;
-    }
-    setState(() {
-      _savingDiary = true;
-      _diaryError = null;
-    });
-    final mood = _selectedMood ?? 'neutral';
-    var aiAnalysis = '';
-    try {
-      final baseUrl = ref.read(apiClientProvider).dio.options.baseUrl;
-      final res = await Dio().post<String>(
-        '$baseUrl/ai',
-        data: {
-          'messages': [
-            {
-              'role': 'user',
-              'content':
-                  '다음 일기를 쓴 사용자의 감정을 따뜻하게 공감하고, 힘이 나는 응원 편지를 2-3문장으로 다정하게 써주세요. 의학적 판단은 금지입니다:\n\n"${_diaryCtrl.text}"',
-              'timestamp': DateTime.now().toIso8601String(),
-            },
-          ],
-        },
-        options: Options(
-          responseType: ResponseType.plain,
-          receiveTimeout: const Duration(seconds: 20),
-        ),
-      );
-      aiAnalysis = (res.data != null && res.data!.trim().isNotEmpty)
-          ? res.data!
-          : getLocalMockFeedback(mood);
-    } catch (_) {
-      aiAnalysis = getLocalMockFeedback(mood);
-    }
-
-    setState(() => _aiFeedback = aiAnalysis);
-
-    try {
-      await ref.read(diaryApiProvider).save(_todayStr(), {
-        'mood': mood,
-        'content': _diaryCtrl.text,
-        'aiAnalysis': aiAnalysis,
-      });
-      final diaries = await ref.read(diaryApiProvider).getAll();
-      if (mounted) setState(() => _diaries = diaries);
-    } on ApiException catch (e) {
-      if (mounted) setState(() => _diaryError = e.message);
-    } catch (_) {
-      if (mounted) setState(() => _diaryError = '일기 저장에 실패했습니다.');
-    } finally {
-      if (mounted) setState(() => _savingDiary = false);
-    }
+  Widget _diaryMovedBanner() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceAlt,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.primaryLight),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('🌸', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '감정일기가 캘린더로 이사했어요',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  '기존에 쓰신 일기는 해당 날짜의 메모에서 그대로 볼 수 있어요.',
+                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                ),
+                const SizedBox(height: 6),
+                TextButton(
+                  onPressed: _goToCalendarWithLatestNote,
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    '캘린더에서 보기 →',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: _dismissDiaryMovedBanner,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: const Icon(
+              Icons.close_rounded,
+              size: 16,
+              color: AppColors.textMuted,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -209,14 +185,10 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     final currentStage = profile?.currentStage;
     final recordTabs = getRecordTabs(treatmentMode);
 
-    final loadingAny = _activeTab == 'diary'
-        ? _loadingDiaries
-        : _loadingHormones;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: loadingAny
+        child: _loadingHormones
             ? const Center(
                 child: CircularProgressIndicator(color: AppColors.primary),
               )
@@ -246,6 +218,10 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
                       const SizedBox(width: 40),
                     ],
                   ),
+                  if (_showDiaryMovedBanner) ...[
+                    const SizedBox(height: 8),
+                    _diaryMovedBanner(),
+                  ],
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.all(4),
@@ -289,7 +265,6 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
                   if (_activeTab == 'hospital')
                     _buildHospitalTab(treatmentMode, currentStage),
                   if (_activeTab == 'procedure') _buildProcedureTab(),
-                  if (_activeTab == 'diary') _buildDiaryTab(),
                 ],
               ),
       ),
@@ -975,286 +950,4 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     );
   }
 
-  Widget _buildDiaryTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Row(
-          children: [
-            Icon(Icons.edit_note_rounded, size: 18, color: AppColors.primary),
-            SizedBox(width: 6),
-            Text(
-              '오늘의 마음 일기',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark,
-              ),
-            ),
-          ],
-        ),
-        const Text(
-          '시술 중 겪는 미묘한 감정을 기록하고 위로받으세요',
-          style: TextStyle(fontSize: 12, color: AppColors.textMuted),
-        ),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.primaryLight),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                '오늘 나의 마음 날씨는 어떤가요?',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _diaryMoods.map((m) {
-                  final active = _selectedMood == m.value;
-                  return GestureDetector(
-                    onTap: () => setState(() => _selectedMood = m.value),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      decoration: BoxDecoration(
-                        color: active ? AppColors.primary : AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(m.icon, style: const TextStyle(fontSize: 20)),
-                          Text(
-                            m.label,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: active
-                                  ? Colors.white
-                                  : AppColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _diaryCtrl,
-                maxLines: 5,
-                onChanged: (_) {
-                  if (_diaryError != null) setState(() => _diaryError = null);
-                },
-                decoration: const InputDecoration(
-                  hintText:
-                      '시술 준비 과정에서 느끼신 사소한 감정이나 몸의 변화를 차분히 남겨 보세요. 다정히 위로해 드릴게요.',
-                ),
-              ),
-              if (_diaryError != null) ...[
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.warning_amber_rounded,
-                      size: 14,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      _diaryError!,
-                      style: const TextStyle(fontSize: 12, color: Colors.red),
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _savingDiary ? null : _handleSaveDiary,
-                  child: _savingDiary
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('일기 등록 & AI 위로 편지 받기'),
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (_aiFeedback.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF8FA),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.primaryLight),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
-                  children: [
-                    Icon(Icons.mail_rounded, size: 15, color: AppColors.primary),
-                    SizedBox(width: 6),
-                    Text(
-                      'AI 동반자가 보낸 편지',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  _aiFeedback,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppColors.textDark,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '* 이 응원은 자가 일기 분석에 따른 멘탈 케어로, 의학적 해석을 대체하지 않습니다.',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: AppColors.textMutedLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: 16),
-        Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.primaryLight),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.event_rounded, size: 15, color: AppColors.primary),
-                  SizedBox(width: 6),
-                  Text(
-                    '과거의 마음 기록들',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              if (_diaries.isEmpty)
-                const Text(
-                  '과거의 마음 기록이 없습니다.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textMutedLight,
-                  ),
-                )
-              else
-                ..._diaries.map(
-                  (d) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _moodLabel(d.mood),
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textDark,
-                              ),
-                            ),
-                            Text(
-                              d.date,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          d.content,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textDark,
-                          ),
-                        ),
-                        if (d.aiAnalysis != null &&
-                            d.aiAnalysis!.isNotEmpty) ...[
-                          const SizedBox(height: 6),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Icon(
-                                  Icons.mail_rounded,
-                                  size: 12,
-                                  color: AppColors.textDark,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    d.aiAnalysis!,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: AppColors.textDark,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
 }

@@ -20,6 +20,7 @@ import 'features/settings/settings_screen.dart';
 import 'features/shell/tab_shell.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/subscription/subscription_screen.dart';
+import 'features/subsidy/subsidy_calculator_screen.dart';
 import 'state/auth_controller.dart';
 import 'state/providers.dart';
 import 'widgets/update_modal.dart';
@@ -80,6 +81,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const CoupleScreen(),
       ),
       GoRoute(path: '/chat', builder: (context, state) => const ChatScreen()),
+      GoRoute(
+        path: '/subsidy-calculator',
+        builder: (context, state) => SubsidyCalculatorScreen(
+          initialProcedureKey: state.uri.queryParameters['procedure'],
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             TabShell(navigationShell: navigationShell),

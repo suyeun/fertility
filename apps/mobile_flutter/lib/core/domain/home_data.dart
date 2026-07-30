@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/cycle.dart';
-import '../models/diary.dart';
+import '../models/daily_note.dart';
 import '../models/enums.dart';
 import '../models/hormone_record.dart';
 import '../models/treatment.dart';
@@ -548,7 +548,7 @@ class _WeekStreakResult {
 _WeekStreakResult _buildWeekStreak(
   TreatmentMode mode,
   List<HormoneRecord> hormones,
-  List<DiaryEntry> diaries,
+  List<DailyNote> diaries,
   List<TreatmentSchedule> schedules,
   DateTime today,
 ) {
@@ -633,7 +633,7 @@ HomeData buildHomeData({
   required List<MenstrualCycle> cycles,
   required List<HormoneRecord> hormones,
   required List<TreatmentSchedule> schedules,
-  required List<DiaryEntry> diaries,
+  required List<DailyNote> diaries,
 }) {
   final now = DateTime.now();
   final today = DateTime(now.year, now.month, now.day);

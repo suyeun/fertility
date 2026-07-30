@@ -2,12 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/purchases/purchases_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../widgets/bom_logo.dart';
 
+const _termsOfUseUrl =
+    'https://cuboid-string-459.notion.site/BOM-3ab4e4079c788019b0e9e946d351ca7f';
+const _privacyPolicyUrl =
+    'https://cuboid-string-459.notion.site/Lunera-3864e4079c7880699f4cf6ac9f9c7952';
+
 const _features = [
+  (icon: Icons.savings_rounded, text: '💰 지원금 상세 내역 & 신청 서류 체크리스트'),
+  (icon: Icons.alarm_rounded, text: '⏰ 지원금 신청 마감 자동 알림'),
+  (icon: Icons.medical_information_rounded, text: '💊 약제비 청구 가이드'),
   (icon: Icons.smart_toy_rounded, text: 'AI 채팅 무제한 — 수치·주기·시술 Q&A'),
   (icon: Icons.thermostat_rounded, text: '호르몬 수치 트렌드 분석 리포트'),
   (icon: Icons.medication_rounded, text: '약물 복용 알림 + 시술 일정 관리'),
@@ -71,6 +80,34 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
   String _monthlyPriceFromAnnual(Package pkg) {
     final monthly = (pkg.storeProduct.price / 12).round();
     return '월 $monthly원';
+  }
+
+  String _trialDisclosure(Package pkg) {
+    final store = pkg.storeProduct;
+    final periodWord = _isAnnual(pkg) ? '매년' : '매월';
+    final intro = store.introductoryPrice;
+    if (intro != null && intro.price == 0) {
+      final trial = _periodLabel(intro.periodNumberOfUnits, intro.periodUnit);
+      return '$trial 무료체험 후 $periodWord ${store.priceString}이 자동 결제됩니다.\n'
+          '체험 종료 전 언제든 해지하면 요금이 청구되지 않아요.';
+    }
+    return '$periodWord ${store.priceString}이 자동 결제됩니다.\n'
+        '언제든지 App Store / Play Store에서 해지할 수 있어요.';
+  }
+
+  String _periodLabel(int units, PeriodUnit unit) {
+    switch (unit) {
+      case PeriodUnit.day:
+        return '$units일';
+      case PeriodUnit.week:
+        return '$units주';
+      case PeriodUnit.month:
+        return '$units개월';
+      case PeriodUnit.year:
+        return '$units년';
+      case PeriodUnit.unknown:
+        return '$units';
+    }
   }
 
   Future<void> _handlePurchase() async {
@@ -439,14 +476,57 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            if (_selected != null)
+              Text(
+                _trialDisclosure(_selected!),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textDark,
+                  height: 1.6,
+                ),
+              ),
+            const SizedBox(height: 6),
             const Text(
-              '구독은 자동 갱신되며 갱신 전 24시간 이내에 요금이 청구됩니다.\n언제든지 App Store / Play Store 설정에서 해지할 수 있습니다.\n구매 시 이용약관 및 개인정보처리방침에 동의하는 것으로 간주됩니다.',
+              '구매 시 이용약관 및 개인정보처리방침에 동의하는 것으로 간주됩니다.',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 10,
                 color: Color(0xFFC4A0AE),
                 height: 1.6,
               ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => launchUrl(Uri.parse(_termsOfUseUrl)),
+                  child: const Text(
+                    '이용약관',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+                const Text(
+                  '·',
+                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                ),
+                TextButton(
+                  onPressed: () => launchUrl(Uri.parse(_privacyPolicyUrl)),
+                  child: const Text(
+                    '개인정보처리방침',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),

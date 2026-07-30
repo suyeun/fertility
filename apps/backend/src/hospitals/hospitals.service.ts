@@ -2,7 +2,7 @@ import {
   Injectable, NotFoundException, InternalServerErrorException, Logger,
 } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'node:crypto'
 import type { Hospital, HospitalSuggestPayload } from '@fertility/shared'
 
 @Injectable()
@@ -67,7 +67,7 @@ export class HospitalsService {
   // ──────────────────────────────────────────
   async suggest(uid: string, data: HospitalSuggestPayload): Promise<void> {
     try {
-      await this.firebase.collection('hospital_suggestions').doc(uuidv4()).set({
+      await this.firebase.collection('hospital_suggestions').doc(randomUUID()).set({
         ...data,
         requestedBy: uid,
         status: 'PENDING',

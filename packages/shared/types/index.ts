@@ -190,6 +190,20 @@ export interface DiaryEntry {
   createdAt: string
 }
 
+// 캘린더 일별 상세의 메모/컨디션 — Flutter 앱의 감정일기를 대체.
+// diary_entries(위 DiaryEntry)는 원본 보존용으로 그대로 유지되며 web은
+// 계속 사용하지만, 신규 daily_notes는 Flutter 전용 upsert(날짜당 1건).
+export interface DailyNote {
+  id: string
+  userId: string
+  date: string
+  memo?: string
+  condition?: number // 1(많이 힘듦) ~ 5(좋음)
+  migratedFromDiary: boolean
+  createdAt: string
+  updatedAt: string
+}
+
 // 앱의 핵심 모드: 자연임신 준비 vs 병원 시술
 export type UserMode = 'NATURAL' | 'CLINIC'
 

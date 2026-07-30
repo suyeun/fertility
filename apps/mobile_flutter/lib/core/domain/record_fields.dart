@@ -9,16 +9,12 @@ class RecordTab {
 
 List<RecordTab> getRecordTabs(TreatmentMode mode) {
   if (mode == 'natural') {
-    return const [
-      RecordTab(key: 'daily', label: '일반 기록'),
-      RecordTab(key: 'diary', label: '감정·증상'),
-    ];
+    return const [RecordTab(key: 'daily', label: '일반 기록')];
   }
   return const [
     RecordTab(key: 'daily', label: '일반 기록'),
     RecordTab(key: 'hospital', label: '병원 수치'),
     RecordTab(key: 'procedure', label: '시술 지표'),
-    RecordTab(key: 'diary', label: '감정·증상'),
   ];
 }
 

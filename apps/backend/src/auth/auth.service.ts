@@ -1,7 +1,7 @@
 import { Injectable, ConflictException, UnauthorizedException, InternalServerErrorException, Logger } from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import * as bcrypt from 'bcryptjs'
-import { v4 as uuidv4 } from 'uuid'
+import { randomUUID } from 'node:crypto'
 import { FirebaseService } from '../firebase/firebase.service'
 import { SignupDto, LoginDto } from './dto/auth.dto'
 import { sanitizeUser } from '../users/users.service'
@@ -23,7 +23,7 @@ export class AuthService {
       const existing = await usersRef.where('email', '==', dto.email).limit(1).get()
       if (!existing.empty) throw new ConflictException('이미 사용 중인 이메일입니다')
 
-      const uid = uuidv4()
+      const uid = randomUUID()
       const passwordHash = await bcrypt.hash(dto.password, 10)
       const now = new Date().toISOString()
 

@@ -235,12 +235,15 @@ flutter build ipa --release \
 | GET/POST | `/api/cycles` | 생리 주기 |
 | GET/POST/DELETE | `/api/hormones` | 호르몬 기록 |
 | GET/POST/PATCH/DELETE | `/api/treatment` | 시술 일정 |
-| GET/POST/DELETE | `/api/diary/:date` | 감정 일기 |
+| GET/GET(:date)/POST/DELETE | `/api/daily-notes` | 캘린더 일별 메모·컨디션 (감정일기 대체, 날짜당 1건) |
 | POST | `/api/ai/chat` | AI 채팅 (스트리밍) |
 | GET/POST | `/api/ai/history` | 채팅 히스토리 |
 | GET/POST | `/api/community/posts` | 커뮤니티 게시글 |
 | GET/POST | `/api/community/secret` | 비밀 대화방 |
 | POST | `/api/notifications/token` | FCM 토큰 등록 |
+| GET | `/api/subsidy/rules` | 난임 시술 지원금 규칙(국가/지자체, 인증 불필요) |
+| GET/PATCH | `/api/subsidy/profile` | 지원금 프로필(거주지·차수·체크리스트) |
+| POST | `/api/subsidy/profile/calculations` | 지원금 계산 결과 저장 |
 
 모든 엔드포인트는 `Authorization: Bearer <JWT>` 헤더 필요 (auth 제외).
 
@@ -259,5 +262,7 @@ flutter build ipa --release \
 - [x] NestJS 백엔드 (모든 데이터 서버 경유)
 - [x] 푸시 알림 (로컬: 약물·D-1·BBT 독려 / 원격: FCM)
 - [x] 인앱결제 (RevenueCat — 페이월 화면, 구매/복원, 백엔드 웹훅)
+- [x] 난임 시술 지원금 계산기 (홈/병원탭/캘린더 통합, 지원금 규칙은 원격 갱신)
+- [x] 감정일기 → 캘린더 메모 통합 (Flutter+웹 모두 제거, 기록 탭 단순화, 기존 데이터 daily_notes로 이관)
 - [ ] Vercel 웹 배포
 - [ ] Flutter 앱 빌드 · 스토어 제출 (iOS / Android)

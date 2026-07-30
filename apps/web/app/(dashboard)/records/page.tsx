@@ -3,10 +3,10 @@
 
 import React, { useEffect, useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { hormonesApi, diaryApi, usersApi, useUserStore, getRecordTabs, getHospitalFields, getDailyFields } from '@fertility/shared'
+import { hormonesApi, usersApi, useUserStore, getRecordTabs, getHospitalFields, getDailyFields } from '@fertility/shared'
 import type { TreatmentMode, CurrentStage } from '@fertility/shared'
-import { HormoneRecord, DiaryEntry, Mood } from '@fertility/shared'
-import { Plus, Info, TrendingUp, Calendar, Trash2, BookOpen, Sparkles, AlertCircle } from 'lucide-react'
+import { HormoneRecord } from '@fertility/shared'
+import { Plus, Info, TrendingUp, Calendar, Trash2, Sparkles } from 'lucide-react'
 
 type HormoneType = 'amh' | 'fsh' | 'lh' | 'estradiol' | 'progesterone' | 'bbt' | 'opkIndex'
 
@@ -177,15 +177,6 @@ export default function RecordsPage() {
   const [showHospitalHormones, setShowHospitalHormones] = useState(false)
   const [showNaturalIndicators, setShowNaturalIndicators] = useState(false)
 
-  // 일기 관련 상태
-  const [diaries, setDiaries] = useState<DiaryEntry[]>([])
-  const [loadingDiaries, setLoadingDiaries] = useState(true)
-  const [selectedMood, setSelectedMood] = useState<Mood>('neutral')
-  const [diaryContent, setDiaryContent] = useState('')
-  const [aiFeedback, setAiFeedback] = useState('')
-  const [savingDiary, setSavingDiary] = useState(false)
-  const [diaryError, setDiaryError] = useState<string | null>(null)
-
   const todayStr = new Date().toISOString().split('T')[0]
 
   const fetchRecords = async () => {
@@ -200,31 +191,11 @@ export default function RecordsPage() {
     }
   }
 
-  const fetchDiaries = async () => {
-    if (!user) return
-    try {
-      const data = await diaryApi.getAll()
-      setDiaries(data)
-      
-      const todayEntry = data.find(d => d.date === todayStr)
-      if (todayEntry) {
-        setSelectedMood(todayEntry.mood)
-        setDiaryContent(todayEntry.content)
-        setAiFeedback(todayEntry.aiAnalysis || '')
-      }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setLoadingDiaries(false)
-    }
-  }
-
   useEffect(() => {
     const init = async () => {
       if (!user) return
       setLoadingHormones(true)
-      setLoadingDiaries(true)
-      await Promise.all([fetchRecords(), fetchDiaries()])
+      await fetchRecords()
     }
     init()
   }, [user])
@@ -326,82 +297,6 @@ export default function RecordsPage() {
   }
 
 
-
-  const handleSaveDiary = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!user) return
-    if (!diaryContent.trim()) {
-      setDiaryError('오늘의 마음 일기 내용을 작성해 주세요.')
-      return
-    }
-
-    setSavingDiary(true)
-    setDiaryError(null)
-
-    try {
-      // AI 분석 서비스 준비중 — 추후 활성화 예정
-      const aiAnalysis = ''
-
-      await diaryApi.save(todayStr, {
-        mood: selectedMood,
-        content: diaryContent,
-        aiAnalysis
-      })
-
-      await fetchDiaries()
-    } catch (err: any) {
-      setDiaryError(err.message || '일기 저장에 실패했습니다.')
-    } finally {
-      setSavingDiary(false)
-    }
-  }
-
-  const getLocalMockFeedback = (mood: Mood, text: string): string => {
-    const defaultMessages: Record<Mood, string[]> = {
-      great: [
-        "기분 좋은 하루를 보내셨다니 저도 무척 행복해집니다! 이 긍정적이고 맑은 에너지가 몸과 마음에 머물러 소중한 기적이 더 빨리 찾아올 거예요.",
-        "오늘 하루가 선물 같으셨군요! 마음껏 웃고 행복해하시는 것만큼 임신 준비에 좋은 약은 없답니다. 이 평화로운 감정이 쭉 이어지길 바라요."
-      ],
-      good: [
-        "평온하고 차분하게 하루를 보내신 것은 아주 훌륭한 마음 관리입니다. 몸도 마음도 가장 안심된 상태에서 소중한 씨앗이 싹틀 준비를 하고 있어요.",
-        "차근차근 일상을 꾸려나가며 느끼신 소소한 만족감은 큰 힘이 됩니다. 무리하지 않고 오늘처럼 평화로운 상태를 유지해 보세요."
-      ],
-      neutral: [
-        "보통의 평범한 하루 속에서도 차분히 준비해나가는 모습이 참 아름답습니다. 특별한 이벤트가 없어도 몸속 세포들은 매 순간 아기를 위해 일하고 있답니다.",
-        "오늘 하루 큰 탈 없이 흘러간 것에 감사합니다. 무난하게 보내신 일상 역시 임신 준비에 있어서는 든든한 밑거름이 됩니다."
-      ],
-      sad: [
-        "마음 한구석이 젖어드는 날이었군요. 눈물이 나거나 서글픈 것은 지극히 자연스러운 과정이니 스스로를 너무 다그치지 마세요. 제가 언제나 곁에서 안아드릴게요.",
-        "기다림의 시간이 길어져 서러운 마음이 드는 날도 있지요. 오늘은 좋아하는 따뜻한 차 한 잔을 마시며 스스로에게 참 잘해왔다고 말해주세요. 반드시 봄은 옵니다."
-      ],
-      anxious: [
-        "시술 일정이나 결과에 대해 걱정이 꼬리를 무는 날이군요. 불안한 생각은 잠시 내려놓고 깊은 호흡을 3번 해보세요. 당신의 몸은 생각보다 강하고 지혜롭습니다.",
-        "불안함은 아기를 너무나 기다리는 애틋한 사랑에서 비롯된 감정입니다. 잘하고 있고, 잘 될 테니 오늘은 따뜻한 온수 샤워를 하고 푹 자도록 해요."
-      ],
-      hopeful: [
-        "마음속 가득 품으신 기분 좋은 기대감이 온 몸에 긍정적인 파동을 보내고 있습니다. 소중하고 둥글둥글한 기적이 곧 눈앞에 나타날 것만 같아요!",
-        "희망을 품고 용기를 내는 당신의 발걸음은 결코 헛되지 않습니다. 기대하시는 그 따사로운 소식이 곧 품에 안길 것을 함께 믿어요."
-      ],
-      excited: [
-        "설레는 마음이 몸속까지 환하게 비추고 있는 하루네요! 그 두근거림을 마음껏 즐기세요. 긍정적인 기대감은 호르몬 균형에도 참 좋은 영향을 줍니다.",
-        "오늘처럼 설레는 날이 자주 찾아오길 바랍니다. 두근두근한 기분 그대로 소중한 하루를 꽉 채워보세요!"
-      ],
-      tired: [
-        "오늘 많이 지치고 힘드셨군요. 몸이 보내는 신호에 귀를 기울여 충분히 쉬어주세요. 잘 쉬는 것도 아기를 맞이하는 준비랍니다.",
-        "피로가 쌓인 날은 억지로 버티기보다 일찍 자리에 누워 몸에게 충전 시간을 주세요. 내일은 분명 오늘보다 가벼운 아침이 올 거예요."
-      ],
-      angry: [
-        "감정이 격해지는 날도 있지요. 화가 나는 감정을 억누르기보다 잠깐 심호흡하고 그 마음을 인정해 주세요. 당신의 감정은 모두 소중합니다.",
-        "울컥하는 마음이 드는 건 그만큼 간절하게 바라는 것이 있다는 증거예요. 감정을 충분히 표현하고 나면 마음이 훨씬 가벼워질 거예요."
-      ],
-      sick: [
-        "몸이 좋지 않은 날은 무엇보다 충분한 휴식이 최우선입니다. 스스로를 챙기는 것이 가장 좋은 임신 준비예요. 빨리 나으시길 바랍니다.",
-        "아픈 몸으로도 하루를 보내느라 정말 수고하셨어요. 따뜻하게 몸을 녹이고 푹 쉬면서 기운을 회복해 주세요."
-      ]
-    }
-    const pool = defaultMessages[mood] || defaultMessages['neutral']
-    return pool[Math.floor(Math.random() * pool.length)]
-  }
 
   // 호르몬 차트 데이터 계산
   const chartData = [...records]
@@ -507,15 +402,6 @@ export default function RecordsPage() {
       }
     })
   }
-
-  const moods: { value: Mood; icon: string; label: string }[] = [
-    { value: 'great', icon: '😄', label: '행복' },
-    { value: 'good', icon: '😊', label: '평온' },
-    { value: 'neutral', icon: '😐', label: '보통' },
-    { value: 'sad', icon: '😢', label: '슬픔' },
-    { value: 'anxious', icon: '😰', label: '불안' },
-    { value: 'hopeful', icon: '💫', label: '기대' },
-  ];
 
   return (
     <div className="space-y-5">
@@ -739,120 +625,6 @@ export default function RecordsPage() {
               </div>
             ) : (
               <p className="text-xs text-gray-400 text-center py-6">등록된 기록이 없습니다.</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── 감정 일기 탭 ── */}
-      {activeTab === 'diary' && (
-        <div className="space-y-5 animate-fade-in">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-xl font-bold text-rose-950 flex items-center gap-1.5">
-                <BookOpen size={20} className="text-primary" />
-                감정 일기 & 심리 케어
-              </h2>
-              <p className="text-xs text-rose-900/50 mt-0.5">시술 중 느끼는 마음의 날씨를 솔직하게 기록해요</p>
-            </div>
-          </div>
-
-          {/* 작성 폼 */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 space-y-4">
-            <h3 className="text-xs font-bold text-slate-800">
-              오늘 나의 마음 상태는 어떤가요?
-            </h3>
-
-            {/* 감정 선택 리스트 */}
-            <div className="grid grid-cols-6 gap-2">
-              {moods.map((m) => (
-                <button
-                  key={m.value}
-                  type="button"
-                  onClick={() => setSelectedMood(m.value)}
-                  className={`flex flex-col items-center gap-1 p-2 rounded-2xl border text-center transition-all ${
-                    selectedMood === m.value
-                      ? 'border-primary bg-rose-50/50 text-rose-950 scale-105 font-bold'
-                      : 'border-rose-100/50 hover:bg-rose-50/10 text-gray-500'
-                  }`}
-                >
-                  <span className="text-2xl">{m.icon}</span>
-                  <span className="text-[9px] tracking-tight">{m.label}</span>
-                </button>
-              ))}
-            </div>
-
-            <form onSubmit={handleSaveDiary} className="space-y-4">
-              <textarea
-                value={diaryContent}
-                onChange={(e) => setDiaryContent(e.target.value)}
-                placeholder="오늘 하루 있었던 일이나 시술 중 드는 감정을 자유롭게 써보세요. 솔직하게 적을수록 마음이 편안해질 거예요."
-                rows={4}
-                disabled={savingDiary}
-                className="w-full px-4 py-3 text-xs rounded-2xl border border-rose-100 bg-rose-50/10 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none leading-relaxed"
-              />
-
-              {diaryError && (
-                <div className="text-[11px] text-red-600 flex items-center gap-1">
-                  <AlertCircle size={12} /> {diaryError}
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={savingDiary}
-                className="w-full py-3.5 bg-primary text-white rounded-2xl text-sm font-semibold hover:bg-rose-500 active-press transition-all flex justify-center items-center gap-2 shadow-lg shadow-rose-200"
-              >
-                {savingDiary ? '저장 중...' : '오늘 일기 저장'}
-              </button>
-            </form>
-          </div>
-
-          {/* AI 위로 피드백 — 서비스 준비중 */}
-          <div className="bg-rose-50 rounded-3xl p-5 border border-rose-100/60 flex items-center gap-3">
-            <span className="text-2xl">🌸</span>
-            <div>
-              <p className="text-xs font-bold text-rose-400">AI 감정 분석 — 서비스 준비중</p>
-              <p className="text-[10px] text-rose-300 mt-0.5">곧 AI가 일기를 읽고 따뜻한 위로를 전해드릴게요 💕</p>
-            </div>
-          </div>
-
-          {/* 과거 일기 내역 */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100">
-            <h3 className="text-xs font-bold text-slate-800 mb-3.5 flex items-center gap-1.5">
-              <Calendar size={14} className="text-primary" />
-              과거의 마음 기록들
-            </h3>
-
-            {diaries.length > 0 ? (
-              <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
-                {diaries.map((d, i) => (
-                  <div key={d.id || i} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg">
-                        {d.mood === 'great' && '😄 행복'}
-                        {d.mood === 'good' && '😊 평온'}
-                        {d.mood === 'neutral' && '😐 보통'}
-                        {d.mood === 'sad' && '😢 슬픔'}
-                        {d.mood === 'anxious' && '😰 불안'}
-                        {d.mood === 'hopeful' && '💫 기대'}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-semibold">{d.date}</span>
-                    </div>
-                    <p className="text-gray-600 leading-relaxed bg-white p-2.5 rounded-xl border border-slate-100/50">
-                      {d.content}
-                    </p>
-                    {d.aiAnalysis && (
-                      <div className="bg-rose-50/30 p-2.5 rounded-xl border border-rose-100/20 text-[10px] text-rose-800 leading-relaxed">
-                        <span className="font-bold block mb-1">💌 AI 동반자 피드백:</span>
-                        {d.aiAnalysis}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 text-center py-6">이전에 작성된 일기가 아직 없습니다.</p>
             )}
           </div>
         </div>
