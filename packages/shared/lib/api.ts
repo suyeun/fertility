@@ -213,15 +213,6 @@ export const communityApi = {
   getComments: (id: string) => request('GET', `/community/posts/${id}/comments`),
   addComment: (id: string, content: string, anonymousName?: string) =>
     request('POST', `/community/posts/${id}/comments`, { content, anonymousName }),
-
-  // 레거시 — SecretChatTab 컴포넌트 호환용 (추후 제거 예정)
-  getSecretPosts: (tag?: string) => request('GET', `/community/secret${tag ? `?tag=${tag}` : ''}`),
-  createSecretPost: (data: any) => request('POST', '/community/secret', data),
-  reactSecretPost: (id: string, reaction: 'cheer' | 'empathy' | 'pray') =>
-    request('POST', `/community/secret/${id}/react`, { reaction }),
-  getSecretComments: (id: string) => request('GET', `/community/secret/${id}/comments`),
-  addSecretComment: (id: string, content: string, anonymousName?: string) =>
-    request('POST', `/community/secret/${id}/comments`, { content, anonymousName }),
 }
 
 export const notificationsApi = {

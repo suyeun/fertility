@@ -9,7 +9,6 @@ import 'core/router/go_router_refresh_stream.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/login_screen.dart';
 import 'features/calendar/calendar_screen.dart';
-import 'features/chat/chat_screen.dart';
 import 'features/community/community_screen.dart';
 import 'features/couple/couple_screen.dart';
 import 'features/home/home_screen.dart';
@@ -80,7 +79,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/couple',
         builder: (context, state) => const CoupleScreen(),
       ),
-      GoRoute(path: '/chat', builder: (context, state) => const ChatScreen()),
       GoRoute(
         path: '/subsidy-calculator',
         builder: (context, state) => SubsidyCalculatorScreen(

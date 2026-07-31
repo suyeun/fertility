@@ -29,9 +29,6 @@ final treatmentApiProvider = Provider<TreatmentApi>(
 final dailyNotesApiProvider = Provider<DailyNotesApi>(
   (ref) => DailyNotesApi(ref.watch(apiClientProvider)),
 );
-final aiApiProvider = Provider<AiApi>(
-  (ref) => AiApi(ref.watch(apiClientProvider)),
-);
 final communityApiProvider = Provider<CommunityApi>(
   (ref) => CommunityApi(ref.watch(apiClientProvider)),
 );

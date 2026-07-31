@@ -442,15 +442,6 @@ List<HomeTask> _getDefaultTasks(
         done: false,
         route: '/records',
       ),
-      HomeTask(
-        id: 'chat',
-        icon: Icons.chat_bubble_rounded,
-        title: '봄이에게 이야기하기',
-        subtitle: 'AI 채팅으로 마음 나눠요',
-        colorKey: 'indigo',
-        done: false,
-        route: '/chat',
-      ),
     ],
   };
 

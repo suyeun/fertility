@@ -17,7 +17,6 @@ const _features = [
   (icon: Icons.savings_rounded, text: '💰 지원금 상세 내역 & 신청 서류 체크리스트'),
   (icon: Icons.alarm_rounded, text: '⏰ 지원금 신청 마감 자동 알림'),
   (icon: Icons.medical_information_rounded, text: '💊 약제비 청구 가이드'),
-  (icon: Icons.smart_toy_rounded, text: 'AI 채팅 무제한 — 수치·주기·시술 Q&A'),
   (icon: Icons.thermostat_rounded, text: '호르몬 수치 트렌드 분석 리포트'),
   (icon: Icons.medication_rounded, text: '약물 복용 알림 + 시술 일정 관리'),
   (icon: Icons.bar_chart_rounded, text: '사이클 패턴 심층 분석'),

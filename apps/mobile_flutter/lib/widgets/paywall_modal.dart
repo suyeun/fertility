@@ -44,7 +44,6 @@ const _premiumFeatures = [
   (icon: Icons.medication_rounded, text: '약물·주사 정시 알림 (핵심)'),
   (icon: Icons.calendar_month_rounded, text: '다회차 시술 일정 무제한 등록'),
   (icon: Icons.insights_rounded, text: '호르몬·주기 추이 분석 차트'),
-  (icon: Icons.smart_toy_rounded, text: 'AI 채팅 무제한 — 수치·시술 Q&A'),
   (icon: Icons.auto_awesome_rounded, text: '감정 일기 AI 분석 + 매일 응원'),
 ];
 

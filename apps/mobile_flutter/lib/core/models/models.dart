@@ -1,5 +1,4 @@
 export 'article.dart';
-export 'chat_message.dart';
 export 'community.dart';
 export 'couple.dart';
 export 'cycle.dart';

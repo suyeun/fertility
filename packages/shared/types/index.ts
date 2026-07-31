@@ -322,51 +322,6 @@ export interface CommunityComment {
 }
 
 // ============================
-// 비밀 대화방 타입 (레거시 유지)
-// ============================
-
-export type SecretTopicTag =
-  | 'retrieval'      // 채취 후기
-  | 'transfer'       // 이식 후기
-  | 'waiting'        // 결과 대기중 (β-hCG)
-  | 'luteal'         // 황체기 증상
-  | 'stimulation'    // 과배란 유도 중
-  | 'mental'         // 멘탈 관리
-  | 'relationship'   // 부부/주변 관계
-  | 'etc'            // 기타
-
-// 반응 타입 (좋아요 대신)
-export type ReactionType = 'cheer' | 'empathy' | 'pray'
-
-export interface Reactions {
-  cheer: string[]    // 응원해요 💪
-  empathy: string[]  // 공감해요 🤗
-  pray: string[]     // 같이기도 🙏
-}
-
-export interface SecretPost {
-  id: string
-  authorToken: string
-  anonymousName: string
-  topicTag: SecretTopicTag
-  content: string
-  likes: string[]        // 레거시 (하위 호환)
-  reactions?: Reactions  // 신규 반응
-  commentsCount: number
-  createdAt: string
-}
-
-export interface SecretComment {
-  id: string
-  postId: string
-  authorToken: string
-  anonymousName: string
-  isAuthor: boolean     // 댓글 작성자 = 포스트 작성자 여부
-  content: string
-  createdAt: string
-}
-
-// ============================
 // 부부 공유 (Couple Linking) 타입
 // ============================
 

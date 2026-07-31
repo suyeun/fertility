@@ -917,49 +917,6 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
           ],
         ),
       ),
-      const SizedBox(height: 12),
-      GestureDetector(
-        onTap: () => context.push('/chat'),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEDE9FE),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFC4B5FD)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                '🤖 지원 신청이 헷갈리세요?',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF5B21B6),
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'AI 봄이에게 내 상황에 맞는 지원 정보를 물어보세요',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF6D28D9),
-                  height: 1.4,
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'AI 상담 시작하기 →',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF7C3AED),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     ];
   }
 
