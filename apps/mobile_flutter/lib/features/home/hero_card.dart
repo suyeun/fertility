@@ -316,7 +316,7 @@ class HeroCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        next.title.isNotEmpty ? next.title : nextMarker.label,
+                        next.displayTitle(nextMarker.label),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
@@ -381,7 +381,7 @@ class HeroCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${s.title.isNotEmpty ? s.title : m.label}  ·  ${d.month}월 ${d.day}일  ${_getDDay(d)}',
+                      '${s.displayTitle(m.label)}  ·  ${d.month}월 ${d.day}일  ${_getDDay(d)}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xE6FFFFFF),

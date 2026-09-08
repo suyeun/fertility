@@ -210,8 +210,12 @@ class LocalNotifications {
 
     final upcoming = schedules.where((s) => s.status == 'scheduled');
     for (final schedule in upcoming) {
-      final apptId = await _scheduleAppointmentReminder(schedule);
-      if (apptId != null) apptIds.add(apptId);
+      // 배우자 일정의 D-1 리마인더는 백엔드가 배우자용 푸시로 보내므로
+      // 기기 로컬 알림은 내 일정에만 잡는다 (중복 방지).
+      if (!schedule.isPartnerRecord) {
+        final apptId = await _scheduleAppointmentReminder(schedule);
+        if (apptId != null) apptIds.add(apptId);
+      }
 
       for (final med in schedule.medications ?? const <Medication>[]) {
         final ids = await _scheduleMedicationReminder(med);

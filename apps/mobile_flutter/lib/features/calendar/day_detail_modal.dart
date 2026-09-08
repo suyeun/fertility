@@ -843,8 +843,16 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                   margin: const EdgeInsets.only(bottom: 8),
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppColors.surface,
+                                    color: sc.isPartnerRecord
+                                        ? Colors.white
+                                        : AppColors.surface,
                                     borderRadius: BorderRadius.circular(12),
+                                    border: sc.isPartnerRecord
+                                        ? Border.all(
+                                            color: AppColors.accentPurpleLight
+                                                .withValues(alpha: 0.5),
+                                          )
+                                        : null,
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
@@ -854,35 +862,81 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                         mainAxisAlignment:
                                             MainAxisAlignment.spaceBetween,
                                         children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 3,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: style.bg,
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Icon(
-                                                  _typeBadge(sc.type).icon,
-                                                  size: 11,
-                                                  color: style.fg,
+                                          Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: style.bg,
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
                                                 ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  _typeBadge(sc.type).label,
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w700,
-                                                    color: style.fg,
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      _typeBadge(sc.type).icon,
+                                                      size: 11,
+                                                      color: style.fg,
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      _typeBadge(sc.type).label,
+                                                      style: TextStyle(
+                                                        fontSize: 10,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: style.fg,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              if (sc.isPartnerRecord) ...[
+                                                const SizedBox(width: 6),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 7,
+                                                        vertical: 3,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: AppColors.surfaceAlt,
+                                                    borderRadius:
+                                                        BorderRadius.circular(8),
+                                                  ),
+                                                  child: const Row(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      Icon(
+                                                        Icons.favorite_rounded,
+                                                        size: 10,
+                                                        color: AppColors
+                                                            .accentPurple,
+                                                      ),
+                                                      SizedBox(width: 3),
+                                                      Text(
+                                                        '배우자',
+                                                        style: TextStyle(
+                                                          fontSize: 10,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color: AppColors
+                                                              .accentPurple,
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                               ],
-                                            ),
+                                            ],
                                           ),
                                           Text(
                                             timeStr,

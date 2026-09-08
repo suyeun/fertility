@@ -479,7 +479,7 @@ List<HomeTask> getTodayTasksByMode(
       HomeTask(
         id: 'sched_$i',
         icon: Icons.local_hospital_rounded,
-        title: s.title,
+        title: s.displayTitle(),
         subtitle: [
           s.hospitalName,
           time,
@@ -501,7 +501,7 @@ List<HomeTask> getTodayTasksByMode(
           HomeTask(
             id: 'med_${s.id}_${j}_$k',
             icon: Icons.vaccines_rounded,
-            title: '${med.name} ${med.dose}',
+            title: '${s.isPartnerRecord ? '배우자 · ' : ''}${med.name} ${med.dose}',
             subtitle: med.times[k],
             colorKey: 'pink',
             done: false,

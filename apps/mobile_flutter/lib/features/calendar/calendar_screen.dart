@@ -193,7 +193,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
         selectedDateStr: presetDate ?? _selectedDateStr,
         treatmentMode: _treatmentMode,
         isPremium: _isPremium,
-        existingScheduleCount: _schedules.length,
+        // 무료 1건 제한은 내 일정만 계산 — 배우자 일정은 포함하지 않는다.
+        existingScheduleCount:
+            _schedules.where((s) => !s.isPartnerRecord).length,
         onPaywall: (source) {
           Navigator.of(context).pop();
           showPaywallModal(context, source: source);
@@ -214,6 +216,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         status: s.status,
                         hospitalName: s.hospitalName,
                         notes: s.notes,
+                        isPartnerRecord: s.isPartnerRecord,
                       ),
                     )
                     .toList();
@@ -462,6 +465,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                   return DayMarker(
                                     color: colorFromHex(style.color),
                                     icon: style.icon,
+                                    hollow: s.isPartnerRecord,
                                   );
                                 }),
                                 if (dayHormone?.injectionDrug != null ||
@@ -535,7 +539,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         mode: _treatmentMode,
                         currentStage: _currentStage,
                         stageDay: stageDay,
-                        upcomingScheduleTitle: upcomingSchedule?.title,
+                        upcomingScheduleTitle: upcomingSchedule?.displayTitle(),
                         upcomingScheduleAt: upcomingSchedule?.scheduledAt,
                       ),
                       if (showNaturalCta)

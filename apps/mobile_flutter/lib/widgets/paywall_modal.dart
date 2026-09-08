@@ -23,11 +23,6 @@ _sourceContent = {
     title: '다회차 일정 관리는\n프리미엄 기능이에요',
     desc: '2회차부터는 프리미엄으로\n모든 시술 일정을 한눈에 관리하세요.',
   ),
-  PaywallSource.analytics: (
-    icon: Icons.insights_rounded,
-    title: '추이 분석은\n프리미엄 기능이에요',
-    desc: '호르몬 수치·주기 패턴·시술 결과를\n장기 차트로 분석해드려요.',
-  ),
   PaywallSource.subsidyCalculator: (
     icon: Icons.savings_rounded,
     title: '지원금 상세 내역은\n프리미엄 기능이에요',
@@ -43,8 +38,8 @@ _sourceContent = {
 const _premiumFeatures = [
   (icon: Icons.medication_rounded, text: '약물·주사 정시 알림 (핵심)'),
   (icon: Icons.calendar_month_rounded, text: '다회차 시술 일정 무제한 등록'),
-  (icon: Icons.insights_rounded, text: '호르몬·주기 추이 분석 차트'),
-  (icon: Icons.auto_awesome_rounded, text: '감정 일기 AI 분석 + 매일 응원'),
+  (icon: Icons.savings_rounded, text: '지원금 항목별 상세 · 신청 서류 체크리스트'),
+  (icon: Icons.alarm_rounded, text: '지원금 신청 마감 알림'),
 ];
 
 /// Port of apps/mobile/components/PaywallModal.tsx.
@@ -187,7 +182,8 @@ class _PaywallSheetState extends State<_PaywallSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final content = _sourceContent[widget.source]!;
+    final content =
+        _sourceContent[widget.source] ?? _sourceContent[PaywallSource.generic]!;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.85,

@@ -43,6 +43,7 @@ class TreatmentSchedule {
     this.hospitalName,
     this.notes,
     this.medications,
+    this.isPartnerRecord = false,
   });
 
   final String id;
@@ -54,6 +55,16 @@ class TreatmentSchedule {
   final String? hospitalName;
   final String? notes;
   final List<Medication>? medications;
+
+  /// 백엔드 GET /treatment 가 연결된 배우자의 기록에 붙여 내려주는 플래그.
+  /// true 면 읽기 전용(수정·삭제 불가)이며 화면에서 "배우자" 로 구분 표시한다.
+  final bool isPartnerRecord;
+
+  /// 표시용 제목 — 배우자 기록이면 "배우자 · " 접두어를 붙인다.
+  String displayTitle([String fallback = '']) {
+    final base = title.isNotEmpty ? title : fallback;
+    return isPartnerRecord ? '배우자 · $base' : base;
+  }
 
   factory TreatmentSchedule.fromJson(Map<String, dynamic> j) =>
       TreatmentSchedule(
@@ -68,6 +79,7 @@ class TreatmentSchedule {
         medications: (j['medications'] as List?)
             ?.map((e) => Medication.fromJson(e as Map<String, dynamic>))
             .toList(),
+        isPartnerRecord: j['isPartnerRecord'] == true,
       );
 
   Map<String, dynamic> toJson() => {

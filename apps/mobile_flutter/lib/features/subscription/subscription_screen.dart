@@ -17,10 +17,8 @@ const _features = [
   (icon: Icons.savings_rounded, text: '💰 지원금 상세 내역 & 신청 서류 체크리스트'),
   (icon: Icons.alarm_rounded, text: '⏰ 지원금 신청 마감 자동 알림'),
   (icon: Icons.medical_information_rounded, text: '💊 약제비 청구 가이드'),
-  (icon: Icons.thermostat_rounded, text: '호르몬 수치 트렌드 분석 리포트'),
-  (icon: Icons.medication_rounded, text: '약물 복용 알림 + 시술 일정 관리'),
-  (icon: Icons.bar_chart_rounded, text: '사이클 패턴 심층 분석'),
-  (icon: Icons.auto_awesome_rounded, text: '감정 일기 AI 분석 — 매일 응원 메시지'),
+  (icon: Icons.medication_rounded, text: '💊 약물·주사 정시 알림'),
+  (icon: Icons.calendar_month_rounded, text: '📅 다회차 시술 일정 무제한 등록'),
 ];
 
 /// Port of apps/mobile/app/subscription/index.tsx.

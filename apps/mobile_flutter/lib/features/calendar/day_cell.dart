@@ -4,9 +4,12 @@ import '../../core/domain/calendar_data.dart';
 import '../../core/theme/app_theme.dart';
 
 class DayMarker {
-  const DayMarker({required this.color, this.icon});
+  const DayMarker({required this.color, this.icon, this.hollow = false});
   final Color color;
   final IconData? icon;
+
+  /// true 면 채우지 않은 테두리 점으로 그린다 — 배우자 일정 구분용.
+  final bool hollow;
 }
 
 /// Port of apps/mobile/components/calendar/DayCell.tsx.
@@ -205,7 +208,19 @@ class DayCell extends StatelessWidget {
                       ...visibleMarkers.map(
                         (m) => Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 1),
-                          child: m.icon != null
+                          child: m.hollow
+                              ? Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: m.color,
+                                      width: 1.2,
+                                    ),
+                                  ),
+                                )
+                              : m.icon != null
                               ? Icon(m.icon!, size: 7, color: m.color)
                               : Container(
                                   width: 5,

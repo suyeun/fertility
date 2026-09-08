@@ -72,16 +72,22 @@ export class TreatmentService {
           this.logger.error('알림 발송 실패 (시술 저장은 완료됨):', err)
         })
 
-        // 2. 배우자 알림 (커플링 후 커플링 노티픽 설정 확인 없이 기본 발송)
+        // 2. 배우자 알림 — 연결된 배우자에게 (a) 등록 즉시 푸시, (b) 전날 09:00 D-1 리마인더
         const partnerUid = await this.couples.getPartnerUid(uid)
         if (partnerUid) {
           const scheduledDate = new Date(record.scheduledAt)
           const dateStr = `${scheduledDate.getMonth() + 1}월 ${scheduledDate.getDate()}일`
           const authorName = (userDoc.data() as any)?.name ?? '배우자'
+          const label = record.title || record.type
           this.notifications.sendPushToUser(partnerUid, {
-            title: '합니다! 시술 일정이 등록되었어요 관리하는 일정들 확인하실 수 있어요 예약',
-            body: `${authorName}님이 ${dateStr} 일정(${record.title || record.type})을 등록했어요.`,
+            title: '📅 배우자가 시술 일정을 등록했어요',
+            body: `${authorName}님이 ${dateStr} ${label} 일정을 등록했어요.`,
+            data: { type: 'partner_schedule', scheduleId: id },
           }).catch(e => this.logger.warn('배우자 일정 알림 실패:', e))
+
+          this.notifications
+            .scheduleAppointmentNotification(partnerUid, record, { partnerName: authorName })
+            .catch(e => this.logger.warn('배우자 D-1 알림 큐 등록 실패:', e))
         }
       }
 
@@ -101,6 +107,13 @@ export class TreatmentService {
       if (doc.data()?.userId !== uid) throw new ForbiddenException('수정 권한이 없습니다')
 
       await docRef.update({ status })
+
+      // 완료·취소된 일정은 본인·배우자 D-1 리마인더를 큐에서 제거
+      if (status !== 'scheduled') {
+        this.notifications.cancelAppointmentNotifications(id).catch(e =>
+          this.logger.warn('D-1 알림 큐 정리 실패:', e),
+        )
+      }
       return { id, status }
     } catch (err) {
       if (err instanceof NotFoundException || err instanceof ForbiddenException) throw err
@@ -118,6 +131,9 @@ export class TreatmentService {
       if (doc.data()?.userId !== uid) throw new ForbiddenException('삭제 권한이 없습니다')
 
       await docRef.delete()
+      this.notifications.cancelAppointmentNotifications(id).catch(e =>
+        this.logger.warn('D-1 알림 큐 정리 실패:', e),
+      )
     } catch (err) {
       if (err instanceof NotFoundException || err instanceof ForbiddenException) throw err
       this.logger.error('treatment delete 오류:', err)

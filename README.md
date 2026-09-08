@@ -9,7 +9,7 @@
 ```
 fertility-app/
 ├── apps/
-│   ├── web/            ← Next.js 14 (웹)
+│   ├── web/            ← Next.js 14 (랜딩 페이지 + 공개 지원금 계산기, 서비스 화면은 동결)
 │   ├── mobile_flutter/ ← Flutter (iOS + Android)
 │   └── backend/        ← NestJS API 서버 (포트 3001)
 └── packages/
@@ -57,8 +57,12 @@ ANTHROPIC_API_KEY=sk-ant-...
 ### 웹 (`apps/web/.env.local`)
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_API_URL=http://localhost:3001/api   # 지원금 규칙 조회에만 사용
+NEXT_PUBLIC_APP_STORE_URL=                      # 비어 있으면 "출시 준비 중" 표시
+NEXT_PUBLIC_PLAY_STORE_URL=
 ```
+
+> 웹은 2026-09부터 **랜딩 페이지 + 공개 지원금 계산기**만 제공합니다. 로그인·기록·일정·커뮤니티·AI 채팅 등 서비스 화면은 모바일 앱으로 이전됐고, 기존 경로는 `/`로 리다이렉트됩니다.
 
 ### 모바일 (Flutter — `--dart-define`)
 
@@ -195,8 +199,11 @@ ALLOWED_ORIGINS=https://your-app.vercel.app
 
 ```
 NEXT_PUBLIC_API_URL=https://bom-backend.onrender.com/api
-ANTHROPIC_API_KEY=sk-ant-...   # /api/ai 라우트가 남아있는 경우
+NEXT_PUBLIC_APP_STORE_URL=https://apps.apple.com/...
+NEXT_PUBLIC_PLAY_STORE_URL=https://play.google.com/...
 ```
+
+> 웹에는 더 이상 Anthropic API 키가 필요하지 않습니다 (AI 프록시 라우트 제거).
 
 6. **Deploy** → 완료
 
@@ -236,8 +243,8 @@ flutter build ipa --release \
 | GET/POST/DELETE | `/api/hormones` | 호르몬 기록 |
 | GET/POST/PATCH/DELETE | `/api/treatment` | 시술 일정 |
 | GET/GET(:date)/POST/DELETE | `/api/daily-notes` | 캘린더 일별 메모·컨디션 (감정일기 대체, 날짜당 1건) |
-| POST | `/api/ai/chat` | AI 채팅 (스트리밍, 웹 전용 — Flutter 앱은 미구현) |
-| GET/POST | `/api/ai/history` | 채팅 히스토리 (웹 전용) |
+| POST | `/api/ai/chat` | AI 채팅 (스트리밍) — 현재 호출하는 클라이언트 없음 (웹 동결, Flutter 미구현) |
+| GET/POST | `/api/ai/history` | 채팅 히스토리 — 현재 호출하는 클라이언트 없음 |
 | GET/POST | `/api/community/posts` | 커뮤니티 게시글 |
 | POST | `/api/notifications/token` | FCM 토큰 등록 |
 | GET | `/api/subsidy/rules` | 난임 시술 지원금 규칙(국가/지자체, 인증 불필요) |
@@ -257,7 +264,9 @@ flutter build ipa --release \
 - [x] 호르몬 기록
 - [x] 시술 일정 관리 UI
 - [x] 커뮤니티
-- [x] AI 채팅 화면 (웹 전용, Flutter 앱에서는 미사용 기능으로 제거)
+- [ ] AI 채팅 화면 (웹 동결로 클라이언트 없음 — 백엔드 엔드포인트만 유지)
+- [x] 난임 시술 지원금 계산기 (앱 + 웹 공개 버전)
+- [x] 웹: 랜딩 페이지 + 공개 지원금 계산기로 축소 (2026-09)
 - [x] NestJS 백엔드 (모든 데이터 서버 경유)
 - [x] 푸시 알림 (로컬: 약물·D-1·BBT 독려 / 원격: FCM)
 - [x] 인앱결제 (RevenueCat — 페이월 화면, 구매/복원, 백엔드 웹훅)

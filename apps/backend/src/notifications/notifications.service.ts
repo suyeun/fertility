@@ -128,8 +128,14 @@ export class NotificationsService {
   // ──────────────────────────────────────────
   // 시술 일정 D-1 알림 예약 — Firestore 큐에 저장
   // 서버 재시작과 무관하게 유지된다.
+  // opts.partnerName 이 있으면 "배우자용" 알림으로 큐에 넣는다 — 연결된 배우자에게
+  // 같은 시각(전날 09:00)에 "내일 OO님의 ... 일정" 형태로 발송된다.
   // ──────────────────────────────────────────
-  async scheduleAppointmentNotification(uid: string, schedule: any): Promise<void> {
+  async scheduleAppointmentNotification(
+    uid: string,
+    schedule: any,
+    opts: { partnerName?: string } = {},
+  ): Promise<void> {
     const scheduledAt = new Date(schedule.scheduledAt)
     const sendAt = new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000)
     sendAt.setHours(9, 0, 0, 0)
@@ -140,24 +146,48 @@ export class NotificationsService {
     const day = scheduledAt.getDate()
     const hour = scheduledAt.getHours()
     const hospitalSuffix = schedule.hospitalName ? ` · ${schedule.hospitalName}` : ''
+    const forPartner = !!opts.partnerName
 
-    // scheduleId 기반 고정 doc ID — 같은 일정 재등록 시 덮어써서 중복 큐 방지
-    const docId = `appointment_${schedule.id}`
+    // scheduleId 기반 고정 doc ID — 같은 일정 재등록 시 덮어써서 중복 큐 방지.
+    // 배우자용은 별도 suffix 로 본인용과 공존한다.
+    const docId = forPartner ? `appointment_${schedule.id}_partner` : `appointment_${schedule.id}`
     await this.firebase.collection('scheduled_notifications').doc(docId).set({
       uid,
-      type: 'appointment',
+      type: forPartner ? 'appointment_partner' : 'appointment',
+      scheduleId: schedule.id,
       sendAt: sendAt.toISOString(),
       sent: false,
       processing: false,
       payload: {
-        title: `내일 ${schedule.title} 일정이 있어요 🌸`,
+        title: forPartner
+          ? `내일 ${opts.partnerName}님의 ${schedule.title} 일정이 있어요 💕`
+          : `내일 ${schedule.title} 일정이 있어요 🌸`,
         body: `${month}월 ${day}일 ${hour}시 예정${hospitalSuffix}`,
-        data: { type: 'appointment', scheduleId: schedule.id },
+        data: {
+          type: forPartner ? 'appointment_partner' : 'appointment',
+          scheduleId: schedule.id,
+        },
       },
       createdAt: new Date().toISOString(),
     })
 
-    this.logger.log(`D-1 알림 큐 등록: ${schedule.title} / 발송 예정 ${sendAt.toISOString()}`)
+    this.logger.log(
+      `D-1 알림 큐 등록${forPartner ? ' (배우자)' : ''}: ${schedule.title} / 발송 예정 ${sendAt.toISOString()}`,
+    )
+  }
+
+  // ──────────────────────────────────────────
+  // 일정 삭제·취소 시 아직 발송되지 않은 D-1 알림(본인·배우자)을 큐에서 제거한다.
+  // ──────────────────────────────────────────
+  async cancelAppointmentNotifications(scheduleId: string): Promise<void> {
+    const ids = [`appointment_${scheduleId}`, `appointment_${scheduleId}_partner`]
+    await Promise.all(
+      ids.map(async (id) => {
+        const ref = this.firebase.collection('scheduled_notifications').doc(id)
+        const doc = await ref.get()
+        if (doc.exists && !doc.data()?.sent) await ref.delete()
+      }),
+    )
   }
 
   // ──────────────────────────────────────────
