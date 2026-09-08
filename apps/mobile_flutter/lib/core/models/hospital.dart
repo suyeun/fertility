@@ -18,6 +18,8 @@ class Hospital {
     this.note,
     required this.isVerified,
     this.createdAt,
+    this.isSponsored = false,
+    this.sponsorBadgeLabel = '광고',
   });
 
   final String id;
@@ -36,6 +38,10 @@ class Hospital {
   final String? note;
   final bool isVerified;
   final String? createdAt;
+
+  /// 정액 광고 계약 기간 중인 병원 — 목록의 "광고" 구역에만 표시된다.
+  final bool isSponsored;
+  final String sponsorBadgeLabel;
 
   factory Hospital.fromJson(Map<String, dynamic> j) => Hospital(
     id: j['id'] as String,
@@ -56,6 +62,11 @@ class Hospital {
     note: j['note'] as String?,
     isVerified: j['isVerified'] as bool? ?? false,
     createdAt: j['createdAt'] as String?,
+    isSponsored: j['isSponsored'] == true,
+    sponsorBadgeLabel:
+        ((j['sponsorship'] as Map<String, dynamic>?)?['badgeLabel']
+            as String?) ??
+        '광고',
   );
 }
 

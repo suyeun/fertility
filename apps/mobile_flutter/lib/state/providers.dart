@@ -53,6 +53,9 @@ final articlesApiProvider = Provider<ArticlesApi>(
 final subsidyApiProvider = Provider<SubsidyApi>(
   (ref) => SubsidyApi(ref.watch(apiClientProvider)),
 );
+final adsApiProvider = Provider<AdsApi>(
+  (ref) => AdsApi(ref.watch(apiClientProvider)),
+);
 final bannersApiProvider = Provider<BannersApi>(
   (ref) => BannersApi(ref.watch(apiClientProvider)),
 );

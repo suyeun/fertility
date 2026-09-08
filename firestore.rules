@@ -10,6 +10,13 @@ service cloud.firestore {
       return isLoggedIn() && request.auth.uid == uid;
     }
 
+    // ── 광고 노출·클릭 집계 (비식별, 일자별 카운트) ──────────
+    // 앱은 백엔드(Admin SDK)를 통해서만 기록한다. 관리자 콘솔이 클라이언트 SDK 로 읽는다.
+    match /ad_stats/{statId} {
+      allow read: if isLoggedIn();
+      allow write: if false;
+    }
+
     // ── 유저 프로필 ────────────────────────────────────────
     // 문서 ID = uid 이므로 본인 것만 읽기/쓰기
     match /user_profiles/{uid} {

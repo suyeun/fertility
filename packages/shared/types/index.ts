@@ -378,6 +378,18 @@ export interface Hospital {
   note?: string
   isVerified: boolean
   createdAt?: string
+  /// 정액 광고 계약 — 기간 내에만 "광고" 구역에 노출된다. 과금은 노출·클릭 수와 무관(의료법 27조3항 유인·알선 회피).
+  sponsorship?: HospitalSponsorship
+  /// 서버가 계산해 내려주는 값: sponsorship 이 활성이고 오늘이 기간 안이면 true
+  isSponsored?: boolean
+}
+
+export interface HospitalSponsorship {
+  isActive: boolean
+  startAt?: string      // YYYY-MM-DD
+  endAt?: string        // YYYY-MM-DD (포함)
+  badgeLabel?: string   // 기본 '광고'
+  contractNote?: string // 관리자 메모 (앱에 내려주지 않음)
 }
 
 export interface HospitalSuggestPayload {

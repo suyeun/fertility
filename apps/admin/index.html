@@ -158,6 +158,38 @@
           <option value="settings">설정 화면 상단</option>
         </select>
       </div>
+      <div style="display:flex;gap:12px">
+        <div class="form-group" style="flex:1">
+          <label class="form-label">광고주 유형</label>
+          <select class="form-select" id="banner-advertiser-input" onchange="onBannerAdvertiserChange()">
+            <option value="brand">일반 이벤트 · 제휴</option>
+            <option value="hospital">의료기관 광고</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1;display:none" id="banner-hospital-group">
+          <label class="form-label">연결 병원 <span style="color:var(--danger)">*</span></label>
+          <select class="form-select" id="banner-hospital-input"><option value="">병원 선택</option></select>
+        </div>
+      </div>
+      <div id="banner-hospital-notice" style="display:none;background:#fff8e1;border:1px solid #fde68a;border-radius:8px;padding:10px 12px;font-size:12px;line-height:1.5;color:#92400e;margin-bottom:14px">
+        의료기관 광고는 앱에 "광고"가 항상 표시되며 정액(기간) 계약만 가능합니다. 치료 효과 보장, 타 병원 비교, 환자 후기·성공률, 할인·이벤트 유인 문구는 의료법 56조 위반 소지가 있어 넣을 수 없습니다. 광고 내용의 법적 책임은 계약서상 의료기관에 있습니다.
+      </div>
+      <div style="display:flex;gap:12px">
+        <div class="form-group" style="flex:1">
+          <label class="form-label">게재 시작일</label>
+          <input type="date" class="form-input" id="banner-start-input">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="form-label">게재 종료일 (포함)</label>
+          <input type="date" class="form-input" id="banner-end-input">
+        </div>
+      </div>
+      <div class="form-group">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="banner-isad-input"> 앱에 "광고" 표시
+          <span style="font-size:11px;color:var(--text-muted)">(의료기관 광고는 항상 표시)</span>
+        </label>
+      </div>
       <div class="form-group">
         <label class="form-label">배너 제목 <span style="color:var(--danger)">*</span></label>
         <input type="text" class="form-input" id="banner-title-input" placeholder="예: 8월 예비맘 엽산 증정 이벤트">

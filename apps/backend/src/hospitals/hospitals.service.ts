@@ -3,7 +3,32 @@ import {
 } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
 import { randomUUID } from 'node:crypto'
-import type { Hospital, HospitalSuggestPayload } from '@fertility/shared'
+import type { Hospital, HospitalSponsorship, HospitalSuggestPayload } from '@fertility/shared'
+
+/// 광고 계약이 오늘 기준 유효한지. 날짜는 YYYY-MM-DD 문자열 비교(KST 기준 일 단위).
+export function isSponsorshipActive(s: HospitalSponsorship | undefined, today: string): boolean {
+  if (!s?.isActive) return false
+  if (s.startAt && today < s.startAt) return false
+  if (s.endAt && today > s.endAt) return false
+  return true
+}
+
+function todayKst(): string {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
+}
+
+/// 앱에 내려줄 형태로 정리 — 계약 메모는 제거하고 isSponsored 를 계산해 붙인다.
+function toPublicHospital(raw: any, today: string): Hospital {
+  const { sponsorship, ...rest } = raw
+  const active = isSponsorshipActive(sponsorship, today)
+  return {
+    ...rest,
+    isSponsored: active,
+    sponsorship: active
+      ? { isActive: true, badgeLabel: sponsorship?.badgeLabel || '광고' }
+      : undefined,
+  }
+}
 
 @Injectable()
 export class HospitalsService {
@@ -23,7 +48,10 @@ export class HospitalsService {
       }
 
       const snap = await query.orderBy('name').limit(200).get()
-      let hospitals: Hospital[] = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }))
+      const today = todayKst()
+      let hospitals: Hospital[] = snap.docs.map((d: any) =>
+        toPublicHospital({ id: d.id, ...d.data() }, today),
+      )
 
       // specialty 필터 (배열 필드 — Firestore array-contains 사용)
       if (params.specialty) {
@@ -40,7 +68,11 @@ export class HospitalsService {
         )
       }
 
-      return hospitals
+      // 광고 병원을 앞에, 나머지는 이름순(중립 정렬). 순위·추천 개념은 두지 않는다.
+      return hospitals.sort((a, b) => {
+        if (!!a.isSponsored !== !!b.isSponsored) return a.isSponsored ? -1 : 1
+        return (a.name || '').localeCompare(b.name || '', 'ko')
+      })
     } catch (err) {
       this.logger.error('hospitals getAll 오류:', err)
       throw new InternalServerErrorException('병원 목록을 불러오는 중 오류가 발생했습니다')
@@ -54,7 +86,7 @@ export class HospitalsService {
     try {
       const doc = await this.firebase.collection('hospitals').doc(id).get()
       if (!doc.exists) throw new NotFoundException('병원을 찾을 수 없습니다')
-      return { id: doc.id, ...doc.data() } as Hospital
+      return toPublicHospital({ id: doc.id, ...doc.data() }, todayKst())
     } catch (err) {
       if (err instanceof NotFoundException) throw err
       this.logger.error('hospitals getById 오류:', err)

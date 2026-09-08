@@ -160,7 +160,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (value) {
       try {
         final schedules = await ref.read(treatmentApiProvider).getAll();
-        await LocalNotifications.instance.rescheduleSubsidyAlerts(schedules);
+        final subsidyProfile = await ref.read(subsidyApiProvider).getProfile();
+        await LocalNotifications.instance.rescheduleSubsidyAlerts(
+          schedules,
+          applications: subsidyProfile.applications,
+        );
       } catch (_) {}
     }
   }

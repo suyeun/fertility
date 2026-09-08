@@ -205,6 +205,38 @@ class SubsidyCalculationRecord {
   };
 }
 
+/// 회차(시술 일정)별 지원금 신청 진행 상태.
+/// 시각 필드가 null 이면 미완료. docsChecked 는 서류 체크리스트(docId → 준비됨).
+class SubsidyApplication {
+  const SubsidyApplication({
+    required this.scheduleId,
+    this.noticeIssuedAt,
+    this.procedureDoneAt,
+    this.claimSubmittedAt,
+    this.docsChecked = const {},
+    this.updatedAt,
+  });
+
+  final String scheduleId;
+  final String? noticeIssuedAt;
+  final String? procedureDoneAt;
+  final String? claimSubmittedAt;
+  final Map<String, bool> docsChecked;
+  final String? updatedAt;
+
+  factory SubsidyApplication.fromJson(String scheduleId, Map<String, dynamic> j) =>
+      SubsidyApplication(
+        scheduleId: j['scheduleId'] as String? ?? scheduleId,
+        noticeIssuedAt: j['noticeIssuedAt'] as String?,
+        procedureDoneAt: j['procedureDoneAt'] as String?,
+        claimSubmittedAt: j['claimSubmittedAt'] as String?,
+        docsChecked: (j['docsChecked'] as Map<String, dynamic>? ?? const {}).map(
+          (k, v) => MapEntry(k, v == true),
+        ),
+        updatedAt: j['updatedAt'] as String?,
+      );
+}
+
 class UsedCounts {
   const UsedCounts({this.ivf = 0, this.iui = 0});
 
@@ -230,6 +262,7 @@ class UserSubsidyProfile {
     this.birthsSinceStart = 0,
     required this.calculations,
     required this.checklistState,
+    this.applications = const {},
   });
 
   final String? regionCode;
@@ -238,6 +271,12 @@ class UserSubsidyProfile {
   final int birthsSinceStart;
   final List<SubsidyCalculationRecord> calculations;
   final Map<String, bool> checklistState;
+
+  /// scheduleId → 신청 진행 상태
+  final Map<String, SubsidyApplication> applications;
+
+  SubsidyApplication? applicationFor(String scheduleId) =>
+      applications[scheduleId];
 
   factory UserSubsidyProfile.fromJson(Map<String, dynamic> j) =>
       UserSubsidyProfile(
@@ -259,6 +298,13 @@ class UserSubsidyProfile {
         checklistState:
             (j['checklistState'] as Map<String, dynamic>? ?? const {}).map(
               (k, v) => MapEntry(k, v as bool),
+            ),
+        applications:
+            (j['applications'] as Map<String, dynamic>? ?? const {}).map(
+              (k, v) => MapEntry(
+                k,
+                SubsidyApplication.fromJson(k, v as Map<String, dynamic>),
+              ),
             ),
       );
 }

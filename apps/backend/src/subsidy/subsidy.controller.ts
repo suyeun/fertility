@@ -1,9 +1,9 @@
-import { Controller, Get, Patch, Post, Body, UseGuards } from '@nestjs/common'
+import { Controller, Get, Patch, Post, Body, Param, UseGuards } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
 import { SubsidyService } from './subsidy.service'
 import { JwtAuthGuard } from '../common/jwt-auth.guard'
 import { CurrentUser, JwtPayload } from '../common/current-user.decorator'
-import { SaveSubsidyProfileDto, AddSubsidyCalculationDto } from './dto/save-subsidy-profile.dto'
+import { SaveSubsidyProfileDto, AddSubsidyCalculationDto, UpdateSubsidyApplicationDto } from './dto/save-subsidy-profile.dto'
 
 @ApiTags('지원금')
 @Controller('subsidy')
@@ -28,6 +28,18 @@ export class SubsidyController {
   @Patch('profile')
   saveProfile(@CurrentUser() user: JwtPayload, @Body() body: SaveSubsidyProfileDto) {
     return this.subsidy.saveProfile(user.sub, body)
+  }
+
+  // 회차(시술 일정)별 신청 진행 상태: 통지서 발급 → 시술 완료 → 청구 완료 + 서류 체크
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @Patch('applications/:scheduleId')
+  updateApplication(
+    @CurrentUser() user: JwtPayload,
+    @Param('scheduleId') scheduleId: string,
+    @Body() body: UpdateSubsidyApplicationDto,
+  ) {
+    return this.subsidy.updateApplication(user.sub, scheduleId, body)
   }
 
   @ApiBearerAuth()

@@ -59,6 +59,9 @@ class EventBanner {
     required this.position,
     required this.order,
     required this.bgColor,
+    this.isAd = false,
+    this.advertiserType = 'brand',
+    this.hospitalId,
   });
 
   final String id;
@@ -70,6 +73,13 @@ class EventBanner {
   final int order;
   final String bgColor;
 
+  /// true 면 "광고" 표시를 붙인다. 병원 배너는 서버가 항상 true 로 내려준다.
+  final bool isAd;
+
+  /// 'brand' | 'hospital'
+  final String advertiserType;
+  final String? hospitalId;
+
   factory EventBanner.fromJson(Map<String, dynamic> j) => EventBanner(
     id: j['id'] as String? ?? '',
     title: j['title'] as String? ?? '',
@@ -79,7 +89,33 @@ class EventBanner {
     position: j['position'] as String? ?? 'home',
     order: (j['order'] as num?)?.toInt() ?? 1,
     bgColor: j['bgColor'] as String? ?? '',
+    isAd: j['isAd'] == true,
+    advertiserType: j['advertiserType'] as String? ?? 'brand',
+    hospitalId: j['hospitalId'] as String?,
   );
+}
+
+/// 광고 노출·클릭 집계 — 비식별. 실패해도 사용자 경험에 영향을 주지 않도록
+/// 호출 측은 await 하지 않고 오류를 무시한다.
+class AdsApi {
+  AdsApi(this._client);
+  final ApiClient _client;
+
+  Future<void> sendEvent({
+    required String type, // 'impression' | 'click'
+    required String target, // 'banner' | 'hospital'
+    required String targetId,
+  }) async {
+    if (targetId.isEmpty) return;
+    try {
+      await _client.post<void>(
+        '/ads/events',
+        data: {'type': type, 'target': target, 'targetId': targetId},
+      );
+    } catch (_) {
+      // 집계 실패는 무시
+    }
+  }
 }
 
 class BannersApi {

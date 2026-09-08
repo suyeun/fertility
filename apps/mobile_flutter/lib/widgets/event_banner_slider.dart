@@ -37,6 +37,18 @@ class _EventBannerSliderState extends ConsumerState<EventBannerSlider> {
   List<EventBanner> _banners = [];
   int _currentPage = 0;
 
+  /// 노출 집계 — 위젯 생명주기 동안 배너당 1회, 비식별.
+  final Set<String> _impressedIds = {};
+
+  void _recordImpression(int index) {
+    if (index < 0 || index >= _banners.length) return;
+    final b = _banners[index];
+    if (!b.isAd || !_impressedIds.add(b.id)) return;
+    ref
+        .read(adsApiProvider)
+        .sendEvent(type: 'impression', target: 'banner', targetId: b.id);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -63,6 +75,7 @@ class _EventBannerSliderState extends ConsumerState<EventBannerSlider> {
         _banners = banners;
         if (_currentPage >= banners.length) _currentPage = 0;
       });
+      _recordImpression(_currentPage);
       _restartAutoSlide();
     } catch (_) {
       // 네트워크 오류 시 기존 상태 유지 (배너는 비필수 콘텐츠)
@@ -75,6 +88,7 @@ class _EventBannerSliderState extends ConsumerState<EventBannerSlider> {
     _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!mounted || !_pageController.hasClients) return;
       _currentPage = (_currentPage + 1) % _banners.length;
+      _recordImpression(_currentPage);
       _pageController.animateToPage(
         _currentPage,
         duration: const Duration(milliseconds: 350),
@@ -92,7 +106,13 @@ class _EventBannerSliderState extends ConsumerState<EventBannerSlider> {
     return AppColors.primary;
   }
 
-  Future<void> _handleTap(String linkUrl) async {
+  Future<void> _handleTap(EventBanner banner) async {
+    if (banner.isAd) {
+      ref
+          .read(adsApiProvider)
+          .sendEvent(type: 'click', target: 'banner', targetId: banner.id);
+    }
+    final linkUrl = banner.linkUrl;
     if (linkUrl.isEmpty) return;
     final uri = Uri.tryParse(linkUrl);
     if (uri == null) return;
@@ -112,13 +132,16 @@ class _EventBannerSliderState extends ConsumerState<EventBannerSlider> {
         children: [
           PageView.builder(
             controller: _pageController,
-            onPageChanged: (index) => setState(() => _currentPage = index),
+            onPageChanged: (index) {
+              setState(() => _currentPage = index);
+              _recordImpression(index);
+            },
             itemCount: _banners.length,
             itemBuilder: (context, index) {
               final banner = _banners[index];
               final bgColor = _parseColor(banner.bgColor);
               return GestureDetector(
-                onTap: () => _handleTap(banner.linkUrl),
+                onTap: () => _handleTap(banner),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -136,6 +159,26 @@ class _EventBannerSliderState extends ConsumerState<EventBannerSlider> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      if (banner.isAd)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.25),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            '광고',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                       Text(
                         banner.title,
                         style: const TextStyle(

@@ -9,6 +9,7 @@ const dataCache = {
   users:       null,
   contents:    null,
   banners:     null,
+  hospitals:   null,
   pushHistory: null,
   appConfig:   null,
 };
@@ -45,6 +46,11 @@ async function ensureContents(force = false) {
 async function ensureBanners(force = false) {
   if (!dataCache.banners || force) dataCache.banners = await apiGetBanners();
   return dataCache.banners;
+}
+
+async function ensureHospitals(force = false) {
+  if (!dataCache.hospitals || force) dataCache.hospitals = await apiGetHospitals();
+  return dataCache.hospitals;
 }
 
 async function ensureAppConfig(force = false) {
@@ -649,7 +655,97 @@ function bannerShell() {
           <div class="skeleton" style="height:11px;width:50%;border-radius:4px"></div>
         </div>
       </div>`).join('')}
+    </div>
+    <div class="card" style="margin-top:24px">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="card-header-title">병원 광고 계약 (정액 · 기간)</span>
+        <span style="font-size:11px;color:var(--text-muted)">계약 기간 중인 병원은 앱 병원 목록 상단 "광고" 구역에 표시됩니다. 노출·클릭 수는 리포트용이며 과금과 무관합니다.</span>
+      </div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table class="data-table" id="sponsor-table" style="width:100%">
+          <thead><tr><th>병원</th><th>지역</th><th>상태</th><th>시작일</th><th>종료일</th><th>배지</th><th>메모</th><th></th></tr></thead>
+          <tbody><tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">불러오는 중…</td></tr></tbody>
+        </table>
+      </div>
     </div>`;
+}
+
+// 오늘(KST) YYYY-MM-DD
+function todayKst() {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+function sponsorshipStatus(s) {
+  if (!s || !s.isActive) return { label: '계약 없음', cls: 'badge-neutral' };
+  const t = todayKst();
+  if (s.startAt && t < s.startAt) return { label: '게재 예정', cls: 'badge-neutral' };
+  if (s.endAt && t > s.endAt)     return { label: '기간 종료', cls: 'badge-neutral' };
+  return { label: '노출 중', cls: 'badge-success' };
+}
+
+function renderSponsorTable() {
+  const tbody = document.querySelector('#sponsor-table tbody');
+  if (!tbody) return;
+  const list = (dataCache.hospitals || []);
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--text-muted);padding:24px">등록된 병원이 없습니다. (hospitals 컬렉션)</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map(h => {
+    const s = h.sponsorship || {};
+    const st = sponsorshipStatus(s);
+    return `<tr data-hospital="${h.id}">
+      <td style="font-weight:600">${h.name}${h.isVerified ? '' : ' <span class="badge badge-neutral">미검증</span>'}</td>
+      <td>${h.region || '-'}</td>
+      <td><span class="badge ${st.cls}">${st.label}</span></td>
+      <td><input type="date" class="form-input" style="padding:4px 6px;font-size:12px" data-field="startAt" value="${s.startAt || ''}"></td>
+      <td><input type="date" class="form-input" style="padding:4px 6px;font-size:12px" data-field="endAt" value="${s.endAt || ''}"></td>
+      <td><input type="text" class="form-input" style="padding:4px 6px;font-size:12px;width:72px" data-field="badgeLabel" value="${s.badgeLabel || '광고'}"></td>
+      <td><input type="text" class="form-input" style="padding:4px 6px;font-size:12px;min-width:140px" data-field="contractNote" placeholder="계약번호 · 금액 등" value="${(s.contractNote || '').replace(/"/g, '&quot;')}"></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-secondary btn-sm" onclick="saveSponsorship('${h.id}', ${s.isActive ? 'false' : 'true'})">${s.isActive ? '계약 종료' : '계약 시작'}</button>
+        ${s.isActive ? `<button class="btn btn-secondary btn-sm" onclick="saveSponsorship('${h.id}', true)">저장</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function saveSponsorship(hospitalId, isActive) {
+  const row = document.querySelector(`#sponsor-table tr[data-hospital="${hospitalId}"]`);
+  if (!row) return;
+  const get = f => (row.querySelector(`[data-field="${f}"]`) || {}).value || '';
+  const startAt = get('startAt'), endAt = get('endAt');
+  if (isActive && startAt && endAt && endAt < startAt) { showToast('종료일이 시작일보다 앞설 수 없습니다.', 'error'); return; }
+  if (isActive && !endAt) { showToast('정액 계약은 종료일이 필요합니다.', 'error'); return; }
+  try {
+    const sponsorship = { isActive, startAt, endAt, badgeLabel: get('badgeLabel') || '광고', contractNote: get('contractNote') };
+    await apiUpdateHospitalSponsorship(hospitalId, sponsorship);
+    const h = (dataCache.hospitals || []).find(x => x.id === hospitalId);
+    if (h) h.sponsorship = sponsorship;
+    renderSponsorTable();
+    fillBannerHospitalSelect();
+    showToast(isActive ? '광고 계약이 저장되었습니다.' : '광고 계약이 종료되었습니다.', 'success');
+  } catch (err) {
+    showToast('저장 실패: ' + err.message, 'error');
+  }
+}
+
+function fillBannerHospitalSelect() {
+  const sel = document.getElementById('banner-hospital-input');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="">병원 선택</option>' +
+    (dataCache.hospitals || []).map(h => `<option value="${h.id}">${h.name}${h.region ? ' · ' + h.region : ''}</option>`).join('');
+  sel.value = current;
+}
+
+function onBannerAdvertiserChange() {
+  const type = document.getElementById('banner-advertiser-input').value;
+  const isHospital = type === 'hospital';
+  document.getElementById('banner-hospital-group').style.display  = isHospital ? '' : 'none';
+  document.getElementById('banner-hospital-notice').style.display = isHospital ? '' : 'none';
+  const isAd = document.getElementById('banner-isad-input');
+  if (isHospital) { isAd.checked = true; isAd.disabled = true; } else { isAd.disabled = false; }
 }
 
 async function loadBanners(force = false) {
@@ -659,6 +755,18 @@ async function loadBanners(force = false) {
   } catch(err) {
     showToast('배너 로드 실패: ' + err.message, 'error');
   }
+  try {
+    await ensureHospitals(force);
+    renderSponsorTable();
+    fillBannerHospitalSelect();
+  } catch(err) {
+    showToast('병원 목록 로드 실패: ' + err.message, 'error');
+  }
+}
+
+function bannerPeriodLabel(b) {
+  if (!b.startAt && !b.endAt) return '상시';
+  return `${b.startAt || '…'} ~ ${b.endAt || '…'}`;
 }
 
 function renderBannerGrid() {
@@ -675,6 +783,8 @@ function renderBannerGrid() {
         <div style="background:${b.bgColor||'var(--primary)'};color:white;padding:18px 20px;min-height:90px;display:flex;flex-direction:column;justify-content:center;position:relative">
           <div style="font-size:11px;opacity:0.85;margin-bottom:4px">
             ${b.position==='home' ? '🏠 홈 화면' : '⚙️ 설정 화면'} · 순서: ${b.order}
+            ${b.isAd ? ' · <span style="background:rgba(255,255,255,.3);padding:1px 6px;border-radius:4px;font-weight:700">광고</span>' : ''}
+            ${b.advertiserType==='hospital' ? ' · 🏥 의료기관' : ''}
           </div>
           <div style="font-size:16px;font-weight:700;letter-spacing:-0.3px">${b.title}</div>
           ${b.subTitle ? `<div style="font-size:12px;opacity:0.9;margin-top:2px">${b.subTitle}</div>` : ''}
@@ -682,6 +792,10 @@ function renderBannerGrid() {
         <div class="content-card-body" style="padding:14px 16px">
           <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px;word-break:break-all">
             <strong>이동 링크:</strong> ${b.linkUrl || '없음'}
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-bottom:6px">
+            <strong>게재 기간:</strong> ${bannerPeriodLabel(b)}
+            ${b.advertiserType==='hospital' && b.hospitalId ? ` · <strong>병원:</strong> ${((dataCache.hospitals||[]).find(h=>h.id===b.hospitalId)||{}).name || b.hospitalId}` : ''}
           </div>
           <div style="display:flex;align-items:center;justify-content:space-between">
             <span class="badge ${b.isActive ? 'badge-success' : 'badge-neutral'}">
@@ -729,6 +843,13 @@ function openBannerModal(item = null) {
   document.getElementById('banner-linkurl-input').value  = item ? (item.linkUrl||'')  : '';
   document.getElementById('banner-order-input').value    = item ? (item.order||1)     : 1;
   document.getElementById('banner-bgcolor-input').value  = item ? (item.bgColor||'hsl(340, 68%, 52%)') : 'hsl(340, 68%, 52%)';
+  fillBannerHospitalSelect();
+  document.getElementById('banner-advertiser-input').value = item ? (item.advertiserType||'brand') : 'brand';
+  document.getElementById('banner-hospital-input').value   = item ? (item.hospitalId||'') : '';
+  document.getElementById('banner-start-input').value      = item ? (item.startAt||'') : '';
+  document.getElementById('banner-end-input').value        = item ? (item.endAt||'') : '';
+  document.getElementById('banner-isad-input').checked     = item ? item.isAd === true : false;
+  onBannerAdvertiserChange();
   openModal('banner-modal-overlay');
 }
 
@@ -771,17 +892,25 @@ async function handleSaveBanner() {
   const linkUrl  = document.getElementById('banner-linkurl-input').value.trim();
   const order    = Number(document.getElementById('banner-order-input').value) || 1;
   const bgColor  = document.getElementById('banner-bgcolor-input').value.trim() || 'hsl(340, 68%, 52%)';
+  const advertiserType = document.getElementById('banner-advertiser-input').value;
+  const hospitalId = document.getElementById('banner-hospital-input').value;
+  const startAt  = document.getElementById('banner-start-input').value;
+  const endAt    = document.getElementById('banner-end-input').value;
+  const isAd     = advertiserType === 'hospital' || document.getElementById('banner-isad-input').checked;
 
   if (!title) { showToast('배너 제목을 입력해 주세요.', 'error'); return; }
+  if (advertiserType === 'hospital' && !hospitalId) { showToast('의료기관 광고는 연결 병원을 선택해야 합니다.', 'error'); return; }
+  if (advertiserType === 'hospital' && !endAt) { showToast('의료기관 광고는 게재 종료일이 필요합니다 (정액 기간 계약).', 'error'); return; }
+  if (startAt && endAt && endAt < startAt) { showToast('종료일이 시작일보다 앞설 수 없습니다.', 'error'); return; }
 
   const saveBtn = document.querySelector('#banner-modal .btn-primary');
   if (saveBtn) saveBtn.disabled = true;
 
   try {
     if (selectedBannerId) {
-      await apiUpdateBanner(selectedBannerId, { title, subTitle, position, imageUrl, linkUrl, order, bgColor });
+      await apiUpdateBanner(selectedBannerId, { title, subTitle, position, imageUrl, linkUrl, order, bgColor, advertiserType, hospitalId, startAt, endAt, isAd });
     } else {
-      await apiCreateBanner({ title, subTitle, position, imageUrl, linkUrl, order, bgColor, isActive: true });
+      await apiCreateBanner({ title, subTitle, position, imageUrl, linkUrl, order, bgColor, isActive: true, advertiserType, hospitalId, startAt, endAt, isAd });
     }
     dataCache.banners = null; // 무효화
     closeModal('banner-modal-overlay');
@@ -944,6 +1073,18 @@ function statsShell() {
       ${periods.map(p=>`<button class="period-btn ${statsState.period===p.v?'active':''}" onclick="switchStatsPeriod('${p.v}')">${p.l}</button>`).join('')}
     </div>
     <div class="kpi-grid" id="stats-kpi-grid">${Array(4).fill(skeletonKpi()).join('')}</div>
+    <div class="card" style="margin-bottom:20px">
+      <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+        <span class="card-header-title">광고 노출 · 클릭 (선택 기간)</span>
+        <span style="font-size:11px;color:var(--text-muted)">비식별 일자별 집계 · 광고주 리포트용 · 과금 무관</span>
+      </div>
+      <div class="card-body" style="padding:0;overflow-x:auto">
+        <table class="data-table" id="ad-stats-table" style="width:100%">
+          <thead><tr><th>유형</th><th>대상</th><th style="text-align:right">노출</th><th style="text-align:right">클릭</th><th style="text-align:right">CTR</th></tr></thead>
+          <tbody><tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">불러오는 중…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
     <div class="chart-grid" style="margin-bottom:20px">
       <div class="card">
         <div class="card-header"><span class="card-header-title">가입자 추이</span></div>
@@ -982,6 +1123,35 @@ async function loadStats() {
   } catch(err) {
     showToast('통계 로드 실패: ' + err.message, 'error');
   }
+  try {
+    await renderAdStats(Number(statsState.period) || 7);
+  } catch(err) {
+    showToast('광고 집계 로드 실패: ' + err.message, 'error');
+  }
+}
+
+async function renderAdStats(days) {
+  const tbody = document.querySelector('#ad-stats-table tbody');
+  if (!tbody) return;
+  const to = todayKst();
+  const from = new Date(Date.now() + 9 * 60 * 60 * 1000 - (days - 1) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const [rows] = await Promise.all([apiGetAdStats(from, to), ensureBanners(), ensureHospitals()]);
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:20px">${from} ~ ${to} 집계가 없습니다.</td></tr>`;
+    return;
+  }
+  const nameOf = r => {
+    if (r.target === 'banner') return ((dataCache.banners||[]).find(b => b.id === r.targetId) || {}).title || r.targetId;
+    if (r.target === 'hospital') return ((dataCache.hospitals||[]).find(h => h.id === r.targetId) || {}).name || r.targetId;
+    return r.targetId;
+  };
+  tbody.innerHTML = rows.map(r => `<tr>
+    <td>${r.target === 'banner' ? '배너' : r.target === 'hospital' ? '병원' : r.target}</td>
+    <td>${nameOf(r)}</td>
+    <td style="text-align:right">${r.impressions.toLocaleString()}</td>
+    <td style="text-align:right">${r.clicks.toLocaleString()}</td>
+    <td style="text-align:right">${r.impressions ? (r.clicks / r.impressions * 100).toFixed(1) + '%' : '-'}</td>
+  </tr>`).join('');
 }
 
 function renderStatsKpi(users, cfg) {

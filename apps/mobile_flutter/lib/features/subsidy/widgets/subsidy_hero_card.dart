@@ -55,12 +55,16 @@ class SubsidyHeroCard extends StatelessWidget {
     required this.schedules,
     required this.isPremium,
     required this.onTap,
+    this.onProgressTap,
   });
 
   final UserSubsidyProfile? profile;
   final List<TreatmentSchedule> schedules;
   final bool isPremium;
   final VoidCallback onTap;
+
+  /// 마감 임박 카드에서 신청 진행 관리로 이동. 없으면 onTap 을 쓴다.
+  final VoidCallback? onProgressTap;
 
   SubsidyCalculationRecord? get _latest => subsidyLatestCalculation(profile);
 
@@ -80,6 +84,7 @@ class SubsidyHeroCard extends StatelessWidget {
     switch (_state) {
       case _SubsidyCardState.deadlineSoon:
         return _card(
+          onTapOverride: onProgressTap,
           background: const Color(0xFFFFF8E1),
           border: const Color(0xFFFDE68A),
           child: Row(
@@ -190,10 +195,11 @@ class SubsidyHeroCard extends StatelessWidget {
     required Color background,
     required Color border,
     required Widget child,
+    VoidCallback? onTapOverride,
   }) {
     return InkWell(
       borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
+      onTap: onTapOverride ?? onTap,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.all(14),

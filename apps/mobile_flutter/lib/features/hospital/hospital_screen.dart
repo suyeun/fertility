@@ -146,10 +146,29 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
             search: _searchCtrl.text.isEmpty ? null : _searchCtrl.text,
           );
       if (mounted) setState(() => _hospitals = data);
+      _recordSponsorImpressions(data);
     } catch (_) {
     } finally {
       if (mounted) setState(() => _loadingHospitals = false);
     }
+  }
+
+  /// 광고 병원 노출 집계 — 화면 생명주기 동안 병원당 1회, 비식별.
+  final Set<String> _impressedHospitalIds = {};
+  void _recordSponsorImpressions(List<Hospital> hospitals) {
+    final ads = ref.read(adsApiProvider);
+    for (final h in hospitals.where((h) => h.isSponsored)) {
+      if (_impressedHospitalIds.add(h.id)) {
+        ads.sendEvent(type: 'impression', target: 'hospital', targetId: h.id);
+      }
+    }
+  }
+
+  void _recordSponsorClick(Hospital h) {
+    if (!h.isSponsored) return;
+    ref
+        .read(adsApiProvider)
+        .sendEvent(type: 'click', target: 'hospital', targetId: h.id);
   }
 
   Future<void> _fetchSubsidySummary() async {
@@ -432,8 +451,15 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
             child: CircularProgressIndicator(color: AppColors.primary),
           ),
         )
-      else
-        ..._hospitals.map(_hospitalCard),
+      else ...[
+        if (_hospitals.any((h) => h.isSponsored)) ...[
+          _sectionLabel('광고', hint: '계약 기간 동안 노출되는 병원이에요'),
+          ..._hospitals.where((h) => h.isSponsored).map(_hospitalCard),
+          if (_hospitals.any((h) => !h.isSponsored))
+            _sectionLabel('전체 병원', hint: '이름순'),
+        ],
+        ..._hospitals.where((h) => !h.isSponsored).map(_hospitalCard),
+      ],
       if (!_loadingHospitals && _hospitals.isEmpty)
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 40),
@@ -485,14 +511,68 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
     ];
   }
 
+  Widget _sectionLabel(String label, {String? hint}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8, top: 4),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textMuted,
+            ),
+          ),
+          if (hint != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              hint,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textMutedLight,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _adBadge(String label) {
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: AppColors.textMutedLight),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textMuted,
+        ),
+      ),
+    );
+  }
+
   Widget _hospitalCard(Hospital h) {
+    // 광고 병원은 평점·리뷰 수를 표시하지 않는다 (의료광고 후기·평가 표현 규제).
+    // 일반 병원도 데이터가 없으면 "0.0"을 노출하지 않는다.
+    final showRating =
+        !h.isSponsored && h.rating != null && h.rating! > 0;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primaryLight),
+        border: Border.all(
+          color: h.isSponsored ? AppColors.textMutedLight : AppColors.primaryLight,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -504,13 +584,20 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      h.name,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
-                      ),
+                    Row(
+                      children: [
+                        if (h.isSponsored) _adBadge(h.sponsorBadgeLabel),
+                        Expanded(
+                          child: Text(
+                            h.name,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textDark,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -523,26 +610,27 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
                   ],
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '⭐ ${h.rating ?? 0.0}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
+              if (showRating)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      '⭐ ${h.rating}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textDark,
+                      ),
                     ),
-                  ),
-                  Text(
-                    '리뷰 ${h.reviewCount ?? 0}개',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: AppColors.textMuted,
+                    Text(
+                      '리뷰 ${h.reviewCount ?? 0}개',
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textMuted,
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
             ],
           ),
           if (h.note != null) ...[
@@ -611,31 +699,49 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
                   color: AppColors.textDark,
                 ),
               ),
-              GestureDetector(
-                onTap: () => _launch('tel:${h.phone}'),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppColors.primaryLight),
-                  ),
-                  child: const Text(
-                    '📞 전화',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ),
+              // 연락은 사용자가 기기에서 직접 한다 — 앱은 전화/브라우저를 열기만 하고
+              // 사용자 정보를 병원에 전달하지 않는다.
+              Row(
+                children: [
+                  if ((h.website ?? '').isNotEmpty) ...[
+                    _contactButton('🌐 홈페이지', () {
+                      _recordSponsorClick(h);
+                      _launch(h.website!);
+                    }),
+                    const SizedBox(width: 6),
+                  ],
+                  if (h.phone.isNotEmpty)
+                    _contactButton('📞 전화', () {
+                      _recordSponsorClick(h);
+                      _launch('tel:${h.phone}');
+                    }),
+                ],
               ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _contactButton(String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: AppColors.primaryLight),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppColors.primary,
+          ),
+        ),
       ),
     );
   }
@@ -676,6 +782,19 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
                 backgroundColor: AppColors.accentGreen,
               ),
               child: const Text('지원금 계산기 열기'),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => context.push('/subsidy-progress'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.accentGreen,
+                side: const BorderSide(color: AppColors.accentGreen),
+              ),
+              icon: const Icon(Icons.checklist_rounded, size: 16),
+              label: const Text('신청 진행 관리 (통지서 · 시술 · 청구)'),
             ),
           ),
         ],

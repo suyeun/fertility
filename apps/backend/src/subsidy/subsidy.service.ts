@@ -1,7 +1,7 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common'
+import { ForbiddenException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common'
 import { randomUUID } from 'node:crypto'
 import { FirebaseService } from '../firebase/firebase.service'
-import { SaveSubsidyProfileDto, AddSubsidyCalculationDto } from './dto/save-subsidy-profile.dto'
+import { SaveSubsidyProfileDto, AddSubsidyCalculationDto, UpdateSubsidyApplicationDto } from './dto/save-subsidy-profile.dto'
 
 export interface NationalRules {
   version?: string
@@ -34,6 +34,7 @@ const emptySubsidyProfile = {
   birthsSinceStart: 0,
   calculations: [],
   checklistState: {},
+  applications: {},   // scheduleId → 신청 진행 상태 (UpdateSubsidyApplicationDto + scheduleId, updatedAt)
 }
 
 @Injectable()
@@ -83,6 +84,33 @@ export class SubsidyService {
     } catch (err) {
       this.logger.error('subsidy saveProfile 오류:', err)
       throw new InternalServerErrorException('지원금 프로필을 저장하는 중 오류가 발생했습니다')
+    }
+  }
+
+  // 회차별 신청 진행 상태 갱신 — 본인 시술 일정에만 기록할 수 있다.
+  // Firestore merge 로 applications.<scheduleId> 만 부분 갱신하며, null 은 해당 단계를 미완료로 되돌린다.
+  async updateApplication(uid: string, scheduleId: string, dto: UpdateSubsidyApplicationDto) {
+    const scheduleDoc = await this.firebase.collection('treatment_schedules').doc(scheduleId).get()
+    if (!scheduleDoc.exists) throw new NotFoundException('시술 일정을 찾을 수 없습니다')
+    if (scheduleDoc.data()?.userId !== uid) throw new ForbiddenException('본인 일정에만 기록할 수 있습니다')
+
+    try {
+      const patch: Record<string, unknown> = { scheduleId, updatedAt: new Date().toISOString() }
+      for (const key of ['noticeIssuedAt', 'procedureDoneAt', 'claimSubmittedAt', 'docsChecked'] as const) {
+        if (dto[key] !== undefined) patch[key] = dto[key]
+      }
+      await this.firebase.collection('subsidy_profiles').doc(uid).set(
+        {
+          userId: uid,
+          applications: { [scheduleId]: patch },
+          updatedAt: new Date().toISOString(),
+        },
+        { merge: true },
+      )
+      return this.getProfile(uid)
+    } catch (err) {
+      this.logger.error('subsidy updateApplication 오류:', err)
+      throw new InternalServerErrorException('지원금 신청 진행 상태를 저장하는 중 오류가 발생했습니다')
     }
   }
 

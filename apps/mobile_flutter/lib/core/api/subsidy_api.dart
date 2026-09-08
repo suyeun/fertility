@@ -38,6 +38,18 @@ class SubsidyApi {
     return UserSubsidyProfile.fromJson(res.data ?? const {});
   }
 
+  /// 회차별 신청 진행 상태 갱신. 시각 필드에 null 을 넣으면 미완료로 되돌린다.
+  Future<UserSubsidyProfile> updateApplication(
+    String scheduleId,
+    Map<String, dynamic> data,
+  ) async {
+    final res = await _client.patch<Map<String, dynamic>>(
+      '/subsidy/applications/$scheduleId',
+      data: data,
+    );
+    return UserSubsidyProfile.fromJson(res.data ?? const {});
+  }
+
   Future<SubsidyCalculationRecord> saveCalculation(
     Map<String, dynamic> data,
   ) async {

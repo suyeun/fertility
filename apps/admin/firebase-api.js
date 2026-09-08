@@ -212,9 +212,26 @@ async function apiGetBanners() {
       order:     data.order     || 1,
       isActive:  data.isActive !== false,
       bgColor:   data.bgColor   || 'hsl(340, 68%, 52%)',
+      advertiserType: data.advertiserType === 'hospital' ? 'hospital' : 'brand',
+      hospitalId: data.hospitalId || '',
+      isAd:      data.advertiserType === 'hospital' || data.isAd === true,
+      startAt:   data.startAt   || '',
+      endAt:     data.endAt     || '',
       createdAt: tsToDate(data.createdAt),
     };
   });
+}
+
+// 광고 필드 정규화 — 병원 광고는 isAd 강제 true
+function normalizeBannerAdFields(data) {
+  const advertiserType = data.advertiserType === 'hospital' ? 'hospital' : 'brand';
+  return {
+    advertiserType,
+    hospitalId: advertiserType === 'hospital' ? (data.hospitalId || '') : '',
+    isAd:       advertiserType === 'hospital' ? true : data.isAd === true,
+    startAt:    data.startAt || '',
+    endAt:      data.endAt   || '',
+  };
 }
 
 async function apiCreateBanner(data) {
@@ -227,6 +244,7 @@ async function apiCreateBanner(data) {
     order:     Number(data.order) || 1,
     isActive:  data.isActive !== false,
     bgColor:   data.bgColor   || 'hsl(340, 68%, 52%)',
+    ...normalizeBannerAdFields(data),
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
@@ -242,7 +260,68 @@ async function apiUpdateBanner(docId, data) {
   if (data.order     !== undefined) updateData.order     = Number(data.order);
   if (data.isActive  !== undefined) updateData.isActive  = data.isActive;
   if (data.bgColor   !== undefined) updateData.bgColor   = data.bgColor;
+  if (data.advertiserType !== undefined) Object.assign(updateData, normalizeBannerAdFields(data));
   await db.collection('banners').doc(docId).update(updateData);
+}
+
+// ──────────────────────────────────────────────
+// HOSPITALS (병원 광고 계약)
+// ──────────────────────────────────────────────
+
+async function apiGetHospitals() {
+  const snap = await db.collection('hospitals').orderBy('name').get();
+  return snap.docs.map(d => {
+    const data = d.data();
+    const s = data.sponsorship || {};
+    return {
+      id:         d.id,
+      name:       data.name   || '',
+      region:     data.region || '',
+      isVerified: data.isVerified === true,
+      sponsorship: {
+        isActive:     s.isActive === true,
+        startAt:      s.startAt  || '',
+        endAt:        s.endAt    || '',
+        badgeLabel:   s.badgeLabel || '광고',
+        contractNote: s.contractNote || '',
+      },
+    };
+  });
+}
+
+// 정액 광고 계약 상태만 갱신 — 노출·클릭 수와 과금은 연동하지 않는다.
+async function apiUpdateHospitalSponsorship(hospitalId, sponsorship) {
+  await db.collection('hospitals').doc(hospitalId).update({
+    sponsorship: {
+      isActive:     sponsorship.isActive === true,
+      startAt:      sponsorship.startAt  || '',
+      endAt:        sponsorship.endAt    || '',
+      badgeLabel:   sponsorship.badgeLabel || '광고',
+      contractNote: sponsorship.contractNote || '',
+    },
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+}
+
+// ──────────────────────────────────────────────
+// AD STATS (광고 노출·클릭 집계 — 백엔드가 기록, 여기서는 읽기만)
+// ──────────────────────────────────────────────
+
+async function apiGetAdStats(fromDay, toDay) {
+  const snap = await db.collection('ad_stats')
+    .where('day', '>=', fromDay)
+    .where('day', '<=', toDay)
+    .get();
+  const byKey = {};
+  snap.docs.forEach(d => {
+    const r = d.data();
+    const key = `${r.target}_${r.targetId}`;
+    const acc = byKey[key] || { target: r.target, targetId: r.targetId, impressions: 0, clicks: 0 };
+    acc.impressions += Number(r.impressions) || 0;
+    acc.clicks      += Number(r.clicks) || 0;
+    byKey[key] = acc;
+  });
+  return Object.values(byKey).sort((a, b) => b.impressions - a.impressions);
 }
 
 async function apiDeleteBanner(docId) {

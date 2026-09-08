@@ -551,6 +551,19 @@ class _SubsidyCalculatorScreenState
               ),
             ),
           ),
+          const SizedBox(height: 4),
+          TextButton.icon(
+            onPressed: () => context.push('/subsidy-progress'),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              foregroundColor: AppColors.accentGreen,
+            ),
+            icon: const Icon(Icons.checklist_rounded, size: 16),
+            label: const Text(
+              '회차별 신청 진행 체크하기',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );

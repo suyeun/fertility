@@ -21,6 +21,7 @@ import { HospitalsModule } from './hospitals/hospitals.module'
 import { SubsidyModule } from './subsidy/subsidy.module'
 import { DailyNotesModule } from './daily-notes/daily-notes.module'
 import { BannersModule } from './banners/banners.module'
+import { AdsModule } from './ads/ads.module'
 
 // [ARCH-004] 필수 환경변수 검증 — 누락 시 서버 시작 즉시 오류 발생
 const envValidationSchema = Joi.object({
@@ -75,6 +76,7 @@ const envValidationSchema = Joi.object({
     SubsidyModule,
     DailyNotesModule,
     BannersModule,
+    AdsModule,
   ],
   providers: [
     // [SEC-007] ThrottlerGuard를 글로벌로 적용 — 모든 엔드포인트 기본 60회/분 제한

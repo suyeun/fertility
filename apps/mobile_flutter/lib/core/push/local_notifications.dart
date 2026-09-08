@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../models/subsidy.dart';
 import '../models/treatment.dart';
 import 'fcm_service.dart';
 
@@ -256,19 +257,35 @@ class LocalNotifications {
     await prefs.setStringList('bom_subsidy_notif_ids', []);
   }
 
+  /// 마지막으로 전달받은 신청 진행 상태 — 호출자가 생략하면 이 값을 재사용해,
+  /// 이미 완료한 단계의 알림이 다시 살아나지 않게 한다.
+  Map<String, SubsidyApplication> _lastSubsidyApplications = const {};
+
   /// 지원금 대상 시술(IVF/FET/IUI) 일정마다 D-7 통지서 발급 알림, D+14 청구 서류
   /// 준비 알림 2건을 예약한다 — 구독자 전용, 설정에서 끌 수 있다.
-  Future<void> rescheduleSubsidyAlerts(List<TreatmentSchedule> schedules) async {
+  /// 진행 관리에서 완료 처리한 단계(통지서 발급/청구 완료)의 알림은 예약하지 않는다.
+  Future<void> rescheduleSubsidyAlerts(
+    List<TreatmentSchedule> schedules, {
+    Map<String, SubsidyApplication>? applications,
+  }) async {
     await _ensureInit();
+    if (applications != null) _lastSubsidyApplications = applications;
+    final apps = _lastSubsidyApplications;
     if (!(await isSubsidyReminderEnabled())) return;
     await _cancelSubsidyAlerts();
 
     final ids = <int>[];
+    // 배우자 일정은 배우자 본인이 신청하므로 내 기기에서는 알림을 잡지 않는다.
     final upcoming = schedules.where(
-      (s) => s.status == 'scheduled' && _subsidyEligibleTypes.contains(s.type),
+      (s) =>
+          s.status == 'scheduled' &&
+          !s.isPartnerRecord &&
+          _subsidyEligibleTypes.contains(s.type),
     );
     for (final schedule in upcoming) {
-      ids.addAll(await _scheduleSubsidyReminders(schedule));
+      ids.addAll(
+        await _scheduleSubsidyReminders(schedule, apps[schedule.id]),
+      );
     }
 
     final prefs = await SharedPreferences.getInstance();
@@ -280,12 +297,15 @@ class LocalNotifications {
 
   Future<List<int>> _scheduleSubsidyReminders(
     TreatmentSchedule schedule,
+    SubsidyApplication? application,
   ) async {
     final scheduledAt = DateTime.tryParse(schedule.scheduledAt);
     if (scheduledAt == null) return const [];
 
     final ids = <int>[];
     final now = DateTime.now();
+    final noticeDone = application?.noticeIssuedAt != null;
+    final claimDone = application?.claimSubmittedAt != null;
 
     final noticeTrigger = DateTime(
       scheduledAt.year,
@@ -293,7 +313,7 @@ class LocalNotifications {
       scheduledAt.day,
       9,
     ).subtract(const Duration(days: 7));
-    if (noticeTrigger.isAfter(now)) {
+    if (!noticeDone && noticeTrigger.isAfter(now)) {
       final noticeId = ('subsidy_notice_${schedule.id}').hashCode & 0x7fffffff;
       await _plugin.zonedSchedule(
         noticeId,
@@ -317,7 +337,7 @@ class LocalNotifications {
       scheduledAt.day,
       9,
     ).add(const Duration(days: 14));
-    if (claimTrigger.isAfter(now)) {
+    if (!claimDone && claimTrigger.isAfter(now)) {
       final claimId = ('subsidy_claim_${schedule.id}').hashCode & 0x7fffffff;
       await _plugin.zonedSchedule(
         claimId,
@@ -416,6 +436,7 @@ class LocalNotifications {
   Future<void> initNotifications(
     List<TreatmentSchedule> schedules, {
     bool isPremium = false,
+    Map<String, SubsidyApplication>? subsidyApplications,
   }) async {
     final granted = await requestNotificationPermission();
     if (!granted) return;
@@ -423,7 +444,8 @@ class LocalNotifications {
       registerPushToken(),
       scheduleDailyBBTReminder(),
       rescheduleMedicationAlerts(schedules),
-      if (isPremium) rescheduleSubsidyAlerts(schedules),
+      if (isPremium)
+        rescheduleSubsidyAlerts(schedules, applications: subsidyApplications),
     ]);
   }
 }

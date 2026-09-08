@@ -76,7 +76,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       final isPremium =
           currentProfile != null && isPremiumProfile(currentProfile);
       LocalNotifications.instance
-          .initNotifications(_schedules, isPremium: isPremium)
+          .initNotifications(
+            _schedules,
+            isPremium: isPremium,
+            subsidyApplications: _subsidyProfile?.applications,
+          )
           .catchError((_) {});
     } catch (_) {
       if (mounted) setState(() => _loading = false);
@@ -233,6 +237,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         schedules: _schedules,
                         isPremium: isPremium,
                         onTap: () => context.push('/subsidy-calculator'),
+                        onProgressTap: () => context.push('/subsidy-progress'),
                       );
                       final urgent = isSubsidyDeadlineUrgent(
                         _subsidyProfile,

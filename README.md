@@ -141,6 +141,12 @@ curl http://localhost:3001/api/subsidy/rules
 
 ---
 
+## 4-2. 병원 광고 · 배너 운영 원칙
+
+정액(기간) 광고만 판매하고, 앱은 환자 정보를 병원에 전달하지 않으며, 광고는 항상 "광고"로 표시합니다. 근거 법령과 약관·계약서·처리방침 문안은 [docs/ad-policy.md](docs/ad-policy.md)에 정리했습니다. 관리자 콘솔 **배너 관리 > 병원 광고 계약** 표에서 계약 기간을 관리하고, **통계**에서 비식별 노출·클릭을 확인합니다.
+
+---
+
 ## 5. 인앱결제 설정 (RevenueCat)
 
 ### 준비 순서
@@ -275,9 +281,13 @@ flutter build ipa --release \
 | GET/POST | `/api/ai/history` | 채팅 히스토리 — 현재 호출하는 클라이언트 없음 |
 | GET/POST | `/api/community/posts` | 커뮤니티 게시글 |
 | POST | `/api/notifications/token` | FCM 토큰 등록 |
+| GET | `/api/banners` | 활성 배너 (게재 기간 필터, 병원 배너는 isAd=true) |
+| POST | `/api/ads/events` | 광고 노출·클릭 비식별 집계 (인증 불필요, 분당 120회) |
+| GET | `/api/ads/stats` | 기간별 광고 집계 합계 |
 | GET | `/api/subsidy/rules` | 난임 시술 지원금 규칙(국가/지자체, 인증 불필요) |
 | GET/PATCH | `/api/subsidy/profile` | 지원금 프로필(거주지·차수·체크리스트) |
 | POST | `/api/subsidy/profile/calculations` | 지원금 계산 결과 저장 |
+| PATCH | `/api/subsidy/applications/:scheduleId` | 회차별 지원금 신청 진행 상태 (통지서 발급 · 시술 완료 · 청구 완료 · 서류 체크) |
 
 모든 엔드포인트는 `Authorization: Bearer <JWT>` 헤더 필요 (auth 제외).
 
