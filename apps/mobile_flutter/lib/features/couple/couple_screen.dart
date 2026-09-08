@@ -214,7 +214,7 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFFFFBFC),
+        backgroundColor: AppColors.background,
         body: Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
@@ -225,7 +225,7 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
     final isPending = !isLinked && _status?.inviteCode != null;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBFC),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -267,14 +267,14 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
+                color: AppColors.accentGreenLight,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text(
                 '배우자와 공유된 정보는 제3자에게 공개되지 않으며 기존 인증 체계로 보호됩니다.',
                 style: TextStyle(
                   fontSize: 11,
-                  color: Color(0xFF166534),
+                  color: AppColors.accentGreen,
                   height: 1.5,
                 ),
               ),
@@ -388,12 +388,15 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
           onPressed: _showUnlinkModal,
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            side: const BorderSide(color: Color(0xFFFCA5A5), width: 1.5),
+            side: BorderSide(
+              color: AppColors.error.withValues(alpha: 0.4),
+              width: 1.5,
+            ),
           ),
           child: const Text(
             '연결 해제하기',
             style: TextStyle(
-              color: Color(0xFFDC2626),
+              color: AppColors.error,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -410,9 +413,9 @@ class _CoupleScreenState extends ConsumerState<CoupleScreen> {
       Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFFEDE9FE),
+          color: AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFC4B5FD), width: 1.5),
+          border: Border.all(color: AppColors.accentPurpleLight, width: 1.5),
         ),
         child: Column(
           children: [

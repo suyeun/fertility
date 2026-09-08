@@ -30,11 +30,11 @@ class LegendItem {
 List<LegendItem> getLegend(TreatmentMode mode) {
   if (mode == 'natural') {
     return const [
-      LegendItem(color: Color(0xFFFECDD3), label: '생리'),
-      LegendItem(color: Color(0xFFEDE9FE), label: '가임기'),
-      LegendItem(color: Color(0xFFFF8FAB), label: '배란일'),
+      LegendItem(color: Color(0xFFFFDCDB), label: '생리'),
+      LegendItem(color: Color(0xFFEAE8FF), label: '가임기'),
+      LegendItem(color: AppColors.primary, label: '배란일'),
       LegendItem(
-        color: Color(0xFFFB7185),
+        color: AppColors.primaryDark,
         label: '관계일',
         icon: Icons.favorite_rounded,
       ),
@@ -42,16 +42,16 @@ List<LegendItem> getLegend(TreatmentMode mode) {
   }
   if (mode == 'iui') {
     return const [
-      LegendItem(color: Color(0xFFFECDD3), label: '생리'),
-      LegendItem(color: Color(0xFFEDE9FE), label: '가임기'),
-      LegendItem(color: Color(0xFFFF8FAB), label: '배란일'),
+      LegendItem(color: Color(0xFFFFDCDB), label: '생리'),
+      LegendItem(color: Color(0xFFEAE8FF), label: '가임기'),
+      LegendItem(color: AppColors.primary, label: '배란일'),
       LegendItem(
-        color: Color(0xFFFF8FAB),
+        color: AppColors.primary,
         label: '인공수정',
         icon: Icons.star_rounded,
       ),
       LegendItem(
-        color: Color(0xFFA855F7),
+        color: AppColors.accentPurpleLight,
         label: '초음파',
         icon: Icons.circle_rounded,
       ),
@@ -63,7 +63,7 @@ List<LegendItem> getLegend(TreatmentMode mode) {
     ];
   }
   return const [
-    LegendItem(color: Color(0xFFFECDD3), label: '생리'),
+    LegendItem(color: Color(0xFFFFDCDB), label: '생리'),
     LegendItem(
       color: Color(0xFF2DD4BF),
       label: '이식',
@@ -75,7 +75,7 @@ List<LegendItem> getLegend(TreatmentMode mode) {
       icon: Icons.adjust_rounded,
     ),
     LegendItem(
-      color: Color(0xFFA855F7),
+      color: AppColors.accentPurpleLight,
       label: '초음파',
       icon: Icons.circle_rounded,
     ),
@@ -412,9 +412,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                       Row(
                         children: _weekdays.asMap().entries.map((e) {
                           final color = e.key == 0
-                              ? const Color(0xFFF43F5E)
+                              ? const Color(0xFFC57670)
                               : (e.key == 6
-                                    ? const Color(0xFF60A5FA)
+                                    ? const Color(0xFF4C759F)
                                     : AppColors.textMuted);
                           return Expanded(
                             child: Center(
@@ -466,7 +466,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                                 }),
                                 if (dayHormone?.injectionDrug != null ||
                                     dayHormone?.injectionDose != null)
-                                  const DayMarker(color: Color(0xFF60A5FA)),
+                                  const DayMarker(color: Color(0xFF4C759F)),
                                 if (hasNote)
                                   const DayMarker(
                                     color: AppColors.accentPurpleLight,
@@ -733,7 +733,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFEEF2),
+                          backgroundColor: AppColors.surface,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           side: BorderSide.none,
                           shape: RoundedRectangleBorder(

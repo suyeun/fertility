@@ -34,13 +34,13 @@ class CycleSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (mode == 'natural') {
-      final rows = [
+      final stats = [
         ('다음 배란일', _fmt(nextOvulationDate)),
         ('다음 생리 예정', _fmt(nextPeriodDate)),
         ('사이클 평균', '$cycleLength일'),
         ('오늘 사이클', '$currentCycleDay일째'),
       ];
-      return _card(Icons.auto_awesome_rounded, '이번 달 요약', rows);
+      return _gridCard(Icons.auto_awesome_rounded, '이번 달 요약', stats);
     }
 
     if (currentStage == null && upcomingScheduleTitle == null) {
@@ -73,6 +73,83 @@ class CycleSummaryCard extends StatelessWidget {
     ];
 
     return _card(Icons.bar_chart_rounded, '치료 요약', rows);
+  }
+
+  Widget _gridCard(
+    IconData icon,
+    String title,
+    List<(String, String)> stats,
+  ) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12).copyWith(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primaryLight, width: 0.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 13, color: AppColors.primary),
+              const SizedBox(width: 5),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 10,
+            crossAxisSpacing: 10,
+            childAspectRatio: 1.7,
+            children: stats
+                .map(
+                  (s) => Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          s.$1,
+                          style: const TextStyle(
+                            fontSize: 10.5,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          s.$2,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _card(IconData icon, String title, List<(String, String)> rows) {

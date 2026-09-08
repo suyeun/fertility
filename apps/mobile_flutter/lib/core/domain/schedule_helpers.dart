@@ -200,25 +200,25 @@ MarkerStyle getScheduleMarkerStyle(String scheduleType, [String? title]) {
     case 'injection':
       return const MarkerStyle(
         icon: Icons.circle_rounded,
-        color: '#60a5fa',
+        color: '#4c759f',
         label: '주사',
       );
     case 'bloodtest':
       return const MarkerStyle(
         icon: Icons.circle_rounded,
-        color: '#a855f7',
+        color: '#8675d4',
         label: '채혈',
       );
     case 'monitoring':
       return const MarkerStyle(
         icon: Icons.circle_rounded,
-        color: '#a855f7',
+        color: '#8675d4',
         label: '초음파',
       );
     case 'iui':
       return const MarkerStyle(
         icon: Icons.star_rounded,
-        color: '#ff8fab',
+        color: '#e19796',
         label: '인공수정',
       );
     case 'transfer':
@@ -236,13 +236,13 @@ MarkerStyle getScheduleMarkerStyle(String scheduleType, [String? title]) {
     case 'IUI':
       return const MarkerStyle(
         icon: Icons.star_rounded,
-        color: '#ff8fab',
+        color: '#e19796',
         label: '인공수정',
       );
     case 'IVF':
       return const MarkerStyle(
         icon: Icons.star_rounded,
-        color: '#ff8fab',
+        color: '#e19796',
         label: '시험관',
       );
     case 'FET':

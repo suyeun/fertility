@@ -295,47 +295,19 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
           style: TextStyle(fontSize: 12, color: AppColors.textMuted),
         ),
         const SizedBox(height: 14),
+        _bbtStepperCard(today),
+        const SizedBox(height: 12),
+        _opkSelectionCard(today),
+        const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(color: AppColors.primaryLight),
           ),
           child: Column(
             children: [
-              _dailyRow(
-                Icons.thermostat_rounded,
-                '기초체온',
-                _numberInputRow(today?.bbt?.toString(), 'bbt', '°C 입력', '36.5'),
-              ),
-              const Divider(height: 24),
-              _dailyRow(
-                Icons.egg_rounded,
-                '배란 테스트기',
-                Row(
-                  children: [
-                    _opkBtn(
-                      '양성 (피크)',
-                      today?.opkIndex == 10,
-                      () => _saveDailyField(
-                        'opkIndex',
-                        today?.opkIndex == 10 ? null : 10,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    _opkBtn(
-                      '음성',
-                      today?.opkIndex == 1,
-                      () => _saveDailyField(
-                        'opkIndex',
-                        today?.opkIndex == 1 ? null : 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 24),
               _dailyRow(
                 Icons.monitor_weight_rounded,
                 '몸무게',
@@ -413,6 +385,164 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
     );
   }
 
+  Widget _bbtStepperCard(HormoneRecord? today) {
+    final current = today?.bbt ?? 36.5;
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primaryLight),
+      ),
+      child: Column(
+        children: [
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.thermostat_rounded, size: 16, color: AppColors.primary),
+              SizedBox(width: 6),
+              Text(
+                '기초체온',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _stepperButton(
+                icon: Icons.remove_rounded,
+                background: AppColors.surface,
+                foreground: AppColors.textDark,
+                onTap: () => _saveDailyField(
+                  'bbt',
+                  double.parse((current - 0.1).toStringAsFixed(1)),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Text.rich(
+                TextSpan(
+                  text: current.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontSize: 36,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textDark,
+                  ),
+                  children: const [
+                    TextSpan(
+                      text: '℃',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+              _stepperButton(
+                icon: Icons.add_rounded,
+                background: AppColors.primary,
+                foreground: Colors.white,
+                onTap: () => _saveDailyField(
+                  'bbt',
+                  double.parse((current + 0.1).toStringAsFixed(1)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stepperButton({
+    required IconData icon,
+    required Color background,
+    required Color foreground,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(color: background, shape: BoxShape.circle),
+        alignment: Alignment.center,
+        child: Icon(icon, size: 18, color: foreground),
+      ),
+    );
+  }
+
+  Widget _opkSelectionCard(HormoneRecord? today) {
+    return Row(
+      children: [
+        Expanded(
+          child: _opkOption(
+            icon: Icons.local_florist_rounded,
+            label: '양성 (Peak)',
+            active: today?.opkIndex == 10,
+            onTap: () =>
+                _saveDailyField('opkIndex', today?.opkIndex == 10 ? null : 10),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _opkOption(
+            icon: Icons.remove_rounded,
+            label: '음성 (Low)',
+            active: today?.opkIndex == 1,
+            onTap: () =>
+                _saveDailyField('opkIndex', today?.opkIndex == 1 ? null : 1),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _opkOption({
+    required IconData icon,
+    required String label,
+    required bool active,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: active ? AppColors.primary : AppColors.primaryLight,
+            width: active ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: active ? AppColors.primary : AppColors.textMuted,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: active ? AppColors.textDark : AppColors.textMuted,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _numberInputRow(
     String? currentValue,
     String field,
@@ -449,30 +579,6 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
           style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
         ),
       ],
-    );
-  }
-
-  Widget _opkBtn(String label, bool active, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: active ? const Color(0xFFE11D48) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: active ? const Color(0xFFE11D48) : AppColors.primaryLight,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: active ? Colors.white : const Color(0xFF9F1239),
-          ),
-        ),
-      ),
     );
   }
 

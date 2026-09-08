@@ -53,6 +53,9 @@ final articlesApiProvider = Provider<ArticlesApi>(
 final subsidyApiProvider = Provider<SubsidyApi>(
   (ref) => SubsidyApi(ref.watch(apiClientProvider)),
 );
+final bannersApiProvider = Provider<BannersApi>(
+  (ref) => BannersApi(ref.watch(apiClientProvider)),
+);
 
 /// 홈 화면 등 다른 탭에서 캘린더의 특정 날짜 일별 상세를 열어달라는 요청을
 /// 전달하는 상태. `StatefulShellRoute.indexedStack`은 브랜치 위젯을 계속

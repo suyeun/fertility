@@ -246,7 +246,7 @@ List<HomeTask> _getDefaultTasks(
         icon: Icons.medication_rounded,
         title: '엽산 챙기기',
         subtitle: '매일 꾸준히 복용해요',
-        colorKey: 'indigo',
+        colorKey: 'green',
         done: false,
         route: '/records',
       ),

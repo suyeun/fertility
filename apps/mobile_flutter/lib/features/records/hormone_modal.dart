@@ -185,23 +185,23 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
       Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF5F5),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFFFE4E6)),
+          border: Border.all(color: AppColors.primaryLight),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Row(
               children: [
-                Icon(Icons.eco_rounded, size: 14, color: Color(0xFF881337)),
+                Icon(Icons.eco_rounded, size: 14, color: AppColors.primaryDark),
                 SizedBox(width: 6),
                 Text(
                   '홈케어 지표 기록 (자연임신)',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF881337),
+                    color: AppColors.primaryDark,
                   ),
                 ),
               ],
@@ -422,12 +422,10 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: active ? const Color(0xFFE11D48) : Colors.white,
+                  color: active ? AppColors.primary : Colors.white,
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: active
-                        ? const Color(0xFFE11D48)
-                        : const Color(0xFFFFE4E6),
+                    color: active ? AppColors.primary : AppColors.primaryLight,
                   ),
                 ),
                 child: Text(
@@ -435,7 +433,7 @@ class _HormoneModalState extends ConsumerState<HormoneModal> {
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
-                    color: active ? Colors.white : const Color(0xFF9F1239),
+                    color: active ? Colors.white : AppColors.textDark,
                   ),
                 ),
               ),

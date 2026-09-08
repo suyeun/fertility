@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Firestore 초기 데이터 설정 — Fertility Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Noto Sans KR',sans-serif;background:hsl(220,20%,97%);color:hsl(220,26%,12%);padding:40px 20px;-webkit-font-smoothing:antialiased}
+    .container{max-width:720px;margin:0 auto}
+    h1{font-size:22px;font-weight:700;letter-spacing:-0.4px;margin-bottom:6px}
+    .subtitle{font-size:13px;color:hsl(220,8%,60%);margin-bottom:32px}
+    .card{background:#fff;border:1px solid hsl(220,13%,91%);border-radius:12px;padding:24px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+    .card h2{font-size:15px;font-weight:700;margin-bottom:6px}
+    .card p{font-size:13px;color:hsl(220,10%,40%);margin-bottom:16px;line-height:1.6}
+    .btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s}
+    .btn-primary{background:hsl(340,68%,52%);color:#fff}
+    .btn-primary:hover{background:hsl(340,68%,44%)}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .btn-danger{background:#fff;color:hsl(0,72%,52%);border:1px solid hsl(0,72%,90%)}
+    .btn-danger:hover{background:hsl(0,72%,96%)}
+    .btn-secondary{background:#fff;color:hsl(220,10%,40%);border:1px solid hsl(220,13%,91%)}
+    .btn-secondary:hover{background:hsl(220,14%,95%)}
+    .log-box{background:hsl(220,26%,10%);color:hsl(155,60%,70%);border-radius:8px;padding:16px;font-family:monospace;font-size:12px;line-height:1.8;max-height:280px;overflow-y:auto;margin-top:16px;display:none}
+    .log-box.show{display:block}
+    .log-error{color:hsl(0,72%,70%)}
+    .log-info{color:hsl(215,75%,70%)}
+    .status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}
+    .status-ok{background:hsl(155,60%,95%);color:hsl(155,60%,36%)}
+    .status-waiting{background:hsl(38,92%,95%);color:hsl(38,92%,46%)}
+    .status-error{background:hsl(0,72%,96%);color:hsl(0,72%,52%)}
+    .progress{width:100%;height:6px;background:hsl(220,14%,91%);border-radius:3px;margin-top:12px;overflow:hidden}
+    .progress-bar{height:100%;background:hsl(340,68%,52%);border-radius:3px;transition:width .3s ease;width:0%}
+    .auth-info{display:flex;align-items:center;gap:10px;padding:12px 16px;background:hsl(155,60%,95%);border:1px solid hsl(155,60%,88%);border-radius:8px;font-size:13px;color:hsl(155,60%,30%);margin-bottom:20px}
+    .auth-error{background:hsl(0,72%,96%);border-color:hsl(0,72%,88%);color:hsl(0,72%,40%)}
+    .divider{height:1px;background:hsl(220,13%,91%);margin:16px 0}
+    .stat-row{display:flex;gap:16px;margin-top:12px}
+    .stat-item{flex:1;text-align:center;padding:12px;background:hsl(220,14%,97%);border-radius:8px}
+    .stat-value{font-size:20px;font-weight:700;color:hsl(340,68%,52%)}
+    .stat-label{font-size:11px;color:hsl(220,8%,60%);margin-top:2px}
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+    <div style="width:32px;height:32px;background:hsl(340,68%,52%);border-radius:8px;display:flex;align-items:center;justify-content:center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    </div>
+    <h1>Firestore 초기 데이터 설정</h1>
+  </div>
+  <p class="subtitle">이 페이지는 개발용입니다. Firestore에 샘플 데이터를 추가하고 앱 설정을 초기화합니다.</p>
+
+  <!-- 인증 상태 -->
+  <div id="auth-status" class="auth-info" style="display:none">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    <span id="auth-text">인증 확인 중...</span>
+    <a href="login.html" style="margin-left:auto;font-size:12px;color:inherit;text-decoration:underline">로그아웃</a>
+  </div>
+
+  <!-- Firestore 현황 -->
+  <div class="card">
+    <h2>📊 Firestore 현황</h2>
+    <p>Firestore 각 컬렉션의 현재 도큐먼트 수를 확인합니다.</p>
+    <button class="btn btn-secondary" onclick="checkStatus()">현황 확인</button>
+    <div class="stat-row" id="stat-row" style="display:none">
+      <div class="stat-item"><div class="stat-value" id="stat-users">-</div><div class="stat-label">users</div></div>
+      <div class="stat-item"><div class="stat-value" id="stat-contents">-</div><div class="stat-label">contents</div></div>
+      <div class="stat-item"><div class="stat-value" id="stat-config">-</div><div class="stat-label">app_config</div></div>
+      <div class="stat-item"><div class="stat-value" id="stat-push">-</div><div class="stat-label">push_history</div></div>
+    </div>
+  </div>
+
+  <!-- 사용자 샘플 데이터 -->
+  <div class="card">
+    <h2>👥 사용자 샘플 데이터 추가</h2>
+    <p>20명의 샘플 사용자를 <code>users</code> 컬렉션에 추가합니다.<br>
+      이미 동일한 ID가 존재하면 덮어씁니다. Flutter 앱에서 실제 가입한 사용자는 별도로 추가됩니다.</p>
+    <button class="btn btn-primary" id="btn-users" onclick="seedUsers()">샘플 사용자 추가</button>
+    <div class="progress" id="progress-users"><div class="progress-bar" id="bar-users"></div></div>
+    <div class="log-box" id="log-users"></div>
+  </div>
+
+  <!-- 콘텐츠 샘플 데이터 -->
+  <div class="card">
+    <h2>📝 콘텐츠 샘플 데이터 추가</h2>
+    <p>9개의 샘플 콘텐츠(임신정보·건강팁·공지사항)를 <code>contents</code> 컬렉션에 추가합니다.</p>
+    <button class="btn btn-primary" id="btn-contents" onclick="seedContents()">샘플 콘텐츠 추가</button>
+    <div class="progress" id="progress-contents"><div class="progress-bar" id="bar-contents"></div></div>
+    <div class="log-box" id="log-contents"></div>
+  </div>
+
+  <!-- 앱 설정 초기화 -->
+  <div class="card">
+    <h2>⚙️ 앱 설정 초기화</h2>
+    <p><code>app_config</code> 컬렉션에 iOS, Android 버전 정보와 서비스 공지 초기값을 설정합니다.</p>
+    <button class="btn btn-primary" id="btn-config" onclick="seedAppConfig()">앱 설정 초기화</button>
+    <div class="log-box" id="log-config"></div>
+  </div>
+
+  <!-- 전체 실행 -->
+  <div class="card" style="border-color:hsl(340,68%,85%);background:hsl(340,68%,98%)">
+    <h2>🚀 전체 초기화 (한 번에 실행)</h2>
+    <p>위의 모든 작업을 순서대로 실행합니다. 처음 셋업 시 사용하세요.</p>
+    <button class="btn btn-primary" id="btn-all" onclick="seedAll()">전체 초기화 실행</button>
+    <div class="progress" id="progress-all"><div class="progress-bar" id="bar-all"></div></div>
+    <div class="log-box" id="log-all"></div>
+  </div>
+
+  <!-- 데이터 초기화 (위험) -->
+  <div class="card" style="border-color:hsl(0,72%,88%)">
+    <h2>🗑️ 데이터 초기화 (주의)</h2>
+    <p style="color:hsl(0,72%,40%)">특정 컬렉션의 모든 데이터를 삭제합니다. <strong>되돌릴 수 없습니다.</strong></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-danger" onclick="clearCollection('users')">users 삭제</button>
+      <button class="btn btn-danger" onclick="clearCollection('contents')">contents 삭제</button>
+      <button class="btn btn-danger" onclick="clearCollection('push_history')">push_history 삭제</button>
+    </div>
+    <div class="log-box" id="log-clear"></div>
+  </div>
+
+  <p style="text-align:center;font-size:12px;color:hsl(220,8%,60%);margin-top:8px">
+    개발 완료 후 이 페이지는 배포에서 제외됩니다 (firebase.json 설정).
+    <a href="index.html" style="color:hsl(340,68%,52%)">← 관리자 패널로 이동</a>
+  </p>
+</div>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+
+<script>
+const auth = firebase.auth();
+const db   = firebase.firestore();
+const FV   = firebase.firestore.FieldValue;
+
+// ── 인증 상태 확인 ──
+auth.onAuthStateChanged(user => {
+  const el = document.getElementById('auth-status');
+  el.style.display = 'flex';
+  if (user) {
+    document.getElementById('auth-text').textContent = `${user.email} 로 로그인됨`;
+  } else {
+    el.classList.add('auth-error');
+    document.getElementById('auth-text').textContent = '로그인이 필요합니다. 관리자 계정으로 로그인하세요.';
+    document.querySelectorAll('.btn-primary').forEach(b => b.disabled = true);
+  }
+});
+
+// ── 로그 유틸 ──
+function log(boxId, msg, type = 'ok') {
+  const box = document.getElementById(boxId);
+  box.classList.add('show');
+  const cls = type === 'error' ? 'log-error' : type === 'info' ? 'log-info' : '';
+  box.innerHTML += `<div class="${cls}">${new Date().toLocaleTimeString('ko-KR')} ${msg}</div>`;
+  box.scrollTop = box.scrollHeight;
+}
+
+function setProgress(barId, pct) {
+  const bar = document.getElementById(barId);
+  if (bar) bar.style.width = pct + '%';
+}
+
+// ── 현황 확인 ──
+async function checkStatus() {
+  try {
+    const [u, c, cfg, ph] = await Promise.all([
+      db.collection('users').get(),
+      db.collection('contents').get(),
+      db.collection('app_config').get(),
+      db.collection('push_history').get(),
+    ]);
+    document.getElementById('stat-row').style.display = 'flex';
+    document.getElementById('stat-users').textContent    = u.size;
+    document.getElementById('stat-contents').textContent = c.size;
+    document.getElementById('stat-config').textContent   = cfg.size;
+    document.getElementById('stat-push').textContent     = ph.size;
+  } catch(e) {
+    alert('오류: ' + e.message);
+  }
+}
+
+// ── 샘플 사용자 데이터 ──
+const sampleUsers = [
+  { id:'u001', name:'김민지',  email:'mj.kim@example.com',  phone:'010-1234-5678', pregnancyWeek:28, dueDate:'2026-11-20', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+  { id:'u002', name:'이서연',  email:'sy.lee@example.com',  phone:'010-2345-6789', pregnancyWeek:12, dueDate:'2027-01-25', status:'active',   device:'Android', appVersion:'2.0.8', fcmToken:'' },
+  { id:'u003', name:'박지현',  email:'jh.park@example.com', phone:'010-3456-7890', pregnancyWeek:36, dueDate:'2026-09-15', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+  { id:'u004', name:'최수아',  email:'sa.choi@example.com', phone:'010-4567-8901', pregnancyWeek:8,  dueDate:'2027-03-10', status:'inactive', device:'iOS',     appVersion:'2.0.5', fcmToken:'' },
+  { id:'u005', name:'정하은',  email:'he.jung@example.com', phone:'010-5678-9012', pregnancyWeek:40, dueDate:'2026-08-25', status:'active',   device:'Android', appVersion:'2.1.0', fcmToken:'' },
+  { id:'u006', name:'강미래',  email:'mr.kang@example.com', phone:'010-6789-0123', pregnancyWeek:6,  dueDate:'2027-04-01', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+  { id:'u007', name:'윤채원',  email:'cw.yoon@example.com', phone:'010-7890-1234', pregnancyWeek:20, dueDate:'2026-12-30', status:'active',   device:'Android', appVersion:'2.0.8', fcmToken:'' },
+  { id:'u008', name:'임소희',  email:'sh.lim@example.com',  phone:'010-8901-2345', pregnancyWeek:16, dueDate:'2027-01-10', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+  { id:'u009', name:'한지은',  email:'je.han@example.com',  phone:'010-9012-3456', pregnancyWeek:32, dueDate:'2026-10-20', status:'active',   device:'Android', appVersion:'2.1.0', fcmToken:'' },
+  { id:'u010', name:'오유진',  email:'yj.oh@example.com',   phone:'010-0123-4567', pregnancyWeek:4,  dueDate:'2027-05-15', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+  { id:'u011', name:'신예은',  email:'ye.shin@example.com', phone:'010-1111-2222', pregnancyWeek:10, dueDate:'2027-02-20', status:'paused',   device:'Android', appVersion:'2.0.5', fcmToken:'' },
+  { id:'u012', name:'류나연',  email:'ny.ryu@example.com',  phone:'010-2222-3333', pregnancyWeek:24, dueDate:'2026-12-05', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+  { id:'u013', name:'조민아',  email:'ma.cho@example.com',  phone:'010-3333-4444', pregnancyWeek:8,  dueDate:'2027-04-10', status:'active',   device:'Android', appVersion:'2.0.8', fcmToken:'' },
+  { id:'u014', name:'문지수',  email:'js.moon@example.com', phone:'010-4444-5555', pregnancyWeek:30, dueDate:'2026-10-28', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+  { id:'u015', name:'배수현',  email:'sh.bae@example.com',  phone:'010-5555-6666', pregnancyWeek:18, dueDate:'2027-01-05', status:'inactive', device:'Android', appVersion:'2.0.5', fcmToken:'' },
+  { id:'u016', name:'노은지',  email:'ej.noh@example.com',  phone:'010-6666-7777', pregnancyWeek:6,  dueDate:'2027-04-25', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+  { id:'u017', name:'서하람',  email:'hr.seo@example.com',  phone:'010-7777-8888', pregnancyWeek:22, dueDate:'2026-12-18', status:'active',   device:'Android', appVersion:'2.1.0', fcmToken:'' },
+  { id:'u018', name:'마리아',  email:'maria@example.com',   phone:'010-8888-9999', pregnancyWeek:10, dueDate:'2027-03-05', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+  { id:'u019', name:'김보영',  email:'by.kim@example.com',  phone:'010-9999-0000', pregnancyWeek:14, dueDate:'2027-01-28', status:'active',   device:'Android', appVersion:'2.0.8', fcmToken:'' },
+  { id:'u020', name:'이정은',  email:'je.lee@example.com',  phone:'010-0000-1111', pregnancyWeek:2,  dueDate:'2027-05-20', status:'active',   device:'iOS',     appVersion:'2.1.0', fcmToken:'' },
+];
+
+const joinDates = [
+  '2026-07-15','2026-07-10','2026-06-28','2026-06-15','2026-05-20',
+  '2026-08-01','2026-07-25','2026-07-18','2026-06-10','2026-08-10',
+  '2026-05-05','2026-07-05','2026-08-05','2026-06-20','2026-04-15',
+  '2026-08-12','2026-07-22','2026-08-14','2026-07-30','2026-08-17',
+];
+
+async function seedUsers() {
+  const btn = document.getElementById('btn-users');
+  btn.disabled = true;
+  setProgress('bar-users', 0);
+  log('log-users', '사용자 데이터 추가 시작...', 'info');
+
+  try {
+    const batch = db.batch();
+    sampleUsers.forEach((u, i) => {
+      const ref = db.collection('users').doc(u.id);
+      batch.set(ref, {
+        name:          u.name,
+        email:         u.email,
+        phone:         u.phone,
+        joinDate:      joinDates[i],
+        pregnancyWeek: u.pregnancyWeek,
+        dueDate:       u.dueDate,
+        status:        u.status,
+        device:        u.device,
+        appVersion:    u.appVersion,
+        fcmToken:      u.fcmToken,
+        lastLogin:     joinDates[i],
+        createdAt:     FV.serverTimestamp(),
+      }, { merge: true });
+    });
+
+    await batch.commit();
+    setProgress('bar-users', 100);
+    log('log-users', `✅ ${sampleUsers.length}명 사용자 추가 완료!`);
+  } catch(e) {
+    log('log-users', '❌ 오류: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── 샘플 콘텐츠 데이터 ──
+const sampleContents = [
+  { category:'pregnancy', emoji:'🤰', title:'임신 초기 영양 관리 가이드',       body:'임신 초기에는 엽산, 철분, 칼슘이 중요합니다.', tags:['임신','영양','엽산'],   status:'published' },
+  { category:'health',    emoji:'🥗', title:'임신 중 먹어도 되는 음식 A to Z',   body:'신선한 채소, 단백질 식품, 유제품을 균형있게 섭취하세요.', tags:['건강','음식','영양'], status:'published' },
+  { category:'pregnancy', emoji:'🏥', title:'산부인과 정기검진 일정 체크리스트', body:'임신 주차별 필수 검진 항목을 확인하세요.', tags:['검진','병원','일정'],   status:'published' },
+  { category:'health',    emoji:'🧘', title:'임산부 요가 — 주차별 추천 동작',    body:'임신 중 안전한 요가 동작으로 몸의 긴장을 풀어보세요.', tags:['요가','운동','건강'], status:'published' },
+  { category:'notice',    emoji:'📢', title:'앱 업데이트 v2.1.0 안내',           body:'새로운 태아 성장 리포트 기능이 추가되었습니다.', tags:['업데이트','공지'],    status:'published' },
+  { category:'pregnancy', emoji:'💊', title:'엽산 복용 시 주의사항과 권장량',    body:'임신 초기 엽산 복용은 태아 신경관 결손 예방에 필수입니다.', tags:['엽산','영양제'],  status:'published' },
+  { category:'health',    emoji:'😴', title:'임신 중 안전한 수면 자세는?',       body:'왼쪽 옆으로 자는 자세가 혈액 순환에 가장 좋습니다.', tags:['수면','건강','자세'], status:'draft'     },
+  { category:'pregnancy', emoji:'👶', title:'태아 발달 주차별 완벽 정리',        body:'임신 4주부터 40주까지 태아의 성장 과정을 확인하세요.', tags:['태아','발달','주차'], status:'published' },
+  { category:'notice',    emoji:'🔔', title:'정기점검 안내 (8월 20일)',           body:'8월 20일 오전 2시~4시 서버 점검이 예정되어 있습니다.', tags:['점검','공지'],       status:'published' },
+];
+
+async function seedContents() {
+  const btn = document.getElementById('btn-contents');
+  btn.disabled = true;
+  setProgress('bar-contents', 0);
+  log('log-contents', '콘텐츠 데이터 추가 시작...', 'info');
+
+  try {
+    const dates = ['2026-08-10','2026-08-08','2026-08-05','2026-08-01','2026-07-28','2026-07-25','2026-07-20','2026-07-15','2026-07-10'];
+    const views = [1240, 2851, 980, 1563, 3200, 890, 2100, 4520, 1780];
+
+    for (let i = 0; i < sampleContents.length; i++) {
+      const c = sampleContents[i];
+      await db.collection('contents').add({
+        ...c,
+        views:     views[i] || 0,
+        createdAt: new Date(dates[i]),
+        updatedAt: new Date(dates[i]),
+      });
+      setProgress('bar-contents', Math.round((i+1)/sampleContents.length*100));
+      log('log-contents', `  [${i+1}/${sampleContents.length}] ${c.title}`);
+    }
+    log('log-contents', `✅ ${sampleContents.length}개 콘텐츠 추가 완료!`);
+  } catch(e) {
+    log('log-contents', '❌ 오류: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── 샘플 배너 데이터 ──
+const sampleBanners = [
+  { title:'8월 예비맘 엽산 증정 이벤트 🎁', subTitle:'신청자 전원 100% 무료 배송', position:'home', linkUrl:'https://lunera.com/event/folic-acid', order:1, isActive:true, bgColor:'hsl(340, 68%, 52%)' },
+  { title:'임신 주차별 산모 건강 가이드 📖', subTitle:'전문가가 검수한 맞춤 팁 모음', position:'home', linkUrl:'/guide/pregnancy-week', order:2, isActive:true, bgColor:'hsl(155, 60%, 40%)' },
+  { title:'신규 회원 웰컴 쿠폰팩 🎟️', subTitle:'제휴몰 3만원 상당 혜택 증정', position:'settings', linkUrl:'/coupon/welcome', order:1, isActive:true, bgColor:'hsl(215, 75%, 55%)' },
+];
+
+async function seedBanners() {
+  log('log-contents', '이벤트 배너 데이터 추가 중...', 'info');
+  try {
+    for (let b of sampleBanners) {
+      await db.collection('banners').add({
+        ...b,
+        createdAt: FV.serverTimestamp(),
+        updatedAt: FV.serverTimestamp(),
+      });
+    }
+    log('log-contents', `✅ ${sampleBanners.length}개 이벤트 배너 추가 완료!`);
+  } catch(e) {
+    log('log-contents', '❌ 배너 추가 오류: ' + e.message, 'error');
+  }
+}
+
+// ── 앱 설정 초기화 ──
+async function seedAppConfig() {
+  const btn = document.getElementById('btn-config');
+  btn.disabled = true;
+  log('log-config', '앱 설정 초기화 시작...', 'info');
+
+  try {
+    await Promise.all([
+      db.collection('app_config').doc('ios').set({
+        currentVersion: '2.0.0',
+        latestVersion:  '2.1.0',
+        forceUpdate:    false,
+        updateMessage:  '안정성 개선 및 새로운 태아 성장 리포트 기능이 추가되었습니다.',
+        releaseDate:    '2026-08-01',
+      }, { merge: true }),
+      db.collection('app_config').doc('android').set({
+        currentVersion: '2.0.0',
+        latestVersion:  '2.1.0',
+        forceUpdate:    true,
+        updateMessage:  '중요 보안 업데이트가 포함되어 있습니다. 최신 버전으로 업데이트해 주세요.',
+        releaseDate:    '2026-08-03',
+      }, { merge: true }),
+      db.collection('app_config').doc('notice').set({
+        maintenanceMode: false,
+        maintenanceMsg:  '시스템 점검 중입니다. 잠시 후 다시 이용해 주세요.',
+        bannerEnabled:   true,
+        bannerMsg:       '🌟 새로운 태아 성장 리포트 기능을 이용해 보세요!',
+      }, { merge: true }),
+    ]);
+    log('log-config', '✅ iOS, Android, notice 설정 초기화 완료!');
+  } catch(e) {
+    log('log-config', '❌ 오류: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── 전체 실행 ──
+async function seedAll() {
+  const btn = document.getElementById('btn-all');
+  btn.disabled = true;
+  setProgress('bar-all', 0);
+  log('log-all', '═══ 전체 초기화 시작 ═══', 'info');
+
+  try {
+    log('log-all', '1단계: 사용자 데이터 추가 중...', 'info');
+    await seedUsers();
+    setProgress('bar-all', 33);
+
+    log('log-all', '2단계: 콘텐츠 및 배너 데이터 추가 중...', 'info');
+    await seedContents();
+    await seedBanners();
+    setProgress('bar-all', 66);
+
+    log('log-all', '3단계: 앱 설정 초기화 중...', 'info');
+    await seedAppConfig();
+    setProgress('bar-all', 100);
+
+    log('log-all', '');
+    log('log-all', '✅ 전체 초기화 완료! 관리자 패널에서 데이터를 확인하세요.');
+    log('log-all', '→ <a href="index.html" style="color:hsl(155,60%,70%)">관리자 패널 열기</a>');
+    await checkStatus();
+  } catch(e) {
+    log('log-all', '❌ 오류: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── 컬렉션 삭제 ──
+async function clearCollection(name) {
+  if (!confirm(`'${name}' 컬렉션의 모든 데이터를 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) return;
+  const box = 'log-clear';
+  log(box, `${name} 삭제 시작...`, 'info');
+  try {
+    const snap = await db.collection(name).get();
+    const batch = db.batch();
+    snap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    log(box, `✅ ${name} 컬렉션 ${snap.size}개 도큐먼트 삭제 완료`);
+    await checkStatus();
+  } catch(e) {
+    log(box, '❌ 오류: ' + e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>

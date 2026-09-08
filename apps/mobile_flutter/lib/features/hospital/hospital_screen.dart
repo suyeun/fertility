@@ -242,7 +242,10 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
                         SizedBox(height: 3),
                         Text(
                           '난임 병원 · 비용 · 지원 · 유용한 정보',
-                          style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                          ),
                         ),
                       ],
                     ),
@@ -676,9 +679,8 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
   Widget _subsidyArticleCard(({String id, String title, String body}) a) {
     final expanded = _expandedSubsidyArticleId == a.id;
     return GestureDetector(
-      onTap: () => setState(
-        () => _expandedSubsidyArticleId = expanded ? null : a.id,
-      ),
+      onTap: () =>
+          setState(() => _expandedSubsidyArticleId = expanded ? null : a.id),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
@@ -937,7 +939,23 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
           ),
         )
       else
-        ..._articles.map(_articleCard),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const gap = 10.0;
+            final halfWidth = (constraints.maxWidth - gap) / 2;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: _articles.map((a) {
+                final expanded = _expandedArticleId == a.id;
+                return SizedBox(
+                  width: expanded ? constraints.maxWidth : halfWidth,
+                  child: _articleCard(a),
+                );
+              }).toList(),
+            );
+          },
+        ),
       if (!_loadingArticles && _articles.isEmpty)
         const Padding(
           padding: EdgeInsets.symmetric(vertical: 40),
@@ -972,8 +990,7 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
     return GestureDetector(
       onTap: () => setState(() => _expandedArticleId = expanded ? null : a.id),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -982,228 +999,251 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: meta.bg,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    a.category,
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                      color: meta.fg,
-                    ),
-                  ),
-                ),
-                if (a.authorName != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Text(
-                      '🩺 자문: ${a.authorName}${a.authorAffiliation != null ? ' (${a.authorAffiliation})' : ''}',
-                      style: const TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF475569),
-                      ),
-                    ),
-                  ),
-                if (products.isNotEmpty)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.primaryLight),
-                    ),
-                    child: const Text(
-                      '🛍️ 추천 제품',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.textMuted,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              a.title,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.textDark,
-                height: 1.3,
+            if (!expanded)
+              Container(
+                height: 74,
+                width: double.infinity,
+                color: meta.bg,
+                alignment: Alignment.center,
+                child: Text(meta.emoji, style: const TextStyle(fontSize: 24)),
               ),
-            ),
-            if (expanded) ...[
-              const SizedBox(height: 10),
-              Text(
-                a.summary,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Color(0xCC5A3042),
-                  height: 1.5,
-                ),
-              ),
-              if (a.content != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  a.content!,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF475569),
-                    height: 1.5,
-                  ),
-                ),
-              ],
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: a.tags
-                    .map(
-                      (t) => Container(
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
+                          color: meta.bg,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: meta.fg),
                         ),
                         child: Text(
-                          '#$t',
+                          a.category,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: meta.fg,
                           ),
                         ),
                       ),
-                    )
-                    .toList(),
-              ),
-              if (products.isNotEmpty) ...[
-                const SizedBox(height: 10),
-                Container(
-                  padding: const EdgeInsets.only(top: 10),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      top: BorderSide(color: AppColors.primaryLight),
+                      if (a.authorName != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Text(
+                            '🩺 자문: ${a.authorName}${a.authorAffiliation != null ? ' (${a.authorAffiliation})' : ''}',
+                            style: const TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF475569),
+                            ),
+                          ),
+                        ),
+                      if (products.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.primaryLight),
+                          ),
+                          child: const Text(
+                            '🛍️ 추천 제품',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    a.title,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textDark,
+                      height: 1.3,
                     ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '🛍️ 아티클 관련 추천 제품',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMuted,
+                  if (expanded) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      a.summary,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Color(0xCC5A3042),
+                        height: 1.5,
+                      ),
+                    ),
+                    if (a.content != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        a.content!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFF475569),
+                          height: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      ...products.map(
-                        (p) => GestureDetector(
-                          onTap: () => _launch(p.url),
-                          child: Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppColors.primaryLight),
-                            ),
-                            child: Row(
-                              children: [
-                                const Text(
-                                  '🛍️',
-                                  style: TextStyle(fontSize: 18),
+                    ],
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: a.tags
+                          .map(
+                            (t) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: meta.fg),
+                              ),
+                              child: Text(
+                                '#$t',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: meta.fg,
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    if (products.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.only(top: 10),
+                        decoration: const BoxDecoration(
+                          border: Border(
+                            top: BorderSide(color: AppColors.primaryLight),
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              '🛍️ 아티클 관련 추천 제품',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ...products.map(
+                              (p) => GestureDetector(
+                                onTap: () => _launch(p.url),
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppColors.primaryLight,
+                                    ),
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        p.name,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.textDark,
+                                      const Text(
+                                        '🛍️',
+                                        style: TextStyle(fontSize: 18),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              p.name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: AppColors.textDark,
+                                              ),
+                                            ),
+                                            Text(
+                                              p.desc,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: AppColors.textMuted,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      Text(
-                                        p.desc,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.textMuted,
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surface,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          p.platform,
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: AppColors.primary,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.surface,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    p.platform,
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ],
+                  ],
+                  const SizedBox(height: 6),
+                  Text(
+                    expanded ? '접기 ▲' : '더보기 ▼',
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textMuted,
+                    ),
                   ),
-                ),
-              ],
-            ],
-            const SizedBox(height: 6),
-            Text(
-              expanded ? '접기 ▲' : '더보기 ▼',
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                ],
+              ),
             ),
           ],
         ),
@@ -1286,7 +1326,9 @@ class _SuggestHospitalModalState extends ConsumerState<_SuggestHospitalModal> {
       }
     } on ApiException catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     } catch (_) {
       if (mounted) {

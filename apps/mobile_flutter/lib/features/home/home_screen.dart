@@ -12,8 +12,13 @@ import '../../core/theme/app_theme.dart';
 import '../../state/auth_controller.dart';
 import '../../state/profile_controller.dart';
 import '../../state/providers.dart';
+import '../../widgets/event_banner_slider.dart';
 import '../subsidy/widgets/subsidy_hero_card.dart';
 import 'hero_card.dart';
+
+const List<BoxShadow> _bentoCardShadow = [
+  BoxShadow(color: Color(0x0D000000), blurRadius: 4, offset: Offset(0, 1)),
+];
 
 /// Port of apps/mobile/app/(tabs)/index.tsx.
 class HomeScreen extends ConsumerStatefulWidget {
@@ -214,6 +219,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ],
                   ),
+                  const EventBannerSlider(position: 'home', height: 115),
                   _CoupleBadge(
                     status: _coupleStatus,
                     onReturn: _refreshCoupleStatus,
@@ -245,91 +251,88 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         hasCycleData: hasCycleData,
                         upcomingSchedules: upcomingSchedules,
                       );
+
+                      final taskSection =
+                          (treatmentMode != 'natural' && currentStage == null)
+                          ? _TaskRow(
+                              icon: Icons.calendar_month_rounded,
+                              title: '치료 단계를 설정하면 맞춤 할 일이 나와요',
+                              subtitle: '지금 설정하러 가기 →',
+                              done: false,
+                              colorKey: 'indigo',
+                              onTap: () => context.push('/settings'),
+                            )
+                          : Column(
+                              children: home.todayTasks
+                                  .map(
+                                    (task) => Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 8,
+                                      ),
+                                      child: _TaskRow(
+                                        icon: task.icon,
+                                        title: task.title,
+                                        subtitle: task.subtitle,
+                                        done: task.done,
+                                        colorKey: task.colorKey,
+                                        onTap: task.route != null
+                                            ? () => context.push(task.route!)
+                                            : null,
+                                      ),
+                                    ),
+                                  )
+                                  .toList(),
+                            );
+
                       return Column(
-                        children: urgent
-                            ? [
-                                subsidyCard,
-                                const SizedBox(height: 10),
-                                heroCard,
-                              ]
-                            : [
-                                heroCard,
-                                const SizedBox(height: 10),
-                                subsidyCard,
-                              ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  const _SectionHeader(
-                    icon: Icons.flash_on_rounded,
-                    title: '빠른 기록',
-                  ),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _QuickCard(
-                          icon: quickA.icon,
-                          label: quickA.label,
-                          value: quickAValue,
-                          onTap: () => context.push(quickA.route),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _QuickCard(
-                          icon: quickB.icon,
-                          label: quickB.label,
-                          value: quickBValue,
-                          onTap: () => context.push(quickB.route),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const _SectionHeader(
-                    icon: Icons.calendar_today_rounded,
-                    title: '오늘 할 일',
-                  ),
-                  const SizedBox(height: 10),
-                  if (treatmentMode != 'natural' && currentStage == null)
-                    _TaskRow(
-                      icon: Icons.calendar_month_rounded,
-                      title: '치료 단계를 설정하면 맞춤 할 일이 나와요',
-                      subtitle: '지금 설정하러 가기 →',
-                      done: false,
-                      colorKey: 'indigo',
-                      onTap: () => context.push('/settings'),
-                    )
-                  else
-                    Column(
-                      children: home.todayTasks
-                          .map(
-                            (task) => Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: _TaskRow(
-                                icon: task.icon,
-                                title: task.title,
-                                subtitle: task.subtitle,
-                                done: task.done,
-                                colorKey: task.colorKey,
-                                onTap: task.route != null
-                                    ? () => context.push(task.route!)
-                                    : null,
+                        children: [
+                          if (urgent) ...[
+                            subsidyCard,
+                            const SizedBox(height: 10),
+                          ],
+                          heroCard,
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _QuickCard(
+                                  icon: quickA.icon,
+                                  label: quickA.label,
+                                  value: quickAValue,
+                                  onTap: () => context.push(quickA.route),
+                                ),
                               ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  const SizedBox(height: 16),
-                  _MindCard(
-                    note: todayNote,
-                    onTap: () {
-                      ref
-                          .read(pendingCalendarOpenDateProvider.notifier)
-                          .state = todayStr;
-                      context.go('/calendar');
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: _QuickCard(
+                                  icon: quickB.icon,
+                                  label: quickB.label,
+                                  value: quickBValue,
+                                  onTap: () => context.push(quickB.route),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          taskSection,
+                          const SizedBox(height: 10),
+                          _MindCard(
+                            note: todayNote,
+                            onTap: () {
+                              ref
+                                  .read(
+                                    pendingCalendarOpenDateProvider.notifier,
+                                  )
+                                  .state = todayStr;
+                              context.go('/calendar');
+                            },
+                          ),
+                          if (!urgent) ...[
+                            const SizedBox(height: 16),
+                            subsidyCard,
+                          ],
+                        ],
+                      );
                     },
                   ),
                   const SizedBox(height: 16),
@@ -382,30 +385,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.icon, required this.title});
-  final IconData icon;
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 16, color: AppColors.primary),
-        const SizedBox(width: 6),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textDark,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 class _CoupleBadge extends StatelessWidget {
   const _CoupleBadge({required this.status, required this.onReturn});
   final CoupleStatusResponse? status;
@@ -417,17 +396,17 @@ class _CoupleBadge extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         onTap: () async {
           await context.push('/couple');
           onReturn();
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: linked ? Colors.white : AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.primaryLight),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: _bentoCardShadow,
           ),
           child: Row(
             children: [
@@ -443,9 +422,11 @@ class _CoupleBadge extends StatelessWidget {
                       ? '${status?.partnerName ?? '배우자'}님과 연결됨'
                       : '배우자 초대하기 (함께 일정·기록 공유)',
                   style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: linked ? FontWeight.w600 : FontWeight.w400,
-                    color: linked ? AppColors.textDark : AppColors.textMuted,
+                    fontSize: 12.5,
+                    fontWeight: linked ? FontWeight.w600 : FontWeight.w500,
+                    color: linked
+                        ? AppColors.textDark
+                        : const Color(0xFF443734),
                   ),
                 ),
               ),
@@ -461,19 +442,19 @@ class _CoupleBadge extends StatelessWidget {
               else
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: 12,
+                    vertical: 7,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(11),
                   ),
                   child: const Text(
                     '초대하기',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 11.5,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: Color(0xFF3C2828),
                     ),
                   ),
                 ),
@@ -506,8 +487,8 @@ class _QuickCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: AppColors.primaryLight),
           borderRadius: BorderRadius.circular(18),
+          boxShadow: _bentoCardShadow,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -516,15 +497,19 @@ class _QuickCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               label,
-              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textDark,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               value ?? '기록하기 →',
               style: TextStyle(
-                fontSize: value != null ? 16 : 12,
-                fontWeight: FontWeight.w700,
-                color: AppColors.primary,
+                fontSize: value != null ? 16 : 11,
+                fontWeight: value != null ? FontWeight.w700 : FontWeight.w400,
+                color: value != null ? AppColors.textDark : AppColors.textMuted,
               ),
             ),
           ],
@@ -553,15 +538,22 @@ class _TaskRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final iconBg = colorKey == 'pink'
-        ? AppColors.surface
-        : AppColors.surfaceAlt;
-    final iconFg = colorKey == 'pink'
-        ? AppColors.primary
-        : AppColors.accentIndigo;
-    final dotBg = done
-        ? AppColors.textMutedLight
-        : (colorKey == 'pink' ? AppColors.primary : AppColors.accentIndigo);
+    final Color iconBg;
+    final Color iconFg;
+    switch (colorKey) {
+      case 'pink':
+        iconBg = AppColors.surface;
+        iconFg = AppColors.primary;
+        break;
+      case 'green':
+        iconBg = AppColors.accentGreenLight;
+        iconFg = AppColors.accentGreen;
+        break;
+      default:
+        iconBg = AppColors.surfaceAlt;
+        iconFg = AppColors.accentIndigo;
+    }
+    final dotBg = done ? AppColors.textMutedLight : iconFg;
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: onTap,
@@ -569,8 +561,8 @@ class _TaskRow extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border.all(color: AppColors.primaryLight),
           borderRadius: BorderRadius.circular(16),
+          boxShadow: _bentoCardShadow,
         ),
         child: Row(
           children: [
@@ -626,6 +618,11 @@ class _MindCard extends StatelessWidget {
   final DailyNote? note;
   final VoidCallback onTap;
 
+  // Prototype text colors on the lavender card
+  // (oklch(0.35 0.05 290) / oklch(0.4 0.04 290)).
+  static const _title = Color(0xFF3A3653);
+  static const _body = Color(0xFF47445C);
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
@@ -634,9 +631,8 @@ class _MindCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceAlt,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.primaryLight, width: 1.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -646,18 +642,14 @@ class _MindCard extends StatelessWidget {
               children: const [
                 Row(
                   children: [
-                    Icon(
-                      Icons.edit_note_rounded,
-                      size: 16,
-                      color: AppColors.primary,
-                    ),
+                    Icon(Icons.edit_note_rounded, size: 16, color: _title),
                     SizedBox(width: 6),
                     Text(
                       '오늘의 마음',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textDark,
+                        color: _title,
                       ),
                     ),
                   ],
@@ -667,7 +659,7 @@ class _MindCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                    color: _title,
                   ),
                 ),
               ],
@@ -681,7 +673,7 @@ class _MindCard extends StatelessWidget {
                       ? Icons.sentiment_satisfied_alt_rounded
                       : Icons.chat_bubble_outline_rounded,
                   size: 26,
-                  color: AppColors.primary,
+                  color: _title,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -692,7 +684,7 @@ class _MindCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 13,
-                            color: AppColors.textDark,
+                            color: _body,
                             height: 1.4,
                           ),
                         )
@@ -704,16 +696,13 @@ class _MindCard extends StatelessWidget {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.textDark,
+                                color: _title,
                               ),
                             ),
                             SizedBox(height: 2),
                             Text(
                               '신체 수치 · 감정 · 메모를 한 곳에',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textMuted,
-                              ),
+                              style: TextStyle(fontSize: 11.5, color: _body),
                             ),
                           ],
                         ),
@@ -738,8 +727,8 @@ class _StreakCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: AppColors.primaryLight),
         borderRadius: BorderRadius.circular(18),
+        boxShadow: _bentoCardShadow,
       ),
       child: Column(
         children: [

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/domain/calendar_data.dart';
+import '../../core/theme/app_theme.dart';
 
 class DayMarker {
   const DayMarker({required this.color, this.icon});
@@ -40,41 +41,41 @@ class DayCell extends StatelessWidget {
     bool dashed = false;
 
     if (isOvulation) {
-      bgColor = const Color(0xFFFFE4EC);
-      borderColor = const Color(0xFFFFB3C6);
+      bgColor = AppColors.primaryLight;
+      borderColor = const Color(0xFFD68585);
       borderWidth = 1;
     } else if (isMenstruation) {
-      bgColor = const Color(0xFFFEE2E2);
-      borderColor = const Color(0xFFFCA5A5);
+      bgColor = const Color(0xFFFFDCDB);
+      borderColor = const Color(0xFFF08E8E);
       borderWidth = 1;
     } else if (isFertile) {
-      bgColor = const Color(0xFFEDE9FE);
-      borderColor = const Color(0xFFC4B5FD);
+      bgColor = const Color(0xFFEAE8FF);
+      borderColor = const Color(0xFFBCB6EE);
       borderWidth = 1;
       dashed = true;
     }
 
     if (isSelected) {
-      borderColor = const Color(0xFFFF4D7D);
+      borderColor = AppColors.primaryDark;
       borderWidth = 2;
     } else if (day.isToday) {
-      borderColor = const Color(0xFFFF8FAB);
+      borderColor = AppColors.primary;
       borderWidth = 2;
     }
 
-    Color numColor = const Color(0xFF5A3042);
+    Color numColor = AppColors.textDark;
     FontWeight numWeight = FontWeight.w600;
     if (isOvulation) {
-      numColor = const Color(0xFFBE185D);
+      numColor = const Color(0xFF3C2828);
       numWeight = FontWeight.w700;
     } else if (isMenstruation) {
-      numColor = const Color(0xFFB91C1C);
+      numColor = const Color(0xFF944A4B);
       numWeight = FontWeight.w700;
     } else if (isFertile) {
-      numColor = const Color(0xFF6D28D9);
+      numColor = const Color(0xFF564692);
       numWeight = FontWeight.w700;
     } else if (day.isToday) {
-      numColor = const Color(0xFFFF4D7D);
+      numColor = AppColors.primaryDark;
       numWeight = FontWeight.w700;
     }
 
@@ -88,12 +89,12 @@ class DayCell extends StatelessWidget {
       badgeFontSize = 11;
     } else if (isMenstruation) {
       badge = '생리';
-      badgeColor = const Color(0xFFFECACA);
-      badgeFg = const Color(0xFFB91C1C);
+      badgeColor = const Color(0xFFFFDCDB);
+      badgeFg = const Color(0xFF944A4B);
     } else if (isFertile) {
       badge = '가임';
-      badgeColor = const Color(0xFFDDD6FE);
-      badgeFg = const Color(0xFF5B21B6);
+      badgeColor = const Color(0xFFD0C9FF);
+      badgeFg = const Color(0xFF564692);
     }
 
     final visibleMarkers = (markers != null && markers!.length > 3)
@@ -140,7 +141,7 @@ class DayCell extends StatelessWidget {
                       child: Icon(
                         Icons.favorite_rounded,
                         size: 7,
-                        color: Color(0xFFFB7185),
+                        color: AppColors.primaryDark,
                       ),
                     ),
                 ],
@@ -190,7 +191,7 @@ class DayCell extends StatelessWidget {
                   width: 4,
                   height: 4,
                   decoration: const BoxDecoration(
-                    color: Color(0xFFFF4D7D),
+                    color: AppColors.primaryDark,
                     shape: BoxShape.circle,
                   ),
                 ),

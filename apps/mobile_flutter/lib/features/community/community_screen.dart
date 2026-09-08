@@ -207,7 +207,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBFC),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(20),
@@ -280,7 +280,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
             Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
+                color: AppColors.surface,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -317,7 +317,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                                 vertical: 1,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFEDE9FE),
+                                color: AppColors.surfaceAlt,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Text(
@@ -341,8 +341,8 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F3FF),
-                border: Border.all(color: const Color(0xFFDDD6FE)),
+                color: AppColors.surfaceAlt,
+                border: Border.all(color: AppColors.accentPurpleLight),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: const Row(
@@ -358,7 +358,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                             text: 'BOM 커뮤니티는 유저분들의 소중한 프라이버시를 위해 ',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF6D28D9),
+                              color: AppColors.accentPurple,
                               height: 1.5,
                             ),
                           ),
@@ -366,7 +366,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                             text: '100% 익명',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF6D28D9),
+                              color: AppColors.accentPurple,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -374,7 +374,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                             text: '으로 안전하게 운영됩니다. 안심하고 마음을 나눠보세요. 🌸',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Color(0xFF6D28D9),
+                              color: AppColors.accentPurple,
                               height: 1.5,
                             ),
                           ),
@@ -473,13 +473,38 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     );
   }
 
+  static const _avatarEmojis = ['🌱', '🌷', '☀️', '🌼', '🍃', '🌸'];
+  static const _avatarBackgrounds = [
+    AppColors.surface,
+    AppColors.surfaceAlt,
+    AppColors.accentGreenLight,
+    AppColors.primaryLight,
+  ];
+
+  Widget _postAvatar(String authorName) {
+    final seed = authorName.hashCode.abs();
+    return Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        color: _avatarBackgrounds[seed % _avatarBackgrounds.length],
+        shape: BoxShape.circle,
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        _avatarEmojis[seed % _avatarEmojis.length],
+        style: const TextStyle(fontSize: 12),
+      ),
+    );
+  }
+
   Widget _buildPostCard(CommunityPost post) {
     final isExpanded = _expandedPostId == post.id;
     final comments = _commentsMap[post.id] ?? const <CommunityComment>[];
     final tagColor = post.targetMode == 'CLINIC'
-        ? (bg: const Color(0xFFEDE9FE), fg: AppColors.accentPurple)
+        ? (bg: AppColors.surfaceAlt, fg: AppColors.accentPurple)
         : post.targetMode == 'NATURAL'
-        ? (bg: const Color(0xFFDCFCE7), fg: const Color(0xFF16A34A))
+        ? (bg: AppColors.accentGreenLight, fg: AppColors.accentGreen)
         : (bg: AppColors.surface, fg: AppColors.primary);
 
     _commentCtrls.putIfAbsent(post.id, () => TextEditingController());
@@ -501,6 +526,8 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
               Expanded(
                 child: Row(
                   children: [
+                    _postAvatar(post.authorName),
+                    const SizedBox(width: 8),
                     const Text('🔒', style: TextStyle(fontSize: 11)),
                     const SizedBox(width: 5),
                     Flexible(
@@ -627,7 +654,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                           onSubmitted: (_) => _handleAddComment(post.id),
                           decoration: const InputDecoration(
                             hintText: '익명으로 댓글이 달려요',
-                            hintStyle: TextStyle(color: Color(0xFFC4A0AE)),
+                            hintStyle: TextStyle(color: AppColors.textMutedLight),
                           ),
                           style: const TextStyle(
                             fontSize: 12,
@@ -718,7 +745,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                               c.content,
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF8C5060),
+                                color: AppColors.textMuted,
                                 height: 1.4,
                               ),
                             ),
@@ -817,8 +844,8 @@ class _WriteModalState extends ConsumerState<_WriteModal> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F3FF),
-                border: Border.all(color: const Color(0xFFDDD6FE)),
+                color: AppColors.surfaceAlt,
+                border: Border.all(color: AppColors.accentPurpleLight),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Text.rich(
@@ -828,13 +855,13 @@ class _WriteModalState extends ConsumerState<_WriteModal> {
                       text: '익명',
                       style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF6D28D9),
+                        color: AppColors.accentPurple,
                         fontSize: 11,
                       ),
                     ),
                     TextSpan(
                       text: '으로 게시돼요. 닉네임이 자동 생성됩니다.',
-                      style: TextStyle(color: Color(0xFF6D28D9), fontSize: 11),
+                      style: TextStyle(color: AppColors.accentPurple, fontSize: 11),
                     ),
                   ],
                 ),
@@ -909,7 +936,7 @@ class _WriteModalState extends ConsumerState<_WriteModal> {
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 hintText: '제목을 입력해주세요',
-                hintStyle: TextStyle(color: Color(0xFFC4A0AE)),
+                hintStyle: TextStyle(color: AppColors.textMutedLight),
               ),
               style: const TextStyle(fontSize: 13, color: AppColors.textDark),
             ),
@@ -929,7 +956,7 @@ class _WriteModalState extends ConsumerState<_WriteModal> {
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 hintText: '솔직하고 따뜻하게 이야기를 나눠주세요 🌸',
-                hintStyle: TextStyle(color: Color(0xFFC4A0AE)),
+                hintStyle: TextStyle(color: AppColors.textMutedLight),
               ),
             ),
             const SizedBox(height: 16),

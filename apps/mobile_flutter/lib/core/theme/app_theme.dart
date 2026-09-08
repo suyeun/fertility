@@ -1,23 +1,25 @@
 import 'package:flutter/material.dart';
 
-/// Palette lifted from the original RN app's inline styles (apps/mobile/app/(tabs)/index.tsx etc).
+/// Warm cream/rose palette — ported from the Claude Design prototype
+/// ("Bom App Prototype.dc.html", oklch-based) via precise oklch→sRGB conversion.
 class AppColors {
   AppColors._();
 
-  static const background = Color(0xFFFFF8F9);
-  static const surface = Color(0xFFFFF0F4);
-  static const surfaceAlt = Color(0xFFEEF2FF);
-  static const primary = Color(0xFFFF8FAB);
-  static const primaryLight = Color(0xFFFFD6E0);
-  static const primaryPale = Color(0xFFFFB3C6);
-  static const accentPurple = Color(0xFF7C3AED);
-  static const accentPurpleLight = Color(0xFFA855F7);
-  static const accentIndigo = Color(0xFF818CF8);
-  static const accentGreen = Color(0xFF15803D);
-  static const accentGreenLight = Color(0xFFDCFCE7);
-  static const textDark = Color(0xFF5A3042);
-  static const textMuted = Color(0xFFB07080);
-  static const textMutedLight = Color(0xFFD4A0B0);
+  static const background = Color(0xFFFCF3EE);
+  static const surface = Color(0xFFF8F0ED);
+  static const surfaceAlt = Color(0xFFEAE9F8);
+  static const primary = Color(0xFFE19796);
+  static const primaryLight = Color(0xFFF6C2BD);
+  static const primaryPale = Color(0xFFEDA9A8);
+  static const primaryDark = Color(0xFFC57576);
+  static const accentPurple = Color(0xFF5F49AB);
+  static const accentPurpleLight = Color(0xFF8675D4);
+  static const accentIndigo = Color(0xFF8675D4);
+  static const accentGreen = Color(0xFF254326);
+  static const accentGreenLight = Color(0xFFCAE7CA);
+  static const textDark = Color(0xFF2B1E1C);
+  static const textMuted = Color(0xFF7D6D6B);
+  static const textMutedLight = Color(0xFF8C7C79);
   static const white = Color(0xFFFFFFFF);
   static const error = Color(0xFFDC2626);
 }

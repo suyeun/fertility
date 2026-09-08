@@ -13,6 +13,7 @@ import '../../state/auth_controller.dart';
 import '../../state/profile_controller.dart';
 import '../../state/providers.dart';
 import '../onboarding/onboarding_data.dart';
+import '../../widgets/event_banner_slider.dart';
 import '../../widgets/paywall_modal.dart';
 
 enum ModeChangeSheetKind { mode, stage, confirmNatural }
@@ -269,7 +270,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFFFFBFC),
+        backgroundColor: AppColors.background,
         body: Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
@@ -286,7 +287,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final isPremium = _subStatus.isActive;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFFFBFC),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Stack(
           children: [
@@ -315,32 +316,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
                 const SizedBox(height: 10),
+                const EventBannerSlider(position: 'settings', height: 95),
                 if (profile != null)
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.all(18),
                     margin: const EdgeInsets.only(bottom: 24),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: AppColors.primaryLight),
                     ),
-                    child: Column(
+                    child: Row(
                       children: [
-                        Text(
-                          profile.name,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textDark,
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: const BoxDecoration(
+                            color: AppColors.surfaceAlt,
+                            shape: BoxShape.circle,
+                          ),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            '🌷',
+                            style: TextStyle(fontSize: 20),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          profile.email,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textMuted,
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                profile.name,
+                                style: const TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                modeLabel,
+                                style: const TextStyle(
+                                  fontSize: 11.5,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -448,9 +471,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFD1FAE5),
+                      color: AppColors.accentGreenLight,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                      border: Border.all(color: AppColors.accentGreen.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -460,7 +483,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF065F46),
+                            color: AppColors.accentGreen,
                           ),
                         ),
                         if (_subStatus.expiresAt != null)
@@ -468,9 +491,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
                               '${_formatExpiry(_subStatus.expiresAt!)} 자동 갱신',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFF047857),
+                                color: AppColors.accentGreen.withValues(alpha: 0.85),
                               ),
                             ),
                           ),
@@ -526,16 +549,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     padding: const EdgeInsets.all(16),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFF0F0),
+                      color: AppColors.error.withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFFECACA)),
+                      border: Border.all(color: AppColors.error.withValues(alpha: 0.3)),
                     ),
                     child: const Text(
                       '로그아웃',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFFEF4444),
+                        color: AppColors.error,
                       ),
                     ),
                   ),
@@ -799,7 +822,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               child: ElevatedButton(
                 onPressed: _modeSaving ? null : _confirmToNatural,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF22C55E),
+                  backgroundColor: AppColors.accentGreen,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                 ),
                 child: _modeSaving
@@ -854,7 +877,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE0D0D8),
+                          color: AppColors.primaryLight,
                           borderRadius: BorderRadius.circular(2),
                         ),
                         margin: const EdgeInsets.only(bottom: 16),
@@ -913,7 +936,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             border: Border.all(
               color: selected
                   ? AppColors.primary
-                  : (dashed ? const Color(0xFFE0C0C8) : AppColors.primaryLight),
+                  : AppColors.primaryLight,
               width: 1.5,
             ),
           ),
@@ -940,7 +963,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: selected
-                            ? const Color(0xFFC0005A)
+                            ? AppColors.primaryDark
                             : (dashed
                                   ? AppColors.textMuted
                                   : AppColors.textDark),

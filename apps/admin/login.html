@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>로그인 — Fertility Admin</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:       hsl(340, 68%, 52%);
+      --primary-hover: hsl(340, 68%, 44%);
+      --primary-light: hsl(340, 68%, 97%);
+      --border:        hsl(220, 13%, 91%);
+      --text-primary:  hsl(220, 26%, 12%);
+      --text-secondary:hsl(220, 10%, 40%);
+      --text-muted:    hsl(220, 8%, 60%);
+      --danger:        hsl(0, 72%, 52%);
+      --danger-bg:     hsl(0, 72%, 96%);
+      --success:       hsl(155, 60%, 36%);
+      --success-bg:    hsl(155, 60%, 95%);
+    }
+
+    body {
+      font-family: 'Noto Sans KR', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(145deg, hsl(340, 68%, 96%) 0%, hsl(220, 25%, 96%) 60%, hsl(215, 40%, 94%) 100%);
+      -webkit-font-smoothing: antialiased;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative circles */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    body::before {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, hsl(340, 68%, 92%) 0%, transparent 70%);
+      top: -150px; right: -150px;
+      opacity: 0.6;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, hsl(215, 75%, 92%) 0%, transparent 70%);
+      bottom: -100px; left: -100px;
+      opacity: 0.5;
+    }
+
+    /* Card */
+    .login-card {
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      border-radius: 20px;
+      padding: 44px 44px 40px;
+      width: 420px;
+      max-width: calc(100vw - 32px);
+      box-shadow:
+        0 24px 64px rgba(0, 0, 0, 0.10),
+        0 8px 24px rgba(0, 0, 0, 0.06),
+        0 2px 8px rgba(0, 0, 0, 0.04);
+      position: relative;
+      z-index: 1;
+      animation: cardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(24px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Brand */
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .brand-icon {
+      width: 36px; height: 36px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px hsl(340, 68%, 52%, 0.35);
+    }
+    .brand-icon svg { color: white; width: 18px; height: 18px; }
+    .brand-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.4px;
+    }
+    .brand-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.8px;
+      margin-bottom: 32px;
+      padding-left: 46px;
+    }
+
+    /* Heading */
+    .login-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.4px;
+      margin-bottom: 6px;
+    }
+    .login-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* Form */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .input-wrap { position: relative; }
+    .input-icon {
+      position: absolute;
+      left: 12px; top: 50%; transform: translateY(-50%);
+      width: 16px; height: 16px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .form-input {
+      width: 100%;
+      padding: 11px 12px 11px 38px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-primary);
+      background: white;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px hsl(340, 68%, 52%, 0.12);
+    }
+    .form-input::placeholder { color: var(--text-muted); font-size: 13px; }
+
+    .form-input.error-state {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px hsl(0, 72%, 52%, 0.10);
+    }
+
+    /* Password toggle */
+    .pw-toggle {
+      position: absolute;
+      right: 12px; top: 50%; transform: translateY(-50%);
+      cursor: pointer;
+      color: var(--text-muted);
+      width: 16px; height: 16px;
+      transition: color 0.15s;
+    }
+    .pw-toggle:hover { color: var(--text-secondary); }
+    #password-input { padding-right: 38px; }
+
+    /* Error message */
+    .error-box {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: var(--danger-bg);
+      border: 1px solid hsl(0, 72%, 90%);
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--danger);
+      font-weight: 500;
+      margin-bottom: 16px;
+      animation: shake 0.3s ease;
+    }
+    .error-box.show { display: flex; }
+    .error-box svg { width: 15px; height: 15px; flex-shrink: 0; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-4px); }
+      60%      { transform: translateX(4px); }
+    }
+
+    /* Submit button */
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      box-shadow: 0 4px 14px hsl(340, 68%, 52%, 0.35);
+      margin-top: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-login:hover:not(:disabled) {
+      background: var(--primary-hover);
+      box-shadow: 0 6px 18px hsl(340, 68%, 52%, 0.45);
+      transform: translateY(-1px);
+    }
+    .btn-login:active:not(:disabled) { transform: translateY(0); }
+    .btn-login:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+    /* Spinner */
+    .spinner {
+      display: none;
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.4);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .btn-login.loading .btn-text { opacity: 0.6; }
+    .btn-login.loading .spinner { display: block; }
+
+    /* Footer */
+    .login-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* Loading overlay (for initial auth check) */
+    #auth-check-overlay {
+      position: fixed; inset: 0;
+      background: linear-gradient(145deg, hsl(340, 68%, 96%), hsl(220, 25%, 96%));
+      z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      transition: opacity 0.3s;
+    }
+    #auth-check-overlay.hidden { opacity: 0; pointer-events: none; }
+    .loading-logo {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+    }
+    .loading-icon {
+      width: 44px; height: 44px;
+      background: var(--primary);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .loading-icon svg { color: white; width: 22px; height: 22px; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.8;transform:scale(0.95)} }
+    .loading-text { font-size: 12px; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <!-- Auth Check Overlay -->
+  <div id="auth-check-overlay">
+    <div class="loading-logo">
+      <div class="loading-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </div>
+      <div class="loading-text">인증 확인 중...</div>
+    </div>
+  </div>
+
+  <!-- Login Card -->
+  <div class="login-card">
+
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      </div>
+      <span class="brand-name">Fertility</span>
+    </div>
+    <div class="brand-sub">ADMIN CONSOLE</div>
+
+    <h1 class="login-title">관리자 로그인</h1>
+    <p class="login-desc">등록된 관리자 계정으로 로그인하세요.</p>
+
+    <!-- Error Box -->
+    <div class="error-box" id="error-box">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="error-text"></span>
+    </div>
+
+    <!-- Form -->
+    <form id="login-form" autocomplete="on">
+      <div class="form-group">
+        <label class="form-label" for="email-input">이메일</label>
+        <div class="input-wrap">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          <input type="email" id="email-input" class="form-input" name="email"
+            placeholder="admin@lunera.com" autocomplete="email" required>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:22px">
+        <label class="form-label" for="password-input">비밀번호</label>
+        <div class="input-wrap">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <input type="password" id="password-input" class="form-input" name="password"
+            placeholder="비밀번호 입력" autocomplete="current-password" required>
+          <svg class="pw-toggle" id="pw-toggle" onclick="togglePassword()"
+            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-login" id="login-btn">
+        <div class="spinner"></div>
+        <span class="btn-text">로그인</span>
+      </button>
+    </form>
+
+    <div class="login-footer">
+      관리자 계정 문의: dev@lunera.com<br>
+      &copy; 2026 Lunera. All rights reserved.
+    </div>
+  </div>
+
+  <!-- Firebase SDKs (Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <script>
+    const auth     = firebase.auth();
+    const overlay  = document.getElementById('auth-check-overlay');
+    const form     = document.getElementById('login-form');
+    const loginBtn = document.getElementById('login-btn');
+    const errorBox = document.getElementById('error-box');
+    const errorTxt = document.getElementById('error-text');
+
+    // ── 이미 로그인된 경우 관리자 페이지로 이동 ──
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        window.location.replace('index.html');
+      } else {
+        // 인증 확인 완료 → 오버레이 숨김
+        overlay.classList.add('hidden');
+        setTimeout(() => overlay.remove(), 350);
+      }
+    });
+
+    // ── 비밀번호 표시/숨김 ──
+    let pwVisible = false;
+    function togglePassword() {
+      pwVisible = !pwVisible;
+      const input = document.getElementById('password-input');
+      input.type = pwVisible ? 'text' : 'password';
+      document.getElementById('pw-toggle').style.color = pwVisible ? 'var(--primary)' : '';
+    }
+
+    // ── Firebase 에러 한국어 변환 ──
+    function getErrorMessage(code) {
+      const map = {
+        'auth/invalid-email':          '유효하지 않은 이메일 주소입니다.',
+        'auth/user-not-found':         '등록되지 않은 계정입니다.',
+        'auth/wrong-password':         '비밀번호가 올바르지 않습니다.',
+        'auth/invalid-credential':     '이메일 또는 비밀번호가 올바르지 않습니다.',
+        'auth/too-many-requests':      '로그인 시도가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+        'auth/user-disabled':          '비활성화된 계정입니다. 관리자에게 문의해 주세요.',
+        'auth/network-request-failed': '네트워크 연결을 확인해 주세요.',
+      };
+      return map[code] || `로그인 중 오류가 발생했습니다. (${code})`;
+    }
+
+    // ── 폼 제출 ──
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const email    = document.getElementById('email-input').value.trim();
+      const password = document.getElementById('password-input').value;
+
+      // 버튼 로딩 상태
+      loginBtn.disabled = true;
+      loginBtn.classList.add('loading');
+      errorBox.classList.remove('show');
+      document.getElementById('email-input').classList.remove('error-state');
+      document.getElementById('password-input').classList.remove('error-state');
+
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+        // 성공 시 onAuthStateChanged에서 자동 리디렉션
+      } catch (err) {
+        errorTxt.textContent = getErrorMessage(err.code);
+        errorBox.classList.add('show');
+        document.getElementById('email-input').classList.add('error-state');
+        document.getElementById('password-input').classList.add('error-state');
+        loginBtn.disabled = false;
+        loginBtn.classList.remove('loading');
+      }
+    });
+
+    // ── 입력 시 에러 초기화 ──
+    ['email-input', 'password-input'].forEach(id => {
+      document.getElementById(id).addEventListener('input', () => {
+        errorBox.classList.remove('show');
+        document.getElementById(id).classList.remove('error-state');
+      });
+    });
+  </script>
+</body>
+</html>

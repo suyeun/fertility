@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fertility Admin Console</title>
+  <meta name="description" content="Fertility 앱 관리자 콘솔 — 사용자 관리, 콘텐츠 관리, 앱 업데이트 및 통계를 제공합니다.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="index.css">
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body style="visibility:hidden">
+
+<div class="app-layout">
+
+  <!-- ====== SIDEBAR ====== -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Brand -->
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-name">
+        <div class="brand-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </div>
+        Fertility
+      </div>
+      <div class="sidebar-brand-sub">ADMIN CONSOLE</div>
+    </div>
+
+    <!-- Admin User -->
+    <div class="sidebar-user">
+      <div class="sidebar-user-role">관리자</div>
+      <div class="sidebar-user-name" id="sidebar-user-name">–</div>
+      <div class="sidebar-user-email" id="sidebar-user-email">–</div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="sidebar-nav">
+      <div class="nav-group-label">메인</div>
+      <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+        <i data-lucide="layout-dashboard"></i> 대시보드
+      </div>
+      <div class="nav-group-label">관리</div>
+      <div class="nav-item" data-page="users" onclick="navigate('users')">
+        <i data-lucide="users"></i> 사용자 관리
+      </div>
+      <div class="nav-item" data-page="content" onclick="navigate('content')">
+        <i data-lucide="file-text"></i> 콘텐츠 관리
+      </div>
+      <div class="nav-item" data-page="banner" onclick="navigate('banner')">
+        <i data-lucide="image"></i> 배너 관리
+      </div>
+      <div class="nav-item" data-page="push" onclick="navigate('push')">
+        <i data-lucide="bell"></i> 푸시 알림
+        <span class="nav-badge" id="push-badge">3</span>
+      </div>
+      <div class="nav-group-label">분석</div>
+      <div class="nav-item" data-page="stats" onclick="navigate('stats')">
+        <i data-lucide="bar-chart-3"></i> 통계 / 리포트
+      </div>
+    </nav>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      <div class="nav-item" data-page="settings" onclick="navigate('settings')">
+        <i data-lucide="settings"></i> 설정
+      </div>
+      <div class="nav-item" id="logout-btn" onclick="handleLogout()">
+        <i data-lucide="log-out"></i> 로그아웃
+      </div>
+    </div>
+  </aside>
+
+  <!-- ====== MAIN AREA ====== -->
+  <main class="main-area">
+    <div class="page-content" id="page-content">
+      <!-- 페이지 콘텐츠가 동적으로 렌더링됩니다 -->
+    </div>
+  </main>
+
+</div>
+
+<!-- ====== MODALS ====== -->
+
+<!-- User Detail Modal -->
+<div class="modal-overlay" id="user-modal-overlay" onclick="closeModal('user-modal-overlay')">
+  <div class="modal" onclick="event.stopPropagation()" id="user-modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-user-title">사용자 상세</span>
+      <button class="modal-close" onclick="closeModal('user-modal-overlay')">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal-body" id="user-modal-body"></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger-outline btn-sm" onclick="handleDeactivateUser()">비활성화</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('user-modal-overlay')">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- Content Edit Modal -->
+<div class="modal-overlay" id="content-modal-overlay" onclick="closeModal('content-modal-overlay')">
+  <div class="modal" onclick="event.stopPropagation()" id="content-modal">
+    <div class="modal-header">
+      <span class="modal-title" id="content-modal-title">콘텐츠 작성</span>
+      <button class="modal-close" onclick="closeModal('content-modal-overlay')">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">카테고리</label>
+        <select class="form-select" id="content-cat">
+          <option value="pregnancy">임신 정보</option>
+          <option value="health">건강 팁</option>
+          <option value="notice">공지사항</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">제목</label>
+        <input type="text" class="form-input" id="content-title-input" placeholder="콘텐츠 제목을 입력하세요">
+      </div>
+      <div class="form-group">
+        <label class="form-label">본문</label>
+        <textarea class="form-textarea" id="content-body-input" placeholder="내용을 입력하세요" style="min-height:140px"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">태그 (쉼표로 구분)</label>
+        <input type="text" class="form-input" id="content-tags-input" placeholder="임신, 건강, 영양">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('content-modal-overlay')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="handleSaveContent()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Banner Edit Modal -->
+<div class="modal-overlay" id="banner-modal-overlay" onclick="closeModal('banner-modal-overlay')">
+  <div class="modal" onclick="event.stopPropagation()" id="banner-modal">
+    <div class="modal-header">
+      <span class="modal-title" id="banner-modal-title">이벤트 배너 추가</span>
+      <button class="modal-close" onclick="closeModal('banner-modal-overlay')">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">노출 위치</label>
+        <select class="form-select" id="banner-position-input">
+          <option value="home">홈 화면 상단</option>
+          <option value="settings">설정 화면 상단</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">배너 제목 <span style="color:var(--danger)">*</span></label>
+        <input type="text" class="form-input" id="banner-title-input" placeholder="예: 8월 예비맘 엽산 증정 이벤트">
+      </div>
+      <div class="form-group">
+        <label class="form-label">부제목 / 설명</label>
+        <input type="text" class="form-input" id="banner-subtitle-input" placeholder="예: 신청자 전원 100% 무료 배송">
+      </div>
+      <div class="form-group">
+        <label class="form-label">이미지 URL</label>
+        <input type="text" class="form-input" id="banner-imgurl-input" placeholder="https://example.com/banner.png">
+      </div>
+      <div class="form-group">
+        <label class="form-label">클릭 링크 (웹 URL 또는 앱 경로)</label>
+        <input type="text" class="form-input" id="banner-linkurl-input" placeholder="https://... 또는 /event/123">
+      </div>
+      <div style="display:flex;gap:12px">
+        <div class="form-group" style="flex:1">
+          <label class="form-label">노출 순서 (숫자)</label>
+          <input type="number" class="form-input" id="banner-order-input" value="1" min="1">
+        </div>
+        <div class="form-group" style="flex:1">
+          <label class="form-label">배너 배경색 (HSL/HEX)</label>
+          <input type="text" class="form-input" id="banner-bgcolor-input" value="hsl(340, 68%, 52%)">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary btn-sm" onclick="closeModal('banner-modal-overlay')">취소</button>
+      <button class="btn btn-primary btn-sm" onclick="handleSaveBanner()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== TOAST CONTAINER ====== -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Firebase SDKs (Compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="firebase-api.js"></script>
+
+<!-- Auth Guard: 미인증 시 로그인 페이지로 이동 -->
+<script>
+  firebase.auth().onAuthStateChanged(function(user) {
+    if (!user) {
+      window.location.replace('login.html');
+    } else {
+      // 로그인한 실제 이메일을 사이드바에 표시
+      var emailEl = document.getElementById('sidebar-user-email');
+      var nameEl  = document.getElementById('sidebar-user-name');
+      if (emailEl) emailEl.textContent = user.email || '';
+      if (nameEl)  nameEl.textContent  = user.displayName || user.email.split('@')[0];
+      // 페이지 표시
+      document.body.style.visibility = 'visible';
+    }
+  });
+</script>
+
+<script src="index.js"></script>
+</body>
+</html>

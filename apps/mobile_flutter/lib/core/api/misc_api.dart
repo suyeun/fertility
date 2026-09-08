@@ -48,6 +48,55 @@ class VersionApi {
   }
 }
 
+/// 관리자 사이트에서 등록하는 실시간 이벤트 배너.
+class EventBanner {
+  EventBanner({
+    required this.id,
+    required this.title,
+    required this.subTitle,
+    required this.imageUrl,
+    required this.linkUrl,
+    required this.position,
+    required this.order,
+    required this.bgColor,
+  });
+
+  final String id;
+  final String title;
+  final String subTitle;
+  final String imageUrl;
+  final String linkUrl;
+  final String position;
+  final int order;
+  final String bgColor;
+
+  factory EventBanner.fromJson(Map<String, dynamic> j) => EventBanner(
+    id: j['id'] as String? ?? '',
+    title: j['title'] as String? ?? '',
+    subTitle: j['subTitle'] as String? ?? '',
+    imageUrl: j['imageUrl'] as String? ?? '',
+    linkUrl: j['linkUrl'] as String? ?? '',
+    position: j['position'] as String? ?? 'home',
+    order: (j['order'] as num?)?.toInt() ?? 1,
+    bgColor: j['bgColor'] as String? ?? '',
+  );
+}
+
+class BannersApi {
+  BannersApi(this._client);
+  final ApiClient _client;
+
+  Future<List<EventBanner>> getBanners(String position) async {
+    final res = await _client.get<List<dynamic>>(
+      '/banners',
+      query: {'position': position},
+    );
+    return (res.data ?? [])
+        .map((e) => EventBanner.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+}
+
 class AffiliateProduct {
   AffiliateProduct({
     required this.name,

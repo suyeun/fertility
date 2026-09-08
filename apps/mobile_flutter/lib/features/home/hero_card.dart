@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/domain/schedule_helpers.dart';
 import '../../core/models/enums.dart';
 import '../../core/models/treatment.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/theme/color_utils.dart';
 
 const Map<String, ({IconData icon, String label})> _phaseBadge = {
@@ -12,6 +13,13 @@ const Map<String, ({IconData icon, String label})> _phaseBadge = {
   'ovulation': (icon: Icons.star_rounded, label: '배란기'),
   'luteal': (icon: Icons.wb_sunny_rounded, label: '황체기'),
 };
+
+// Prototype text colors on the light-rose hero card
+// (oklch(0.25 0.03 20) / oklch(0.4 0.05 20) / oklch(0.99 0.005 50)).
+const _heroTextDark = Color(0xFF2F1C1C);
+const _heroTextDim = Color(0xBF2F1C1C);
+const _heroCtaText = Color(0xFF603D3C);
+const _heroCtaBg = Color(0xFFFFFBF9);
 
 String _getDDay(DateTime target) {
   final t = DateTime(target.year, target.month, target.day);
@@ -53,27 +61,31 @@ class HeroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     if (treatmentMode == 'natural' && !hasCycleData) {
       return _card(
-        color: const Color(0xFFFF8FAB),
+        color: AppColors.primaryLight,
         onTap: () => context.push('/settings'),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
             Text(
               '🌱 자연임신 준비 중',
-              style: TextStyle(fontSize: 11, color: Color(0xE6FFFFFF)),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _heroTextDim,
+              ),
             ),
             SizedBox(height: 8),
             Text(
               '생리 시작일을 입력하면\n주기를 알려드려요',
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.white,
+                fontSize: 18,
+                color: _heroTextDark,
                 fontWeight: FontWeight.w700,
                 height: 1.3,
               ),
             ),
             SizedBox(height: 12),
-            _CtaPill(text: '생리 정보 입력하러 가기 →'),
+            _CtaPill(text: '생리 정보 입력하러 가기 →', color: _heroCtaText),
           ],
         ),
       );
@@ -103,7 +115,7 @@ class HeroCard extends StatelessWidget {
       }
 
       return _card(
-        color: const Color(0xFFFF8FAB),
+        color: AppColors.primaryLight,
         child: Stack(
           children: [
             Column(
@@ -111,7 +123,11 @@ class HeroCard extends StatelessWidget {
               children: [
                 const Text(
                   '🌱 자연임신 준비 중',
-                  style: TextStyle(fontSize: 11, color: Color(0xBFFFFFFF)),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: _heroTextDim,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Container(
@@ -120,20 +136,20 @@ class HeroCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: isGaim ? 0.28 : 0.22),
+                    color: Colors.white.withValues(alpha: isGaim ? 0.55 : 0.45),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(badge.icon, size: 14, color: Colors.white),
+                      Icon(badge.icon, size: 14, color: _heroTextDark),
                       const SizedBox(width: 5),
                       Text(
                         isGaim ? '가임기' : badge.label,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: _heroTextDark,
                         ),
                       ),
                     ],
@@ -142,10 +158,7 @@ class HeroCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   '사이클 $cycleDay일째',
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Color(0xD9FFFFFF),
-                  ),
+                  style: const TextStyle(fontSize: 13, color: _heroTextDim),
                 ),
                 const SizedBox(height: 10),
                 Container(
@@ -155,14 +168,14 @@ class HeroCard extends StatelessWidget {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
+                    color: Colors.white.withValues(alpha: 0.45),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     tip,
                     style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.white,
+                      color: _heroTextDark,
                       height: 1.4,
                     ),
                   ),
@@ -176,14 +189,14 @@ class HeroCard extends StatelessWidget {
                       vertical: 10,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.18),
+                      color: Colors.white.withValues(alpha: 0.4),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Text(
                       '💗 지금은 가임기! 오늘 타이밍을 놓치지 마세요',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.white,
+                        color: _heroTextDark,
                         height: 1.4,
                       ),
                     ),
@@ -194,7 +207,7 @@ class HeroCard extends StatelessWidget {
             Positioned(
               top: 0,
               right: 0,
-              child: _DdayBadge(num: dDayText, label: dDayLabel),
+              child: _DdayBadge(num: dDayText, label: dDayLabel, dark: true),
             ),
           ],
         ),
@@ -207,8 +220,8 @@ class HeroCard extends StatelessWidget {
         ? Icons.vaccines_rounded
         : Icons.biotech_rounded;
     final bgColor = treatmentMode == 'iui'
-        ? const Color(0xFFA855F7)
-        : const Color(0xFF7C3AED);
+        ? AppColors.accentPurpleLight
+        : AppColors.accentPurple;
 
     if (upcomingSchedules.isEmpty) {
       return _card(
@@ -246,7 +259,7 @@ class HeroCard extends StatelessWidget {
               style: TextStyle(fontSize: 13, color: Color(0xD9FFFFFF)),
             ),
             const SizedBox(height: 14),
-            const _CtaPill(text: '일정 추가하러 가기 →'),
+            _CtaPill(text: '일정 추가하러 가기 →', color: bgColor),
           ],
         ),
       );
@@ -415,23 +428,24 @@ class HeroCard extends StatelessWidget {
 }
 
 class _CtaPill extends StatelessWidget {
-  const _CtaPill({required this.text});
+  const _CtaPill({required this.text, required this.color});
   final String text;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(20),
+        color: _heroCtaBg,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Text(
         text,
-        style: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF7C3AED),
+        style: TextStyle(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+          color: color,
         ),
       ),
     );
@@ -439,32 +453,36 @@ class _CtaPill extends StatelessWidget {
 }
 
 class _DdayBadge extends StatelessWidget {
-  const _DdayBadge({required this.num, this.label});
+  const _DdayBadge({required this.num, this.label, this.dark = false});
   final String num;
   final String? label;
+  final bool dark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.25),
+        color: Colors.white.withValues(alpha: dark ? 0.5 : 0.25),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         children: [
           Text(
             num,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: Colors.white,
+              color: dark ? _heroTextDark : Colors.white,
             ),
           ),
           if (label != null)
             Text(
               label!,
-              style: const TextStyle(fontSize: 10, color: Color(0xCCFFFFFF)),
+              style: TextStyle(
+                fontSize: 10,
+                color: dark ? _heroTextDim : const Color(0xCCFFFFFF),
+              ),
             ),
         ],
       ),
