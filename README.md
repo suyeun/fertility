@@ -113,6 +113,34 @@ firebase deploy --only firestore:rules
 
 ---
 
+## 4-1. 지원금 계산기 규칙 데이터 (Firestore `config`)
+
+앱과 웹의 난임 시술 지원금 계산기는 Firestore `config` 컬렉션의 두 문서를 읽습니다.
+
+| 문서 | 내용 |
+|---|---|
+| `config/subsidyNationalRules` | 국가 기준 — 시술별 회당 상한(`procedures`), 별도 지원 항목(`extras`), 총 지원 횟수(`totalLimit`) |
+| `config/subsidyLocalRules` | 지자체 기준 — `regions[]` 에 지역별 상한 덮어쓰기(`overrides`)와 추가 지원(`additionalBenefits`) |
+
+두 문서가 비어 있으면 계산기에 시술 목록이 나오지 않습니다. 관리자 콘솔(`apps/admin`)은 Firestore 클라이언트 SDK를 쓰는데 `firestore.rules`에 `config` 규칙이 없어 기본 거부되므로, **아래 시드 스크립트(Admin SDK)** 또는 Firebase Console에서만 기록할 수 있습니다.
+
+```bash
+# 1) 데이터 확인·수정: apps/backend/scripts/subsidy-rules.seed.json
+# 2) 미리보기 (Firestore 접근 없음)
+cd apps/backend && npm run seed:subsidy-rules -- --dry-run
+# 3) 실제 기록 — apps/backend/.env 의 FIREBASE_* 가 가리키는 프로젝트에 씁니다
+cd apps/backend && npm run seed:subsidy-rules
+# 4) 확인
+curl http://localhost:3001/api/subsidy/rules
+```
+
+- 시드 값은 보건복지부 난임부부 시술비 지원사업 **2024-11-01 개정 기준(만 44세 이하 상한)** 입니다. 배포 전 e보건소에서 최신 고시를 확인하고 `version`/`effectiveDate`를 갱신하세요.
+- 시술 키는 앱이 기대하는 `ivf_fresh` · `ivf_frozen` · `iui` 세 개를 반드시 유지해야 합니다.
+- 지자체는 17개 광역 시·도 뼈대만 들어 있습니다. 지역별 추가 지원을 채운 뒤 `lastVerified`에 확인일(`YYYY-MM-DD`)을 적으면 앱의 "6개월 이상 경과" 경고가 사라집니다. 6개월이 지나면 다시 경고가 뜨므로 반년마다 재확인하세요.
+- 스크립트는 문서를 통째로 덮어씁니다. Firebase Console에서 직접 고친 값이 있으면 JSON에도 반영해두세요.
+
+---
+
 ## 5. 인앱결제 설정 (RevenueCat)
 
 ### 준비 순서

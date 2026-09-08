@@ -1,0 +1,60 @@
+{
+  "_readme": [
+    "난임 시술 지원금 규칙 시드 데이터. `npm run seed:subsidy-rules` 로 Firestore config/subsidyNationalRules, config/subsidyLocalRules 에 기록된다.",
+    "금액·횟수는 보건복지부 '난임부부 시술비 지원사업' 2024-11-01 개정 기준(만 44세 이하 상한)으로 작성했다.",
+    "배포 전 반드시 e보건소(https://www.e-health.go.kr) 또는 보건복지부 고시로 최신 값을 확인하고 version/effectiveDate 를 갱신할 것.",
+    "지자체(local.regions) 는 17개 광역 시·도의 뼈대만 있고 추가 지원(overrides/additionalBenefits)은 비어 있다. 지역별 조례를 확인해 채우고 lastVerified 에 확인일(YYYY-MM-DD)을 적으면 앱의 '6개월 경과' 경고가 사라진다."
+  ],
+  "national": {
+    "version": "seed-2025-01",
+    "effectiveDate": "2024-11-01",
+    "totalLimit": 25,
+    "procedures": {
+      "ivf_fresh":  { "label": "체외수정 · 신선배아 이식", "maxAmount": 1100000, "countLimit": 20, "countGroup": "ivf" },
+      "ivf_frozen": { "label": "체외수정 · 동결배아 이식", "maxAmount": 500000,  "countLimit": 20, "countGroup": "ivf" },
+      "iui":        { "label": "인공수정",                 "maxAmount": 300000,  "countLimit": 5,  "countGroup": "iui" }
+    },
+    "extras": {
+      "embryo_freezing":        { "label": "배아동결비",                 "maxAmount": 300000 },
+      "miscarriage_prevention": { "label": "유산방지제(프로게스테론 제제)", "maxAmount": 200000 },
+      "implantation_support":   { "label": "착상보조제",                 "maxAmount": 200000 }
+    },
+    "eligibilityNotes": [
+      "법률혼 또는 1년 이상 사실혼 관계의 난임 부부 (소득 기준 폐지, 거주지 지자체 기준 적용)",
+      "지원 횟수는 출산당 총 25회 (체외수정 신선·동결 합산 20회 + 인공수정 5회), 출산 시 횟수가 초기화됨",
+      "만 45세 이상은 회당 상한이 낮아짐 (신선 90만원 · 동결 40만원 · 인공수정 20만원)",
+      "시술 시작 전 지원결정통지서를 발급받아야 하며 소급 적용되지 않음"
+    ],
+    "disclaimer": "표시 금액은 정부 고시 기준 회당 최대 지원 한도이며, 실제 지급액은 본인부담금·시술 내용·연령에 따라 달라집니다. 최종 기준은 관할 보건소 또는 e보건소에서 확인하세요."
+  },
+  "local": {
+    "version": "seed-2025-01",
+    "regions": [
+      { "regionCode": "seoul",     "regionName": "서울특별시" },
+      { "regionCode": "busan",     "regionName": "부산광역시" },
+      { "regionCode": "daegu",     "regionName": "대구광역시" },
+      { "regionCode": "incheon",   "regionName": "인천광역시" },
+      { "regionCode": "gwangju",   "regionName": "광주광역시" },
+      { "regionCode": "daejeon",   "regionName": "대전광역시" },
+      { "regionCode": "ulsan",     "regionName": "울산광역시" },
+      { "regionCode": "sejong",    "regionName": "세종특별자치시" },
+      { "regionCode": "gyeonggi",  "regionName": "경기도" },
+      { "regionCode": "gangwon",   "regionName": "강원특별자치도" },
+      { "regionCode": "chungbuk",  "regionName": "충청북도" },
+      { "regionCode": "chungnam",  "regionName": "충청남도" },
+      { "regionCode": "jeonbuk",   "regionName": "전북특별자치도" },
+      { "regionCode": "jeonnam",   "regionName": "전라남도" },
+      { "regionCode": "gyeongbuk", "regionName": "경상북도" },
+      { "regionCode": "gyeongnam", "regionName": "경상남도" },
+      { "regionCode": "jeju",      "regionName": "제주특별자치도" }
+    ],
+    "_regionDefaults": {
+      "overrides": {},
+      "additionalBenefits": [],
+      "residencyNote": "신청일 기준 해당 지자체에 주민등록을 둔 부부 (여성 기준). 세부 요건은 관할 보건소 확인.",
+      "applyChannels": ["정부24", "e보건소(www.e-health.go.kr)", "관할 보건소 방문"],
+      "sourceUrl": "https://www.e-health.go.kr",
+      "lastVerified": null
+    }
+  }
+}

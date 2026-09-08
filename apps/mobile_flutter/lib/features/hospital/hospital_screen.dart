@@ -23,32 +23,39 @@ const _categoryMeta = {
   '식단': (emoji: '🥗', bg: Color(0xFFFEF3C7), fg: Color(0xFF92400E)),
 };
 
+// 보건복지부 난임부부 시술비 지원사업 2024-11-01 개정 기준 (만 44세 이하 상한).
+// 출산당 총 25회(체외수정 신선·동결 합산 20회 + 인공수정 5회), 소득 기준 없음.
+// 정확한 금액은 Firestore config 규칙(지원금 계산기)이 기준이며, 여기는 안내용 요약이다.
 const _costInfo = [
   (
     title: '인공수정 (IUI)',
-    gov: '3회까지 지원',
+    gov: '출산당 5회 · 회당 최대 30만원',
     selfPay: '20~50만원/회',
-    note: '건강보험 적용 시 본인부담 약 20~30%',
+    note: '건강보험 급여 후 본인부담분을 지원 · 만 45세 이상은 상한 20만원',
   ),
   (
     title: '체외수정 (IVF)',
-    gov: '신선배아 9회, 동결배아 7회',
+    gov: '신선·동결 합산 20회 · 신선배아 회당 최대 110만원',
     selfPay: '300~500만원/회',
-    note: '지원 후 본인부담 약 30~50%',
+    note: '만 45세 이상은 상한 90만원 · 배아동결비 최대 30만원 별도',
   ),
   (
     title: '동결이식 (FET)',
-    gov: 'IVF 지원 횟수에 포함',
+    gov: 'IVF 20회에 포함 · 회당 최대 50만원',
     selfPay: '70~150만원/회',
-    note: '신선배아보다 비용 낮음',
+    note: '만 45세 이상은 상한 40만원 · 신선배아보다 비용 낮음',
   ),
 ];
 
 const _processSteps = [
-  (step: '1', label: '난임 진단서 발급', desc: '난임 전문의에게 진단서 발급'),
-  (step: '2', label: '주민센터 방문 신청', desc: '또는 복지로 온라인 신청'),
-  (step: '3', label: '지원 결정 통보', desc: '소득 확인 후 보통 2~3주 소요'),
-  (step: '4', label: '시술 후 비용 청구', desc: '지정 의료기관에서 급여 적용'),
+  (step: '1', label: '난임 진단서 발급', desc: '정부지정 난임시술 의료기관에서 발급'),
+  (
+    step: '2',
+    label: '지원결정통지서 신청',
+    desc: '시술 시작 전 정부24 · e보건소 · 관할 보건소 (소급 불가)',
+  ),
+  (step: '3', label: '지원 결정 통보', desc: '소득 기준 없음 · 서류 확인 후 통지서 발급'),
+  (step: '4', label: '시술 후 비용 청구', desc: '영수증 · 세부내역서로 관할 보건소에 청구'),
 ];
 
 const _subsidyArticles = [
@@ -760,7 +767,7 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
               ),
             ),
             const Text(
-              '기준 중위소득 180% 이하 가구 대상',
+              '소득 기준 없음 · 출산당 총 25회 · 2024년 11월 개정 기준',
               style: TextStyle(fontSize: 12, color: AppColors.textMuted),
             ),
             ..._costInfo.map(
