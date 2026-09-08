@@ -1,6 +1,7 @@
 import '../models/cycle.dart';
 import '../models/daily_note.dart';
 import '../models/hormone_record.dart';
+import '../models/protocol_template.dart';
 import '../models/treatment.dart';
 import 'client.dart';
 
@@ -66,6 +67,14 @@ class TreatmentApi {
       data: data,
     );
     return TreatmentSchedule.fromJson(res.data!);
+  }
+
+  /// 회차 프로토콜 템플릿 (예시 일정)
+  Future<List<ProtocolTemplate>> getTemplates() async {
+    final res = await _client.get<List<dynamic>>('/treatment/templates');
+    return (res.data ?? const [])
+        .map((e) => ProtocolTemplate.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   Future<void> updateStatus(String id, String status) =>

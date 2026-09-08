@@ -57,7 +57,16 @@ class DayDetailModal extends ConsumerStatefulWidget {
     required this.onGoRecords,
     required this.onPaywall,
     this.onNoteSaved,
+    this.onEditSchedule,
+    this.onSchedulesChanged,
   });
+
+  /// 일정 수정 — 부모가 수정 모달을 열고, 저장된 일정(취소 시 null)을 돌려준다.
+  final Future<TreatmentSchedule?> Function(TreatmentSchedule schedule)?
+  onEditSchedule;
+
+  /// 일정 완료·삭제·수정 후 호출 — 부모(캘린더)가 목록과 알림을 갱신한다.
+  final VoidCallback? onSchedulesChanged;
 
   final String selectedDateStr;
   final TreatmentMode treatmentMode;
@@ -79,6 +88,10 @@ class DayDetailModal extends ConsumerStatefulWidget {
 }
 
 class _DayDetailModalState extends ConsumerState<DayDetailModal> {
+  /// 이 시트가 열린 뒤 완료·삭제·수정된 결과를 반영하는 로컬 목록.
+  late final List<TreatmentSchedule> _schedules = List.of(widget.schedules);
+  final Set<String> _scheduleBusy = {};
+
   int? _condition;
   final _memoCtrl = TextEditingController();
   final _memoFocusNode = FocusNode();
@@ -117,14 +130,162 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
     return null;
   }
 
-  List<TreatmentSchedule> get _dateSchedules => widget.schedules
+  void _replaceSchedule(TreatmentSchedule updated) {
+    setState(() {
+      final i = _schedules.indexWhere((s) => s.id == updated.id);
+      if (i >= 0) {
+        _schedules[i] = updated;
+      } else {
+        _schedules.add(updated);
+      }
+    });
+  }
+
+  Future<void> _toggleScheduleStatus(TreatmentSchedule sc) async {
+    final next = sc.status == 'completed' ? 'scheduled' : 'completed';
+    setState(() => _scheduleBusy.add(sc.id));
+    try {
+      await ref.read(treatmentApiProvider).updateStatus(sc.id, next);
+      if (!mounted) return;
+      _replaceSchedule(
+        TreatmentSchedule(
+          id: sc.id,
+          userId: sc.userId,
+          type: sc.type,
+          title: sc.title,
+          scheduledAt: sc.scheduledAt,
+          status: next,
+          hospitalName: sc.hospitalName,
+          notes: sc.notes,
+          medications: sc.medications,
+          isPartnerRecord: sc.isPartnerRecord,
+        ),
+      );
+      widget.onSchedulesChanged?.call();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('상태를 변경하지 못했어요.')),
+      );
+    } finally {
+      if (mounted) setState(() => _scheduleBusy.remove(sc.id));
+    }
+  }
+
+  Future<void> _deleteSchedule(TreatmentSchedule sc) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('일정을 삭제할까요?'),
+        content: Text(
+          '\'${sc.title}\' 일정과 연결된 약물 알림이 함께 삭제돼요. 되돌릴 수 없어요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('취소'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    setState(() => _scheduleBusy.add(sc.id));
+    try {
+      await ref.read(treatmentApiProvider).delete(sc.id);
+      if (!mounted) return;
+      setState(() => _schedules.removeWhere((s) => s.id == sc.id));
+      widget.onSchedulesChanged?.call();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('일정을 삭제하지 못했어요.')),
+      );
+    } finally {
+      if (mounted) setState(() => _scheduleBusy.remove(sc.id));
+    }
+  }
+
+  Future<void> _editSchedule(TreatmentSchedule sc) async {
+    final handler = widget.onEditSchedule;
+    if (handler == null) return;
+    final updated = await handler(sc);
+    if (updated != null && mounted) {
+      _replaceSchedule(updated);
+      widget.onSchedulesChanged?.call();
+    }
+  }
+
+  Widget _scheduleActionBar(TreatmentSchedule sc) {
+    final busy = _scheduleBusy.contains(sc.id);
+    final done = sc.status == 'completed';
+    Widget action(IconData icon, String label, VoidCallback onTap,
+        {Color color = AppColors.textMuted}) {
+      return InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: busy ? null : onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(
+        children: [
+          action(
+            done ? Icons.undo_rounded : Icons.check_circle_outline_rounded,
+            done ? '완료 취소' : '완료',
+            () => _toggleScheduleStatus(sc),
+            color: done ? AppColors.textMuted : AppColors.accentGreen,
+          ),
+          action(Icons.edit_outlined, '수정', () => _editSchedule(sc)),
+          action(
+            Icons.delete_outline_rounded,
+            '삭제',
+            () => _deleteSchedule(sc),
+            color: AppColors.error,
+          ),
+          if (busy) ...[
+            const Spacer(),
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<TreatmentSchedule> get _dateSchedules => _schedules
       .where((s) => s.scheduledAt.split('T')[0] == widget.selectedDateStr)
       .toList();
 
   List<Medication> get _dateMedications {
     final sel = DateTime.tryParse(widget.selectedDateStr);
     final out = <Medication>[];
-    for (final s in widget.schedules) {
+    for (final s in _schedules) {
       final isSelectedDateSchedule =
           s.scheduledAt.split('T')[0] == widget.selectedDateStr;
       for (final med in s.medications ?? const <Medication>[]) {
@@ -950,10 +1111,15 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                       const SizedBox(height: 4),
                                       Text(
                                         sc.title,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
-                                          color: AppColors.textDark,
+                                          color: sc.status == 'completed'
+                                              ? AppColors.textMuted
+                                              : AppColors.textDark,
+                                          decoration: sc.status == 'completed'
+                                              ? TextDecoration.lineThrough
+                                              : null,
                                         ),
                                       ),
                                       if (sc.hospitalName != null)
@@ -974,6 +1140,8 @@ class _DayDetailModalState extends ConsumerState<DayDetailModal> {
                                             ),
                                           ],
                                         ),
+                                      if (!sc.isPartnerRecord)
+                                        _scheduleActionBar(sc),
                                     ],
                                   ),
                                 );

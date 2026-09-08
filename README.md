@@ -276,6 +276,7 @@ flutter build ipa --release \
 | GET/POST | `/api/cycles` | 생리 주기 |
 | GET/POST/DELETE | `/api/hormones` | 호르몬 기록 |
 | GET/POST/PATCH/DELETE | `/api/treatment` | 시술 일정 |
+| GET | `/api/treatment/templates` | 회차 프로토콜 템플릿(예시 일정, `config/treatmentTemplates` 로 갱신 가능) |
 | GET/GET(:date)/POST/DELETE | `/api/daily-notes` | 캘린더 일별 메모·컨디션 (감정일기 대체, 날짜당 1건) |
 | POST | `/api/ai/chat` | AI 채팅 (스트리밍) — 현재 호출하는 클라이언트 없음 (웹 동결, Flutter 미구현) |
 | GET/POST | `/api/ai/history` | 채팅 히스토리 — 현재 호출하는 클라이언트 없음 |

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, InternalServerErrorException, Logger } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
 import { NotificationsService } from '../notifications/notifications.service'
+import { DEFAULT_PROTOCOL_TEMPLATES, isValidTemplateList, ProtocolTemplate } from './protocol-templates'
 import { CouplesService } from '../couples/couples.service'
 import { randomUUID } from 'node:crypto'
 
@@ -13,6 +14,19 @@ export class TreatmentService {
     private notifications: NotificationsService,
     private couples: CouplesService,
   ) {}
+
+  /// 회차 프로토콜 템플릿 — config/treatmentTemplates.templates 가 유효하면 그 값을, 아니면 기본값.
+  async getTemplates(): Promise<ProtocolTemplate[]> {
+    try {
+      const doc = await this.firebase.db.collection('config').doc('treatmentTemplates').get()
+      const remote = doc.exists ? (doc.data() as any)?.templates : undefined
+      if (isValidTemplateList(remote)) return remote
+      if (remote !== undefined) this.logger.warn('config/treatmentTemplates 형식 오류 — 기본 템플릿 사용')
+    } catch (err) {
+      this.logger.warn(`treatmentTemplates 조회 실패 — 기본 템플릿 사용: ${err}`)
+    }
+    return DEFAULT_PROTOCOL_TEMPLATES
+  }
 
   async getAll(uid: string) {
     try {

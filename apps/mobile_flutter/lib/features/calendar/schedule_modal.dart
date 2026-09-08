@@ -19,7 +19,15 @@ class ScheduleModal extends ConsumerStatefulWidget {
     required this.onPaywall,
     required this.onSaved,
     this.onSubsidyEligible,
+    this.existing,
+    this.onUpdated,
   });
+
+  /// 수정 모드 — 기존 일정을 넘기면 값이 채워지고 같은 ID 로 덮어쓴다.
+  /// 무료 1건 제한·다음 단계 제안·지원금 배너는 신규 등록에만 적용된다.
+  final TreatmentSchedule? existing;
+  final void Function(TreatmentSchedule updated)? onUpdated;
+  bool get isEdit => existing != null;
 
   final String selectedDateStr;
   final TreatmentMode treatmentMode;
@@ -48,6 +56,48 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
   final List<Medication> _medications = [];
 
   bool _saving = false;
+  late String _dateStr;
+
+  @override
+  void initState() {
+    super.initState();
+    final ex = widget.existing;
+    _dateStr = ex != null && ex.scheduledAt.contains('T')
+        ? ex.scheduledAt.split('T')[0]
+        : (ex?.scheduledAt ?? widget.selectedDateStr);
+    if (ex != null) {
+      _titleCtrl.text = ex.title;
+      _hospitalCtrl.text = ex.hospitalName ?? '';
+      _notesCtrl.text = ex.notes ?? '';
+      _medications.addAll(ex.medications ?? const []);
+      if (ex.scheduledAt.contains('T')) {
+        final t = ex.scheduledAt.split('T')[1];
+        if (t.length >= 5) _timeCtrl.text = t.substring(0, 5);
+      }
+      // 저장된 일정에는 칩 값이 없어 백엔드 타입이 같은 첫 칩을 고른다.
+      for (final c in getScheduleChips(widget.treatmentMode).chips) {
+        if (c.backendType == ex.type) {
+          _scheduleChipValue = c.value;
+          break;
+        }
+      }
+    }
+  }
+
+  Future<void> _pickDate() async {
+    final current = DateTime.tryParse(_dateStr) ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime.now().subtract(const Duration(days: 730)),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
+    );
+    if (picked == null) return;
+    setState(() {
+      _dateStr =
+          '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
+    });
+  }
 
   @override
   void dispose() {
@@ -92,7 +142,7 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
           name: _medNameCtrl.text,
           dose: _medDoseCtrl.text,
           times: List<String>.from(_medTimes),
-          startDate: widget.selectedDateStr,
+          startDate: _dateStr,
         ),
       );
       _medNameCtrl.clear();
@@ -106,13 +156,15 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
   Future<void> _submit() async {
     if (_titleCtrl.text.trim().isEmpty) return;
 
-    final canRegister = canUseClinicScheduler(
-      ClinicFeature.registerFirstSchedule,
-      ClinicGateContext(
-        isPremium: widget.isPremium,
-        existingScheduleCount: widget.existingScheduleCount,
-      ),
-    );
+    // 수정은 일정 개수를 늘리지 않으므로 무료 1건 제한을 적용하지 않는다.
+    final canRegister = widget.isEdit ||
+        canUseClinicScheduler(
+          ClinicFeature.registerFirstSchedule,
+          ClinicGateContext(
+            isPremium: widget.isPremium,
+            existingScheduleCount: widget.existingScheduleCount,
+          ),
+        );
     if (!canRegister) {
       widget.onPaywall(PaywallSource.multiSchedule);
       return;
@@ -132,16 +184,22 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
       final resolvedType = activeChip?.backendType ?? 'other';
 
       final fullDateTime =
-          '${widget.selectedDateStr}T${_timeCtrl.text.isNotEmpty ? _timeCtrl.text : '09:00'}';
+          '${_dateStr}T${_timeCtrl.text.isNotEmpty ? _timeCtrl.text : '09:00'}';
       final saved = await ref.read(treatmentApiProvider).save({
+        if (widget.isEdit) 'id': widget.existing!.id,
         'type': resolvedType,
         'title': _titleCtrl.text.trim(),
         'scheduledAt': fullDateTime,
-        'status': 'scheduled',
+        'status': widget.existing?.status ?? 'scheduled',
         'hospitalName': _hospitalCtrl.text,
         'notes': _notesCtrl.text,
         'medications': _medications.map((m) => m.toJson()).toList(),
       });
+
+      if (widget.isEdit) {
+        widget.onUpdated?.call(saved);
+        return;
+      }
 
       final suggestion = getNextStageSuggestion(
         activeValue ?? '',
@@ -201,7 +259,9 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            '새 일정 추가 (${widget.selectedDateStr})',
+                            widget.isEdit
+                                ? '일정 수정 ($_dateStr)'
+                                : '새 일정 추가 ($_dateStr)',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
@@ -270,6 +330,50 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
                       }).toList(),
                     ),
                     const SizedBox(height: 14),
+                    if (widget.isEdit) ...[
+                      _label('일정 날짜'),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: _pickDate,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.event_rounded,
+                                size: 16,
+                                color: AppColors.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _dateStr,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textDark,
+                                ),
+                              ),
+                              const Spacer(),
+                              const Text(
+                                '변경',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                    ],
                     _label('일정 시간 (HH:MM)'),
                     _textField(_timeCtrl, '예: 09:00'),
                     const SizedBox(height: 14),
@@ -506,7 +610,7 @@ class _ScheduleModalState extends ConsumerState<ScheduleModal> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('일정 저장하기'),
+                            : Text(widget.isEdit ? '수정 저장' : '일정 저장하기'),
                       ),
                     ),
                     const SizedBox(height: 20),

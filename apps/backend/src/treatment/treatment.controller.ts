@@ -17,6 +17,12 @@ export class TreatmentController {
     return this.treatment.getAll(user.sub)
   }
 
+  // 회차 프로토콜 템플릿 (예시 일정) — 기준일 하나로 회차 일정 초안을 만들 때 사용
+  @Get('templates')
+  getTemplates() {
+    return this.treatment.getTemplates()
+  }
+
   @Post()
   save(@CurrentUser() user: JwtPayload, @Body() body: SaveTreatmentDto) {
     return this.treatment.save(user.sub, body)

@@ -16,6 +16,7 @@ import '../subsidy/widgets/subsidy_inline_banner.dart';
 import 'cycle_summary_card.dart';
 import 'day_cell.dart';
 import 'day_detail_modal.dart';
+import 'protocol_template_sheet.dart';
 import 'schedule_modal.dart';
 
 const _weekdays = ['일', '월', '화', '수', '목', '금', '토'];
@@ -184,45 +185,124 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   int get _cycleLength => _latestCycle?.cycleLength ?? 28;
   int get _periodLength => _latestCycle?.periodLength ?? 5;
 
-  void _openScheduleModal({String? presetDate}) {
+  /// 회차 프로토콜 템플릿 — 기준일 하나로 회차 일정 초안을 만들어 확인·수정 후 일괄 등록.
+  void _openProtocolTemplateSheet() {
+    if (_treatmentMode == 'natural') return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ScheduleModal(
+      builder: (sheetContext) => ProtocolTemplateSheet(
+        treatmentMode: _treatmentMode,
+        initialDate: _selectedDate ?? DateTime.now(),
+        isPremium: _isPremium,
+        existingScheduleCount: _schedules
+            .where((s) => !s.isPartnerRecord)
+            .length,
+        onPaywall: (source) {
+          Navigator.of(sheetContext).pop();
+          showPaywallModal(context, source: source);
+        },
+        onSaved: (saved) async {
+          Navigator.of(sheetContext).pop();
+          await _refreshSchedules();
+          LocalNotifications.instance.rescheduleMedicationAlerts(
+            _isPremium
+                ? _schedules
+                : _schedules
+                      .map(
+                        (s) => TreatmentSchedule(
+                          id: s.id,
+                          userId: s.userId,
+                          type: s.type,
+                          title: s.title,
+                          scheduledAt: s.scheduledAt,
+                          status: s.status,
+                          hospitalName: s.hospitalName,
+                          notes: s.notes,
+                          isPartnerRecord: s.isPartnerRecord,
+                        ),
+                      )
+                      .toList(),
+          );
+          TreatmentSchedule? eligible;
+          for (final s in saved) {
+            if (s.type == 'IVF' || s.type == 'FET' || s.type == 'IUI') {
+              eligible = s;
+              break;
+            }
+          }
+          if (eligible != null && mounted) {
+            setState(() => _subsidyEligibleSchedule = eligible);
+            if (_isPremium) {
+              LocalNotifications.instance.rescheduleSubsidyAlerts(_schedules);
+            }
+          }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${saved.length}건의 일정을 등록했어요.')),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  /// 일정 변경(완료·삭제·수정) 후 목록·알림 갱신.
+  Future<void> _afterSchedulesChanged() async {
+    await _refreshSchedules();
+    if (!mounted) return;
+    LocalNotifications.instance.rescheduleMedicationAlerts(
+      _isPremium
+          ? _schedules
+          : _schedules
+                .map(
+                  (s) => TreatmentSchedule(
+                    id: s.id,
+                    userId: s.userId,
+                    type: s.type,
+                    title: s.title,
+                    scheduledAt: s.scheduledAt,
+                    status: s.status,
+                    hospitalName: s.hospitalName,
+                    notes: s.notes,
+                    isPartnerRecord: s.isPartnerRecord,
+                  ),
+                )
+                .toList(),
+    );
+    if (_isPremium) {
+      LocalNotifications.instance.rescheduleSubsidyAlerts(_schedules);
+    }
+  }
+
+  /// 신규 등록 또는 수정 모달. 수정 모드(existing)는 저장된 일정을 반환하고, 취소 시 null.
+  Future<TreatmentSchedule?> _openScheduleModal({
+    String? presetDate,
+    TreatmentSchedule? existing,
+  }) {
+    return showModalBottomSheet<TreatmentSchedule>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => ScheduleModal(
         selectedDateStr: presetDate ?? _selectedDateStr,
         treatmentMode: _treatmentMode,
         isPremium: _isPremium,
-        // 무료 1건 제한은 내 일정만 계산 — 배우자 일정은 포함하지 않는다.
         existingScheduleCount:
             _schedules.where((s) => !s.isPartnerRecord).length,
+        existing: existing,
+        onUpdated: (updated) {
+          Navigator.of(sheetContext).pop(updated);
+          _afterSchedulesChanged();
+        },
         onPaywall: (source) {
-          Navigator.of(context).pop();
+          Navigator.of(sheetContext).pop();
           showPaywallModal(context, source: source);
         },
         onSaved: (suggestion) async {
-          Navigator.of(context).pop();
-          await _refreshSchedules();
-          final schedulesForAlerts = _isPremium
-              ? _schedules
-              : _schedules
-                    .map(
-                      (s) => TreatmentSchedule(
-                        id: s.id,
-                        userId: s.userId,
-                        type: s.type,
-                        title: s.title,
-                        scheduledAt: s.scheduledAt,
-                        status: s.status,
-                        hospitalName: s.hospitalName,
-                        notes: s.notes,
-                        isPartnerRecord: s.isPartnerRecord,
-                      ),
-                    )
-                    .toList();
-          LocalNotifications.instance.rescheduleMedicationAlerts(
-            schedulesForAlerts,
-          );
+          Navigator.of(sheetContext).pop();
+          await _afterSchedulesChanged();
           if (suggestion != null && mounted) {
             setState(() => _stageSuggestion = suggestion);
           }
@@ -272,6 +352,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           showPaywallModal(context, source: source);
         },
         onNoteSaved: _refreshDailyNotes,
+        onEditSchedule: (schedule) => _openScheduleModal(existing: schedule),
+        onSchedulesChanged: _afterSchedulesChanged,
       ),
     );
   }
@@ -409,6 +491,14 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                             '일정 추가',
                             () => _openScheduleModal(),
                           ),
+                          if (_treatmentMode != 'natural') ...[
+                            const SizedBox(width: 8),
+                            _headerBtn(
+                              Icons.auto_awesome_motion_rounded,
+                              '회차 템플릿',
+                              _openProtocolTemplateSheet,
+                            ),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 8),
@@ -562,8 +652,8 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           ctaText: '+ 오늘 일정 등록하기',
                           onCta: () =>
                               _openScheduleModal(presetDate: _todayStr),
-                          linkText: '생리 시작일도 기록하기 →',
-                          onLink: () => _openDayDetailModal(today),
+                          linkText: '기준일 하나로 회차 일정 한 번에 만들기 →',
+                          onLink: _openProtocolTemplateSheet,
                         ),
                       const SizedBox(height: 8),
                       const Text(
