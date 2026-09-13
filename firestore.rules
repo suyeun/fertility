@@ -17,11 +17,10 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // ── 유저 프로필 ────────────────────────────────────────
-    // 문서 ID = uid 이므로 본인 것만 읽기/쓰기
-    match /user_profiles/{uid} {
-      allow read, write: if isOwner(uid);
-    }
+    // 아래 컬렉션은 앱·웹·관리자 어디서도 클라이언트 SDK 로 접근하지 않아 규칙을 두지 않는다
+    // (규칙 없음 = 기본 거부, 서버 Admin SDK 만 접근):
+    //   user_profiles, diary_entries(구 감정일기 원본, 마이그레이션 스크립트 전용),
+    //   chat_messages(웹 AI 채팅 — 웹 동결로 클라이언트 없음), secret_posts, secret_comments
 
     // ── users 컬렉션 (coupleId / coupleRole 필드 포함) ────
     match /users/{uid} {
@@ -75,25 +74,6 @@ service cloud.firestore {
         && resource.data.userId == request.auth.uid;
     }
 
-    // ── 감정일기 — sharedWithPartner 기반 선택 공유 ────────
-    match /diary_entries/{docId} {
-      // 본인 열람 또는 배우자가 공유 허용한 항목만
-      allow read: if isLoggedIn() && (
-        resource.data.userId == request.auth.uid
-      );
-      allow create: if isLoggedIn()
-        && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isLoggedIn()
-        && resource.data.userId == request.auth.uid;
-    }
-
-    match /chat_messages/{docId} {
-      allow read, write: if isLoggedIn()
-        && resource.data.userId == request.auth.uid;
-      allow create: if isLoggedIn()
-        && request.resource.data.userId == request.auth.uid;
-    }
-
     // ── 커뮤니티 게시판 ────────────────────────────────────
     match /community_posts/{postId} {
       allow read: if isLoggedIn();
@@ -111,20 +91,6 @@ service cloud.firestore {
         && request.resource.data.userId == request.auth.uid;
       allow delete: if isLoggedIn()
         && resource.data.userId == request.auth.uid;
-    }
-
-    // ── 비밀 대화방 ────────────────────────────────────────
-    match /secret_posts/{postId} {
-      allow read: if isLoggedIn();
-      allow create: if isLoggedIn();
-      allow update: if isLoggedIn();
-      allow delete: if false;
-    }
-
-    match /secret_comments/{commentId} {
-      allow read: if isLoggedIn();
-      allow create: if isLoggedIn();
-      allow delete: if false;
     }
 
     // ── 병원 데이터 ────────────────────────────────────────
