@@ -22,6 +22,7 @@ import 'features/subscription/subscription_screen.dart';
 import 'features/subsidy/subsidy_calculator_screen.dart';
 import 'features/subsidy/subsidy_progress_screen.dart';
 import 'state/auth_controller.dart';
+import 'state/profile_controller.dart';
 import 'state/providers.dart';
 import 'widgets/update_modal.dart';
 
@@ -150,7 +151,22 @@ class _BomAppState extends ConsumerState<BomApp> {
     super.initState();
     FcmService.instance.configure(ref.read(notificationsApiProvider));
     PurchasesService.instance.initPurchases();
+    PurchasesService.instance.entitlementActive.addListener(_onEntitlementChanged);
     _checkVersion();
+  }
+
+  @override
+  void dispose() {
+    PurchasesService.instance.entitlementActive.removeListener(_onEntitlementChanged);
+    super.dispose();
+  }
+
+  /// RevenueCat 권한 변화(결제·복원·갱신·만료)를 프로필 상태에 반영해
+  /// isPremiumProfile 을 보는 화면들이 즉시 다시 그려지게 한다.
+  void _onEntitlementChanged() {
+    final active = PurchasesService.instance.entitlementActive.value;
+    if (active == null || !mounted) return;
+    ref.read(profileControllerProvider.notifier).applyEntitlement(active);
   }
 
   Future<void> _checkVersion() async {

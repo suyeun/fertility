@@ -140,10 +140,10 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
 
   Future<void> _handleRestore() async {
     setState(() => _restoring = true);
-    final restored = await PurchasesService.instance.restorePurchases();
+    final result = await PurchasesService.instance.restorePurchases();
     if (mounted) setState(() => _restoring = false);
     if (!mounted) return;
-    if (restored) {
+    if (result.restored) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -161,9 +161,9 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
         ),
       );
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('이 계정으로 구매한 구독 내역이 없어요.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result.error ?? '이 계정으로 구매한 구독 내역이 없어요.')),
+      );
     }
   }
 
@@ -272,13 +272,14 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
               ),
             ),
             if (_packages.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(24),
+              Padding(
+                padding: const EdgeInsets.all(24),
                 child: Center(
                   child: Text(
-                    '현재 구독 플랜을 불러올 수 없어요.\n잠시 후 다시 시도해 주세요.',
+                    PurchasesService.instance.lastOfferingsError ??
+                        '현재 구독 플랜을 불러올 수 없어요.\n잠시 후 다시 시도해 주세요.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: AppColors.textMuted,
                       fontSize: 13,
                       height: 1.5,

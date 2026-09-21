@@ -1,8 +1,12 @@
 import '../models/user_profile.dart';
+import '../purchases/purchases_service.dart';
 
 /// Port of packages/shared/lib/clinicGate.ts — CLINIC-mode feature gating.
 /// RevenueCat is the single source of truth for subscription state; never
 /// use this on data *read* paths, only to gate feature access.
+///
+/// 판정 순서: (1) RevenueCat 권한 캐시가 true 면 프리미엄, (2) 아니면 Firestore
+/// 프로필(웹훅 반영값·체험 기간)로 판정. 결제 직후 웹훅 지연에도 잠금이 즉시 풀린다.
 enum ClinicFeature {
   enterMode,
   viewStages,
@@ -30,6 +34,7 @@ class ClinicGateContext {
 }
 
 bool isPremiumProfile(UserProfile profile) {
+  if (PurchasesService.instance.cachedEntitlementActive == true) return true;
   final now = DateTime.now();
 
   if (profile.subscriptionStatus == 'active') return true;

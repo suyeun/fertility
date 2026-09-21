@@ -81,12 +81,20 @@ class ProfileController extends StateNotifier<UserProfile?> {
     _localCache.saveProfileJson(state!.toJson());
   }
 
-  void setPremium(bool isPremium) {
+  /// RevenueCat 권한 변화 반영. 활성이면 즉시 active 로 올려 화면 잠금을 풀고,
+  /// 비활성이면 서버(웹훅 반영값·체험 기간)를 다시 읽어 판정한다 — 체험 중인
+  /// 사용자를 임의로 cancelled 로 내리지 않기 위함.
+  Future<void> applyEntitlement(bool active) async {
     final current = state;
     if (current == null) return;
-    state = current.copyWith(
-      subscriptionStatus: isPremium ? 'active' : 'cancelled',
-    );
+    if (active) {
+      if (current.subscriptionStatus != 'active') {
+        state = current.copyWith(subscriptionStatus: 'active');
+        await _localCache.saveProfileJson(state!.toJson());
+      }
+      return;
+    }
+    await syncProfile();
   }
 
   Future<void> clearProfile() async {

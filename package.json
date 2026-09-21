@@ -11,7 +11,10 @@
     "build:web": "npm run build:shared && npm run build --workspace=apps/web",
     "build:backend": "npm run build:shared && npm run build --workspace=apps/backend",
     "build:shared": "npm run build --workspace=packages/shared",
-    "build:all": "npm run build:shared && npm run build --workspace=apps/backend && npm run build --workspace=apps/web"
+    "build:all": "npm run build:shared && npm run build --workspace=apps/backend && npm run build --workspace=apps/web",
+    "test:backend": "npm test --workspace=apps/backend",
+    "test:shared": "npm test --workspace=packages/shared",
+    "test": "npm run test:shared && npm run test:backend"
   },
   "engines": {
     "node": ">=20"

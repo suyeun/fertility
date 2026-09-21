@@ -36,6 +36,7 @@ const envValidationSchema = Joi.object({
 
   // 결제
   REVENUECAT_WEBHOOK_SECRET: Joi.string().required(),
+  REVENUECAT_ALLOW_SANDBOX:  Joi.string().valid('true', 'false').optional(), // 운영에서 샌드박스 이벤트 허용 (테스트 시 일시적으로)
 
   // Firebase (JSON 방식 또는 개별 변수 중 하나는 있어야 하므로 optional 처리)
   FIREBASE_SERVICE_ACCOUNT_JSON: Joi.string().optional(),

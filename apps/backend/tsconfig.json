@@ -18,8 +18,17 @@
     "strict": false,
     "esModuleInterop": true,
     "paths": {
-      "@fertility/shared": ["../../packages/shared"]
+      "@fertility/shared": [
+        "../../packages/shared"
+      ]
     }
   },
-  "include": ["src/**/*"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts",
+    "node_modules",
+    "dist"
+  ]
 }

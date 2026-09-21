@@ -184,6 +184,31 @@ REVENUECAT_WEBHOOK_SECRET=your_webhook_secret
 
 ---
 
+### 결제 테스트 (샌드박스) 체크리스트
+
+실제 카드 대신 스토어 샌드박스로 검증한다. 흐름: 스토어 샌드박스 → RevenueCat → `POST /api/payments/revenuecat` → Firestore `users.subscriptionStatus` → 앱 잠금 해제.
+
+**준비**
+- App Store Connect 유료 앱 계약(계약·세금·은행) 서명 — 미서명이면 상품 목록이 비어 온다
+- Sandbox 테스터 계정 생성(App Store Connect → 사용자 및 액세스) 후 기기 설정 → App Store → 샌드박스 계정 로그인
+- Play Console → 설정 → 라이선스 테스트에 테스터 Gmail 등록, 결제 권한 포함 빌드를 내부 테스트 트랙에 업로드
+- RevenueCat 웹훅 설정의 "테스트 전송" → 백엔드 로그에 `TEST 이벤트 수신` 이 찍히면 URL·시크릿 정상 (401 이면 시크릿 불일치)
+
+**시나리오**
+
+| 시나리오 | 확인 |
+|---|---|
+| 월간·연간 신규 구매 | 결제 직후 홈·캘린더 잠금(2회차 일정, 약물 알림, 지원금 상세, 진행 관리 체크) 즉시 해제, Render 로그 `INITIAL_PURCHASE`, Firestore 문서 `active` |
+| 무료 체험 → 자동 결제 | 페이월에 체험 기간 표시, 종료 후 `RENEWAL` 로 active 유지 (샌드박스: 월간 ≈ 5분, 연간 ≈ 1시간 주기로 갱신 후 자동 만료) |
+| 취소 | 스토어 구독 관리에서 취소 → `CANCELLATION` → 만료 전 기능 유지, 만료 후 잠김 |
+| 결제 실패 | 샌드박스 테스터 설정에서 결제 실패 강제 → `BILLING_ISSUE` 처리 |
+| 구매 복원 | 앱 삭제·재설치 후 "구매 복원" 으로 권한 복구 |
+| 다른 기기 | 같은 앱 계정으로 다른 기기 로그인 시 권한 유지 |
+
+**운영 서버 주의**: `NODE_ENV=production` 에서는 샌드박스 웹훅을 무시한다(로그에 `샌드박스 이벤트 무시`). 운영 서버로 샌드박스 검증이 필요하면 `REVENUECAT_ALLOW_SANDBOX=true` 를 잠시 켠 뒤 끈다.
+
+---
+
 ## 6. 배포
 
 ### 백엔드 — Render
@@ -291,6 +316,19 @@ flutter build ipa --release \
 | PATCH | `/api/subsidy/applications/:scheduleId` | 회차별 지원금 신청 진행 상태 (통지서 발급 · 시술 완료 · 청구 완료 · 서류 체크) |
 
 모든 엔드포인트는 `Authorization: Bearer <JWT>` 헤더 필요 (auth 제외).
+
+---
+
+## 6-1. 테스트
+
+| 대상 | 명령 | 내용 |
+|---|---|---|
+| 백엔드 (Jest) | `npm run test:backend` 또는 `cd apps/backend && npm test` | 결제 웹훅 처리(샌드박스 무시·상태 전환), 배너 게재 기간, 병원 광고 계약 기간, 회차 템플릿 검증 |
+| 공유 패키지 (Jest) | `npm run test:shared` | 주기 계산 등 |
+| 모바일 (flutter test) | `cd apps/mobile_flutter && flutter test` | 지원금 계산·진행 관리, 회차 템플릿 초안, 프리미엄 게이트, 앱 부팅 |
+| 전체 JS | `npm test` | shared + backend |
+
+백엔드 테스트 파일은 `src/**/*.spec.ts` 이며 빌드(`tsconfig.json`)에서는 제외되고 `tsconfig.spec.json` 으로만 컴파일된다. 외부 의존(Firestore 등)은 가짜 객체로 대체하고 순수 로직만 검증한다.
 
 ---
 

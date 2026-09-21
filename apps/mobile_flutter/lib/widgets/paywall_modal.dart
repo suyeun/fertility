@@ -338,13 +338,14 @@ class _PaywallSheetState extends State<_PaywallSheet> {
                         ),
                       )
                     else if (_packages.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         child: Center(
                           child: Text(
-                            '구독 플랜을 불러올 수 없어요.\n잠시 후 다시 시도해주세요.',
+                            PurchasesService.instance.lastOfferingsError ??
+                                '구독 플랜을 불러올 수 없어요.\n잠시 후 다시 시도해주세요.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textMuted,
                               height: 1.5,
