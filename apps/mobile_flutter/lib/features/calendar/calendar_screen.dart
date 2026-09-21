@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/domain/calendar_data.dart';
 import '../../core/domain/clinic_gate.dart';
+import '../../core/domain/mode_helpers.dart';
 import '../../core/domain/schedule_helpers.dart';
 import '../../core/models/models.dart';
 import '../../core/push/local_notifications.dart';
@@ -29,6 +30,24 @@ class LegendItem {
 }
 
 List<LegendItem> getLegend(TreatmentMode mode) {
+  if (mode == 'pregnant') {
+    return const [
+      LegendItem(
+        color: AppColors.accentPurpleLight,
+        label: '초음파 · 검사',
+        icon: Icons.circle_rounded,
+      ),
+      LegendItem(
+        color: Color(0xFF94A3B8),
+        label: '산전 진찰',
+        icon: Icons.circle_rounded,
+      ),
+      LegendItem(
+        color: AppColors.accentPurpleLight,
+        label: '메모',
+      ),
+    ];
+  }
   if (mode == 'natural') {
     return const [
       LegendItem(color: Color(0xFFFFDCDB), label: '생리'),
@@ -194,7 +213,10 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => ProtocolTemplateSheet(
         treatmentMode: _treatmentMode,
-        initialDate: _selectedDate ?? DateTime.now(),
+        initialDate: _treatmentMode == 'pregnant' &&
+                _profile?.pregnancyLmpDate != null
+            ? (DateTime.tryParse(_profile!.pregnancyLmpDate!) ?? DateTime.now())
+            : (_selectedDate ?? DateTime.now()),
         isPremium: _isPremium,
         existingScheduleCount: _schedules
             .where((s) => !s.isPartnerRecord)
@@ -423,7 +445,9 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
     final upcomingSchedule = upcoming.isNotEmpty ? upcoming.first : null;
 
     final showNaturalCta = _treatmentMode == 'natural' && _cycles.isEmpty;
-    final showClinicCta = _treatmentMode != 'natural' && _schedules.isEmpty;
+    final showPregnantCta = _treatmentMode == 'pregnant' && _schedules.isEmpty;
+    final showClinicCta =
+        isTreatmentMode(_treatmentMode) && _schedules.isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -631,7 +655,18 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                         stageDay: stageDay,
                         upcomingScheduleTitle: upcomingSchedule?.displayTitle(),
                         upcomingScheduleAt: upcomingSchedule?.scheduledAt,
+                        pregnancyLmpDate: _profile?.pregnancyLmpDate,
                       ),
+                      if (showPregnantCta)
+                        _ctaBox(
+                          icon: Icons.child_care_rounded,
+                          title: '산전 검사 일정을 만들어보세요',
+                          sub: '주수 기준일 하나로 초음파·선별 검사·임당 검사 예시 일정을 한 번에 만들고, 병원 일정에 맞춰 수정하면 돼요.',
+                          ctaText: '산전 검사 일정 한 번에 만들기',
+                          onCta: _openProtocolTemplateSheet,
+                          linkText: '+ 일정 하나만 직접 등록하기 →',
+                          onLink: () => _openScheduleModal(presetDate: _todayStr),
+                        ),
                       if (showNaturalCta)
                         _ctaBox(
                           icon: Icons.water_drop_rounded,

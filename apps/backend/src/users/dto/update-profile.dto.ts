@@ -41,4 +41,15 @@ export class UpdateProfileDto {
   @Min(1)
   @Max(14)
   averagePeriodLength?: number
+
+  // 임신 확인 모드 — null 이면 해제
+  @IsOptional()
+  @ValidateIf((o) => o.pregnancyLmpDate !== null)
+  @IsString()
+  pregnancyLmpDate?: string | null
+
+  @IsOptional()
+  @ValidateIf((o) => o.pregnancyConfirmedAt !== null)
+  @IsString()
+  pregnancyConfirmedAt?: string | null
 }

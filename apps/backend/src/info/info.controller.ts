@@ -10,4 +10,10 @@ export class InfoController {
   getAffiliateProducts() {
     return this.info.getAffiliateProducts()
   }
+
+  // 인증 불필요 — 임신·출산 지원 안내(금액·시점·신청처), config/birthBenefits 로 갱신
+  @Get('birth-benefits')
+  getBirthBenefits() {
+    return this.info.getBirthBenefits()
+  }
 }

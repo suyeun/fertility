@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/domain/mode_helpers.dart';
+import '../../core/domain/pregnancy.dart';
 import '../../core/models/enums.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -17,7 +18,10 @@ class CycleSummaryCard extends StatelessWidget {
     required this.stageDay,
     this.upcomingScheduleTitle,
     this.upcomingScheduleAt,
+    this.pregnancyLmpDate,
   });
+
+  final String? pregnancyLmpDate;
 
   final DateTime nextOvulationDate;
   final DateTime nextPeriodDate;
@@ -33,6 +37,23 @@ class CycleSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (mode == 'pregnant') {
+      final lmp = pregnancyLmpDate != null
+          ? DateTime.tryParse(pregnancyLmpDate!)
+          : null;
+      if (lmp == null) return const SizedBox.shrink();
+      final ga = gestationalAge(lmp);
+      final due = dueDate(lmp);
+      final next = nextPrenatalCheck(ga.weeks);
+      final stats = [
+        ('현재 주수', ga.label.replaceFirst('임신 ', '')),
+        ('출산 예정일', _fmt(due)),
+        ('분기', '${ga.trimester}분기'),
+        ('다음 검사', next != null ? '${next.fromWeek}~${next.toWeek}주' : '-'),
+      ];
+      return _gridCard(Icons.child_care_rounded, '임신 요약', stats);
+    }
+
     if (mode == 'natural') {
       final stats = [
         ('다음 배란일', _fmt(nextOvulationDate)),

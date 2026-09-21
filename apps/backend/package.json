@@ -10,7 +10,8 @@
     "migrate:diary-to-daily-notes": "ts-node --transpile-only scripts/migrate-diary-to-daily-notes.ts",
     "seed:subsidy-rules": "ts-node --transpile-only scripts/seed-subsidy-rules.ts",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "seed:birth-benefits": "ts-node --transpile-only scripts/seed-birth-benefits.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.0",

@@ -1,3 +1,4 @@
+import '../domain/pregnancy.dart';
 import 'client.dart';
 
 class NotificationsApi {
@@ -156,6 +157,12 @@ class AffiliateProduct {
 class InfoApi {
   InfoApi(this._client);
   final ApiClient _client;
+
+  /// 임신·출산 지원 안내 (공개). 실패하면 호출 측이 로컬 폴백을 쓴다.
+  Future<BirthBenefitsData> getBirthBenefits() async {
+    final res = await _client.get<Map<String, dynamic>>('/info/birth-benefits');
+    return BirthBenefitsData.fromJson(res.data ?? const {}).orFallback();
+  }
 
   /// articleId → product list
   Future<Map<String, List<AffiliateProduct>>> getProducts() async {

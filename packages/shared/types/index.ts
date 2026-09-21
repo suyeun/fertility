@@ -221,6 +221,9 @@ export interface UserProfile {
   trialEndsAt?: string
   subscriptionExpiresAt?: string  // RevenueCat CANCELLATION 이후 실제 만료일
   createdAt: string
+  // 임신 확인 모드 (treatmentStage === 'pregnant')
+  pregnancyLmpDate?: string       // 주수 계산 기준일 (LMP 또는 이식일 환산), YYYY-MM-DD
+  pregnancyConfirmedAt?: string   // 임신 확인일
 }
 
 export interface AIChatMessage {

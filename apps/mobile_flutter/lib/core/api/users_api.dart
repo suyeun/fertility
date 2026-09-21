@@ -1,6 +1,8 @@
 import '../models/user_profile.dart';
 import 'client.dart';
 
+const Object _unset = Object();
+
 class UpdateProfilePayload {
   UpdateProfilePayload({
     this.name,
@@ -11,6 +13,8 @@ class UpdateProfilePayload {
     this.stageStartedAt,
     this.averageCycleLength,
     this.averagePeriodLength,
+    this.pregnancyLmpDate = _unset,
+    this.pregnancyConfirmedAt = _unset,
   });
 
   final String? name;
@@ -22,6 +26,10 @@ class UpdateProfilePayload {
   final int? averageCycleLength;
   final int? averagePeriodLength;
 
+  /// null 을 명시하면 서버 값을 지운다(모드 해제). 기본값(_unset)은 전송하지 않음.
+  final Object? pregnancyLmpDate;
+  final Object? pregnancyConfirmedAt;
+
   Map<String, dynamic> toJson() => {
     if (name != null) 'name': name,
     if (partnerName != null) 'partnerName': partnerName,
@@ -31,6 +39,9 @@ class UpdateProfilePayload {
     if (stageStartedAt != null) 'stageStartedAt': stageStartedAt,
     if (averageCycleLength != null) 'averageCycleLength': averageCycleLength,
     if (averagePeriodLength != null) 'averagePeriodLength': averagePeriodLength,
+    if (pregnancyLmpDate != _unset) 'pregnancyLmpDate': pregnancyLmpDate,
+    if (pregnancyConfirmedAt != _unset)
+      'pregnancyConfirmedAt': pregnancyConfirmedAt,
   };
 }
 

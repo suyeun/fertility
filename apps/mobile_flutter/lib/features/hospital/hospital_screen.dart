@@ -9,6 +9,7 @@ import '../../core/api/subsidy_api.dart';
 import '../../core/models/models.dart';
 import '../../core/models/subsidy.dart';
 import '../../core/theme/app_theme.dart';
+import '../../state/profile_controller.dart';
 import '../../state/providers.dart';
 
 const _regions = ['전체', '서울', '경기', '인천', '부산', '대구', '대전', '광주', '기타'];
@@ -746,6 +747,47 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
     );
   }
 
+  Widget _birthBenefitsEntryCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.accentGreen),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '🤍 임신·출산 지원',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            '임신 확인 후 챙길 진료비 바우처, 첫만남이용권, 부모급여, 보건소 지원을 시점별로 정리했어요.',
+            style: TextStyle(fontSize: 12, color: AppColors.textDark, height: 1.4),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => context.push('/birth-benefits'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentGreen,
+              ),
+              child: const Text('임신·출산 지원 안내 열기'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _subsidyRegionSummaryCard() {
     final region = _subsidyRules?.local.findByCode(_subsidyProfile?.regionCode);
     return Container(
@@ -850,7 +892,10 @@ class _HospitalScreenState extends ConsumerState<HospitalScreen> {
   }
 
   List<Widget> _costTabContent() {
+    final isPregnant =
+        ref.read(profileControllerProvider)?.treatmentStage == 'pregnant';
     return [
+      if (isPregnant) _birthBenefitsEntryCard(),
       _subsidyRegionSummaryCard(),
       ..._subsidyArticles.map(_subsidyArticleCard),
       const SizedBox(height: 4),

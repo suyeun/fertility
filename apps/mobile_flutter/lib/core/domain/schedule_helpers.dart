@@ -61,6 +61,37 @@ ScheduleChipsResult getScheduleChips(TreatmentMode mode) {
       defaultValue: null,
     );
   }
+  if (mode == 'pregnant') {
+    return const ScheduleChipsResult(
+      chips: [
+        ScheduleChip(
+          value: 'prenatal',
+          label: '산전 진찰',
+          backendType: 'other',
+          icon: Icons.local_hospital_rounded,
+        ),
+        ScheduleChip(
+          value: 'monitoring',
+          label: '초음파',
+          backendType: 'monitoring',
+          icon: Icons.monitor_heart_rounded,
+        ),
+        ScheduleChip(
+          value: 'bloodtest',
+          label: '검사',
+          backendType: 'monitoring',
+          icon: Icons.science_rounded,
+        ),
+        ScheduleChip(
+          value: 'other',
+          label: '기타',
+          backendType: 'other',
+          icon: Icons.event_rounded,
+        ),
+      ],
+      defaultValue: 'prenatal',
+    );
+  }
   if (mode == 'iui') {
     return const ScheduleChipsResult(
       chips: [
@@ -158,7 +189,7 @@ StageSuggestion? getNextStageSuggestion(
   CurrentStage currentStage,
   TreatmentMode mode,
 ) {
-  if (mode == 'natural') return null;
+  if (mode == 'natural' || mode == 'pregnant') return null;
 
   switch (scheduleValue) {
     case 'transfer':

@@ -219,7 +219,11 @@ class _ProtocolTemplateSheetState extends ConsumerState<ProtocolTemplateSheet> {
                 children: [
                   Expanded(
                     child: Text(
-                      _reviewed ? '예시 일정 확인 · 수정' : '회차 일정 한 번에 만들기',
+                      _reviewed
+                          ? '예시 일정 확인 · 수정'
+                          : widget.treatmentMode == 'pregnant'
+                          ? '산전 검사 일정 한 번에 만들기'
+                          : '회차 일정 한 번에 만들기',
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,

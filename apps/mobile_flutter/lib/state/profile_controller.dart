@@ -44,6 +44,8 @@ class ProfileController extends StateNotifier<UserProfile?> {
           stageStartedAt: profile.stageStartedAt,
           averageCycleLength: profile.averageCycleLength,
           averagePeriodLength: profile.averagePeriodLength,
+          pregnancyLmpDate: profile.pregnancyLmpDate,
+          pregnancyConfirmedAt: profile.pregnancyConfirmedAt,
         ),
       );
     } catch (_) {

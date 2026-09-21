@@ -29,6 +29,18 @@ describe('DEFAULT_PROTOCOL_TEMPLATES', () => {
     const modes = new Set(DEFAULT_PROTOCOL_TEMPLATES.map((t) => t.mode))
     expect(modes.has('ivf')).toBe(true)
     expect(modes.has('iui')).toBe(true)
+    expect(modes.has('pregnant')).toBe(true)
+  })
+
+  it('산전 템플릿은 주수 순서대로 배치되고 40주 안에 있다', () => {
+    const t = DEFAULT_PROTOCOL_TEMPLATES.find((x) => x.mode === 'pregnant')!
+    let prev = -1
+    for (const s of t.steps) {
+      expect(s.offsetFrom).toBeUndefined()
+      expect(s.offsetDays).toBeGreaterThan(prev)
+      expect(s.offsetDays).toBeLessThanOrEqual(40 * 7)
+      prev = s.offsetDays
+    }
   })
 })
 

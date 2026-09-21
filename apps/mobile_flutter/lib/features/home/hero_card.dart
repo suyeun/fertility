@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/domain/pregnancy.dart';
 import '../../core/domain/schedule_helpers.dart';
 import '../../core/models/enums.dart';
 import '../../core/models/treatment.dart';
@@ -44,7 +45,11 @@ class HeroCard extends StatelessWidget {
     required this.isFertileWindow,
     required this.hasCycleData,
     required this.upcomingSchedules,
+    this.pregnancyLmpDate,
   });
+
+  /// 임신 확인 모드 주수 기준일 (YYYY-MM-DD). treatmentMode == 'pregnant' 일 때 사용.
+  final String? pregnancyLmpDate;
 
   final TreatmentMode treatmentMode;
   final CurrentStage currentStage;
@@ -59,6 +64,8 @@ class HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (treatmentMode == 'pregnant') return _pregnantCard(context);
+
     if (treatmentMode == 'natural' && !hasCycleData) {
       return _card(
         color: AppColors.primaryLight,
@@ -392,6 +399,108 @@ class HeroCard extends StatelessWidget {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+
+  Widget _pregnantCard(BuildContext context) {
+    final lmp = pregnancyLmpDate != null
+        ? DateTime.tryParse(pregnancyLmpDate!)
+        : null;
+    if (lmp == null) {
+      return _card(
+        color: AppColors.primaryLight,
+        onTap: () => context.push('/pregnancy-setup'),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '🤍 임신 확인 모드',
+              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _heroTextDim),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '주수 기준일을 입력하면\n주수와 예정일을 알려드려요',
+              style: TextStyle(fontSize: 18, color: _heroTextDark, fontWeight: FontWeight.w700, height: 1.3),
+            ),
+            SizedBox(height: 12),
+            _CtaPill(text: '기준일 입력하러 가기 →', color: _heroCtaText),
+          ],
+        ),
+      );
+    }
+
+    final ga = gestationalAge(lmp);
+    final due = dueDate(lmp);
+    final next = nextPrenatalCheck(ga.weeks);
+    final upcoming = upcomingSchedules.isNotEmpty ? upcomingSchedules.first : null;
+    final upcomingDate = upcoming != null ? DateTime.tryParse(upcoming.scheduledAt) : null;
+
+    return _card(
+      color: AppColors.primaryLight,
+      onTap: () => context.push('/calendar'),
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '🤍 임신 확인 모드',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _heroTextDim),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                ga.label,
+                style: const TextStyle(fontSize: 22, color: _heroTextDark, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${ga.trimester}분기 · 출산 예정일 ${due.month}월 ${due.day}일',
+                style: const TextStyle(fontSize: 13, color: _heroTextDim),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.45),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  weeklyTip(ga.weeks),
+                  style: const TextStyle(fontSize: 12, color: _heroTextDark, height: 1.4),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  upcoming != null && upcomingDate != null
+                      ? '다음 일정 · ${upcoming.displayTitle()} ${upcomingDate.month}/${upcomingDate.day} ${_getDDay(upcomingDate)}'
+                      : next != null
+                      ? '다음 검사 · ${next.label} (${next.fromWeek}~${next.toWeek}주) — 캘린더에 일정을 등록해두세요'
+                      : '예정일이 가까워요. 병원과 분만 일정을 확인하세요',
+                  style: const TextStyle(fontSize: 12, color: _heroTextDark, height: 1.4),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                '주수·예정일은 참고용이에요. 병원에서 안내한 기준이 우선이에요.',
+                style: TextStyle(fontSize: 10, color: _heroTextDim),
+              ),
+            ],
+          ),
+          Positioned(
+            top: 0,
+            right: 0,
+            child: _DdayBadge(num: _getDDay(due), label: '출산 예정', dark: true),
+          ),
         ],
       ),
     );

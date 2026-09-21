@@ -17,6 +17,8 @@ const ALLOWED_UPDATE_FIELDS = [
   'stageStartedAt',
   'averageCycleLength',
   'averagePeriodLength',
+  'pregnancyLmpDate',      // 임신 주수 기준일 (LMP 또는 이식일 환산, YYYY-MM-DD)
+  'pregnancyConfirmedAt',  // 임신 확인일
 ] as const
 
 @Injectable()

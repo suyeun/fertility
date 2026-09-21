@@ -14,6 +14,9 @@ import 'features/couple/couple_screen.dart';
 import 'features/home/home_screen.dart';
 import 'features/hospital/hospital_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
+import 'features/pregnancy/birth_benefits_screen.dart';
+import 'features/pregnancy/pregnancy_setup_screen.dart';
+import 'features/pregnancy/treatment_summary_screen.dart';
 import 'features/records/records_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/shell/tab_shell.dart';
@@ -90,6 +93,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/subsidy-progress',
         builder: (context, state) => const SubsidyProgressScreen(),
+      ),
+      GoRoute(
+        path: '/pregnancy-setup',
+        builder: (context, state) => const PregnancySetupScreen(),
+      ),
+      GoRoute(
+        path: '/birth-benefits',
+        builder: (context, state) => const BirthBenefitsScreen(),
+      ),
+      GoRoute(
+        path: '/treatment-summary',
+        builder: (context, state) => const TreatmentSummaryScreen(),
       ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>

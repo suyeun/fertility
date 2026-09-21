@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/domain/clinic_gate.dart';
 import '../../core/domain/mode_helpers.dart';
+import '../../core/domain/pregnancy.dart';
 import '../../core/models/models.dart' hide SubscriptionStatus;
 import '../../core/push/local_notifications.dart';
 import '../../core/purchases/purchases_service.dart';
@@ -213,6 +214,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       _closeSheet();
       return;
     }
+    if (mode == 'pregnant') {
+      _closeSheet();
+      context.push('/pregnancy-setup');
+      return;
+    }
     if (mode == 'natural') {
       setState(() {
         _pendingMode = 'natural';
@@ -237,7 +243,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           .saveProfile(
             ref
                 .read(profileControllerProvider)!
-                .copyWith(treatmentStage: 'natural', currentMode: 'NATURAL'),
+                .copyWith(
+                  treatmentStage: 'natural',
+                  currentMode: 'NATURAL',
+                  pregnancyLmpDate: null,
+                  pregnancyConfirmedAt: null,
+                ),
           );
     }
     setState(() => _modeSaving = false);
@@ -258,7 +269,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           .saveProfile(
             ref
                 .read(profileControllerProvider)!
-                .copyWith(treatmentStage: targetMode, currentMode: 'CLINIC'),
+                .copyWith(
+                  treatmentStage: targetMode,
+                  currentMode: 'CLINIC',
+                  pregnancyLmpDate: null,
+                  pregnancyConfirmedAt: null,
+                ),
           );
     }
     setState(() => _modeSaving = false);
@@ -282,7 +298,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
 
     final profile = _profile;
-    final modeLabel = modeOptions
+    final modeLabel = settingsModeOptions
         .firstWhere(
           (m) => m.value == _currentMode,
           orElse: () => modeOptions.first,
@@ -381,7 +397,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onTap: () =>
                       setState(() => _sheet = ModeChangeSheetKind.mode),
                 ),
-                if (_currentMode != 'natural')
+                if (_currentMode == 'pregnant')
+                  _row(
+                    label: '주수 기준일',
+                    desc: _profile?.pregnancyLmpDate != null
+                        ? '${_profile!.pregnancyLmpDate} · ${gestationalAge(DateTime.parse(_profile!.pregnancyLmpDate!)).label}'
+                        : '미설정 — 탭해서 설정',
+                    cta: '변경 ›',
+                    onTap: () => context.push('/pregnancy-setup'),
+                  ),
+                if (_currentMode == 'pregnant')
+                  _row(
+                    label: '시술 기록 요약',
+                    desc: '회차별 일정·수치를 정리해 병원에 공유',
+                    cta: '열기 ›',
+                    onTap: () => context.push('/treatment-summary'),
+                  ),
+                if (isTreatmentMode(_currentMode))
                   _row(
                     label: '현재 단계',
                     desc: _currentStage != null
@@ -760,7 +792,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         title = '치료 모드 변경';
         subtitle = '현재 상황에 맞는 모드를 선택해주세요';
         content = Column(
-          children: modeOptions
+          children: settingsModeOptions
               .map(
                 (opt) => _optionButton(
                   emoji: opt.emoji,

@@ -40,6 +40,16 @@ const modeOptions = [
   ),
 ];
 
+/// 설정 화면 전용 — 온보딩에는 노출하지 않는 "임신 확인" 옵션을 덧붙인 목록.
+const pregnantModeOption = ModeOption(
+  value: 'pregnant',
+  emoji: '🤍',
+  label: '임신을 확인했어요',
+  sub: '임신 주수·산전 검사 일정·출산 지원 안내로 전환해요',
+  color: Color(0xFFE19796),
+);
+const settingsModeOptions = [...modeOptions, pregnantModeOption];
+
 class StageOption {
   const StageOption({
     required this.value,

@@ -2,6 +2,7 @@ import '../models/enums.dart';
 
 /// Port of packages/shared/lib/modeHelpers.ts.
 bool isTreatmentMode(TreatmentMode mode) => mode == 'iui' || mode == 'ivf';
+bool isPregnantMode(TreatmentMode mode) => mode == 'pregnant';
 
 const Map<String, String> _stageLabels = {
   'stimulation': '과배란 유도 중',

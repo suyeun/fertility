@@ -4,7 +4,7 @@
 /// throwing on values not yet known to this client.
 library;
 
-typedef TreatmentMode = String; // 'natural' | 'iui' | 'ivf'
+typedef TreatmentMode = String; // 'natural' | 'iui' | 'ivf' | 'pregnant'
 typedef IUIStage =
     String; // stimulation | monitoring | procedure | luteal | result
 typedef IVFStage =

@@ -273,6 +273,8 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
 
   Widget _buildDailyTab() {
     final today = _todayRecord;
+    final isPregnant =
+        ref.read(profileControllerProvider)?.treatmentStage == 'pregnant';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -295,10 +297,13 @@ class _RecordsScreenState extends ConsumerState<RecordsScreen> {
           style: TextStyle(fontSize: 12, color: AppColors.textMuted),
         ),
         const SizedBox(height: 14),
-        _bbtStepperCard(today),
-        const SizedBox(height: 12),
-        _opkSelectionCard(today),
-        const SizedBox(height: 12),
+        // 임신 모드에서는 배란 추적용 기초체온·배란테스트기 카드를 숨긴다.
+        if (!isPregnant) ...[
+          _bbtStepperCard(today),
+          const SizedBox(height: 12),
+          _opkSelectionCard(today),
+          const SizedBox(height: 12),
+        ],
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(

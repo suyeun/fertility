@@ -33,8 +33,8 @@ export interface ProtocolStep {
 
 export interface ProtocolTemplate {
   id: string
-  /** 앱 treatmentMode: 'ivf' | 'iui' */
-  mode: 'ivf' | 'iui'
+  /** 앱 treatmentMode: 'ivf' | 'iui' | 'pregnant'(산전 검사) */
+  mode: 'ivf' | 'iui' | 'pregnant'
   label: string
   anchorLabel: string
   description: string
@@ -94,13 +94,33 @@ export const DEFAULT_PROTOCOL_TEMPLATES: ProtocolTemplate[] = [
       { key: 'beta', title: '임신 판정 (혈액검사)', chipValue: 'bloodtest', backendType: 'monitoring', offsetDays: 14, offsetFrom: 'iui', hour: '09:00' },
     ],
   },
+  {
+    id: 'prenatal_standard',
+    mode: 'pregnant',
+    label: '산전 검사 (임신 확인 후)',
+    anchorLabel: '마지막 생리 시작일 (또는 이식일 환산 기준일)',
+    description: '초기 초음파 → 1·2차 기형아 선별 → 정밀 초음파 → 임신성 당뇨 → 후기 진찰',
+    disclaimer:
+      '산전 검사 시기는 일반적인 권장 범위를 참고용으로 배치한 예시입니다. 병원·개인 상황에 따라 항목과 시기가 달라지므로, 저장 전 담당 의료진의 안내에 맞춰 모든 날짜를 확인·수정해주세요.',
+    steps: [
+      { key: 'us_early', title: '초기 초음파 (태낭·심박 확인)', chipValue: 'monitoring', backendType: 'monitoring', offsetDays: 7 * 7, hour: '10:00' },
+      { key: 'screen1', title: '1차 기형아 선별 (NT 초음파·혈액)', chipValue: 'bloodtest', backendType: 'monitoring', offsetDays: 12 * 7, hour: '10:00', note: '보통 11~13주 사이, NIPT 여부는 의료진과 상담' },
+      { key: 'screen2', title: '2차 기형아 선별 (혈액)', chipValue: 'bloodtest', backendType: 'monitoring', offsetDays: 16 * 7 + 3, hour: '10:00' },
+      { key: 'us_detail', title: '정밀 초음파', chipValue: 'monitoring', backendType: 'monitoring', offsetDays: 21 * 7, hour: '10:00' },
+      { key: 'gdm', title: '임신성 당뇨·빈혈 검사', chipValue: 'bloodtest', backendType: 'monitoring', offsetDays: 26 * 7, hour: '09:00', note: '공복 여부는 병원 안내 확인' },
+      { key: 'visit28', title: '산전 진찰 (28주)', chipValue: 'other', backendType: 'other', offsetDays: 28 * 7, hour: '10:00', note: 'Rh 음성이면 면역글로불린 상담' },
+      { key: 'us_growth', title: '초음파 · 태아 성장 확인', chipValue: 'monitoring', backendType: 'monitoring', offsetDays: 33 * 7, hour: '10:00' },
+      { key: 'gbs', title: 'GBS 검사', chipValue: 'bloodtest', backendType: 'monitoring', offsetDays: 36 * 7, hour: '10:00' },
+      { key: 'visit37', title: '산전 진찰 (37주, 이후 주 1회)', chipValue: 'other', backendType: 'other', offsetDays: 37 * 7, hour: '10:00' },
+    ],
+  },
 ]
 
 /** Firestore 문서 값이 형식에 맞는지 최소 검증 — 깨진 문서면 기본값을 쓴다. */
 export function isValidTemplateList(v: unknown): v is ProtocolTemplate[] {
   if (!Array.isArray(v) || v.length === 0) return false
   return v.every((t: any) =>
-    t && typeof t.id === 'string' && (t.mode === 'ivf' || t.mode === 'iui') &&
+    t && typeof t.id === 'string' && ['ivf', 'iui', 'pregnant'].includes(t.mode) &&
     typeof t.label === 'string' && typeof t.disclaimer === 'string' &&
     Array.isArray(t.steps) && t.steps.length > 0 &&
     t.steps.every((s: any) => s && typeof s.key === 'string' && typeof s.title === 'string' &&

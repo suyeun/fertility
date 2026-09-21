@@ -146,6 +146,12 @@ StageProgress getStageProgress(TreatmentMode mode, CurrentStage stage) {
 }
 
 List<QuickAction> getQuickActions(TreatmentMode mode, CurrentStage stage) {
+  if (mode == 'pregnant') {
+    return const [
+      QuickAction(icon: Icons.monitor_weight_rounded, label: '체중 기록', route: '/records'),
+      QuickAction(icon: Icons.event_available_rounded, label: '산전 검사 일정', route: '/calendar'),
+    ];
+  }
   if (mode == 'natural' || stage == null) {
     return const [
       QuickAction(icon: Icons.thermostat_rounded, label: '기초체온 기록', route: '/records'),
@@ -237,6 +243,40 @@ List<HomeTask> _getDefaultTasks(
     done: todayHormone?.opkIndex != null,
     route: '/records',
   );
+
+  if (mode == 'pregnant') {
+    return [
+      const HomeTask(
+        id: 'prenatal_vitamin',
+        icon: Icons.medication_rounded,
+        title: '엽산 · 철분 챙기기',
+        subtitle: '엽산은 초기까지, 철분은 16주부터 (의료진 안내 기준)',
+        colorKey: 'green',
+        done: false,
+        route: '/records',
+      ),
+      HomeTask(
+        id: 'weight',
+        icon: Icons.monitor_weight_rounded,
+        title: '체중 기록',
+        subtitle: todayHormone?.weight != null
+            ? '${todayHormone!.weight}kg 기록됨'
+            : '주 1회 이상 기록해보세요',
+        colorKey: 'pink',
+        done: todayHormone?.weight != null,
+        route: '/records',
+      ),
+      const HomeTask(
+        id: 'benefits',
+        icon: Icons.savings_rounded,
+        title: '임신·출산 지원 확인',
+        subtitle: '바우처 · 첫만남이용권 · 부모급여',
+        colorKey: 'indigo',
+        done: false,
+        route: '/birth-benefits',
+      ),
+    ];
+  }
 
   if (mode == 'natural') {
     return [

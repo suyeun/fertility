@@ -19,6 +19,7 @@ const _features = [
   (icon: Icons.medical_information_rounded, text: '💊 약제비 청구 가이드'),
   (icon: Icons.medication_rounded, text: '💊 약물·주사 정시 알림'),
   (icon: Icons.calendar_month_rounded, text: '📅 다회차 시술 일정 무제한 등록'),
+  (icon: Icons.child_care_rounded, text: '🤍 임신 확인 후에도 산전 검사 일정 · 출산 지원 안내'),
 ];
 
 /// Port of apps/mobile/app/subscription/index.tsx.

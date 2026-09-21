@@ -40,6 +40,7 @@ const _premiumFeatures = [
   (icon: Icons.calendar_month_rounded, text: '다회차 시술 일정 무제한 등록'),
   (icon: Icons.savings_rounded, text: '지원금 항목별 상세 · 신청 서류 체크리스트'),
   (icon: Icons.alarm_rounded, text: '지원금 신청 마감 알림'),
+  (icon: Icons.child_care_rounded, text: '임신 확인 후 산전 검사 일정 · 출산 지원 안내까지 계속'),
 ];
 
 /// Port of apps/mobile/components/PaywallModal.tsx.

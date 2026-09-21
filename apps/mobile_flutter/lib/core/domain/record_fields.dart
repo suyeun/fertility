@@ -8,7 +8,7 @@ class RecordTab {
 }
 
 List<RecordTab> getRecordTabs(TreatmentMode mode) {
-  if (mode == 'natural') {
+  if (mode == 'natural' || mode == 'pregnant') {
     return const [RecordTab(key: 'daily', label: '일반 기록')];
   }
   return const [
@@ -230,6 +230,9 @@ List<FieldConfig> getHospitalFields(TreatmentMode mode, CurrentStage stage) {
 }
 
 List<String> getDailyFields(TreatmentMode mode) {
+  if (mode == 'pregnant') {
+    return const ['weight', 'sleep'];
+  }
   if (mode == 'natural') {
     return const ['bbt', 'opk', 'cervicalMucus', 'weight', 'sleep'];
   }

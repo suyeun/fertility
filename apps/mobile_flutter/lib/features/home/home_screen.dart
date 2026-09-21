@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/domain/clinic_gate.dart';
 import '../../core/domain/home_data.dart';
+import '../../core/domain/mode_helpers.dart';
 import '../../core/models/models.dart';
 import '../../core/models/subsidy.dart';
 import '../../core/push/local_notifications.dart';
@@ -232,18 +233,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     builder: (context) {
                       final isPremium =
                           profile != null && isPremiumProfile(profile);
-                      final subsidyCard = SubsidyHeroCard(
-                        profile: _subsidyProfile,
-                        schedules: _schedules,
-                        isPremium: isPremium,
-                        onTap: () => context.push('/subsidy-calculator'),
-                        onProgressTap: () => context.push('/subsidy-progress'),
-                      );
-                      final urgent = isSubsidyDeadlineUrgent(
-                        _subsidyProfile,
-                        _schedules,
-                        isPremium,
-                      );
+                      final Widget subsidyCard = treatmentMode == 'pregnant'
+                          ? _BirthBenefitsCard(
+                              onTap: () => context.push('/birth-benefits'),
+                            )
+                          : SubsidyHeroCard(
+                              profile: _subsidyProfile,
+                              schedules: _schedules,
+                              isPremium: isPremium,
+                              onTap: () => context.push('/subsidy-calculator'),
+                              onProgressTap: () =>
+                                  context.push('/subsidy-progress'),
+                            );
+                      final urgent = treatmentMode != 'pregnant' &&
+                          isSubsidyDeadlineUrgent(
+                            _subsidyProfile,
+                            _schedules,
+                            isPremium,
+                          );
                       final heroCard = HeroCard(
                         treatmentMode: treatmentMode,
                         currentStage: currentStage,
@@ -255,10 +262,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         isFertileWindow: home.isFertileWindow,
                         hasCycleData: hasCycleData,
                         upcomingSchedules: upcomingSchedules,
+                        pregnancyLmpDate: profile?.pregnancyLmpDate,
                       );
+                      final isPregnant = treatmentMode == 'pregnant';
+                      // 판정 대기 단계에서 임신 확인 모드로 넘어가는 진입점
+                      final showPregnancyPrompt =
+                          !isPregnant && currentStage == 'result';
 
                       final taskSection =
-                          (treatmentMode != 'natural' && currentStage == null)
+                          (isTreatmentMode(treatmentMode) && currentStage == null)
                           ? _TaskRow(
                               icon: Icons.calendar_month_rounded,
                               title: '치료 단계를 설정하면 맞춤 할 일이 나와요',
@@ -297,6 +309,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           ],
                           heroCard,
                           const SizedBox(height: 10),
+                          if (showPregnancyPrompt) ...[
+                            _TaskRow(
+                              icon: Icons.favorite_rounded,
+                              title: '임신을 확인했다면 임신 확인 모드로',
+                              subtitle: '주수·산전 검사 일정·출산 지원 안내로 전환 →',
+                              done: false,
+                              colorKey: 'pink',
+                              onTap: () => context.push('/pregnancy-setup'),
+                            ),
+                            const SizedBox(height: 10),
+                          ],
                           Row(
                             children: [
                               Expanded(
@@ -381,6 +404,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     streakCount: home.streakCount,
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 임신 확인 모드에서 난임 지원금 카드 대신 노출되는 임신·출산 지원 안내 카드.
+class _BirthBenefitsCard extends StatelessWidget {
+  const _BirthBenefitsCard({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(16),
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.accentGreenLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.accentGreen),
+        ),
+        child: const Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '임신·출산 지원',
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    '진료비 바우처 · 첫만남이용권 · 부모급여',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.accentGreen,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '안내 보기 ›',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.accentGreen,
               ),
             ),
           ],

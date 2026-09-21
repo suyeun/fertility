@@ -141,6 +141,27 @@ curl http://localhost:3001/api/subsidy/rules
 
 ---
 
+## 4-3. 임신 확인 모드
+
+시술·자연임신 준비 사용자가 임신을 확인하면 `treatmentStage = 'pregnant'` 로 전환한다. 기획과 화면별 변화는 [docs/pregnancy-mode.md](docs/pregnancy-mode.md) 참고.
+
+- 진입: 설정 > 현재 모드 > "임신을 확인했어요", 또는 홈(판정 대기 단계) 카드 → `/pregnancy-setup` 에서 주수 기준일(마지막 생리 시작일 또는 이식일+배아일수 환산) 입력
+- 프로필 필드: `pregnancyLmpDate`, `pregnancyConfirmedAt` (다른 모드로 돌아가면 해제)
+- 홈: 주수·출산 예정일·주수별 안내·다음 산전 검사, 임신·출산 지원 카드(`/birth-benefits`)
+- 캘린더: 임신 요약 카드, 산전 진찰·초음파·검사 칩, 산전 검사 템플릿(`GET /api/treatment/templates` 의 `mode: 'pregnant'`)
+- 기록: 기초체온·배란테스트기 카드 숨김, 체중·수면 중심
+- 시술 기록 요약(`/treatment-summary`): 회차별 일정·약물·수치를 텍스트로 정리해 공유(산부인과 지참용, 자가 기록 명시)
+- 지원 금액은 Firestore `config/birthBenefits` 문서에서 `GET /api/info/birth-benefits` 로 받는다(인증 불필요). 문서가 없거나 형식이 깨지면 백엔드 기본값, 서버 연결이 안 되면 앱 내 폴백을 쓰고 화면에 "저장된 기준 표시 중"을 붙인다.
+
+```bash
+# 금액·확인일 수정: apps/backend/scripts/birth-benefits.seed.json (verifiedAt 도 함께 갱신)
+cd apps/backend && npm run seed:birth-benefits -- --dry-run   # 미리보기
+cd apps/backend && npm run seed:birth-benefits                # 기록
+curl http://localhost:3001/api/info/birth-benefits             # 확인 (source: config)
+```
+
+---
+
 ## 4-2. 병원 광고 · 배너 운영 원칙
 
 정액(기간) 광고만 판매하고, 앱은 환자 정보를 병원에 전달하지 않으며, 광고는 항상 "광고"로 표시합니다. 근거 법령과 약관·계약서·처리방침 문안은 [docs/ad-policy.md](docs/ad-policy.md)에 정리했습니다. 관리자 콘솔 **배너 관리 > 병원 광고 계약** 표에서 계약 기간을 관리하고, **통계**에서 비식별 노출·클릭을 확인합니다.
@@ -307,6 +328,7 @@ flutter build ipa --release \
 | GET/POST | `/api/ai/history` | 채팅 히스토리 — 현재 호출하는 클라이언트 없음 |
 | GET/POST | `/api/community/posts` | 커뮤니티 게시글 |
 | POST | `/api/notifications/token` | FCM 토큰 등록 |
+| GET | `/api/info/birth-benefits` | 임신·출산 지원 안내 (config/birthBenefits, 인증 불필요) |
 | GET | `/api/banners` | 활성 배너 (게재 기간 필터, 병원 배너는 isAd=true) |
 | POST | `/api/ads/events` | 광고 노출·클릭 비식별 집계 (인증 불필요, 분당 120회) |
 | GET | `/api/ads/stats` | 기간별 광고 집계 합계 |
