@@ -30,6 +30,31 @@ export function shouldIgnoreSandboxEvent(
   return allowSandbox !== 'true'
 }
 
+/// RevenueCat cancel_reason / expiration_reason → 한글 라벨과 환불 여부.
+/// https://www.revenuecat.com/docs/integrations/webhooks/event-types-and-fields
+export function describeCancelReason(reason: string | undefined | null): { label: string; isRefund: boolean } {
+  switch (reason) {
+    case 'CUSTOMER_SUPPORT':
+      return { label: '고객 지원 환불', isRefund: true }          // 스토어(Apple/Google)가 환불 처리
+    case 'UNSUBSCRIBE':
+      return { label: '사용자 해지', isRefund: false }             // 만료일까지 이용 후 종료
+    case 'BILLING_ERROR':
+      return { label: '결제 실패', isRefund: false }
+    case 'DEVELOPER_INITIATED':
+      return { label: '개발사 취소', isRefund: false }
+    case 'PRICE_INCREASE':
+      return { label: '가격 인상 미동의', isRefund: false }
+    case 'SUBSCRIPTION_PAUSED':
+      return { label: '일시정지', isRefund: false }
+    case 'UNKNOWN':
+    case undefined:
+    case null:
+      return { label: '사유 미상', isRefund: false }
+    default:
+      return { label: reason, isRefund: false }
+  }
+}
+
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name)
@@ -74,14 +99,34 @@ export class PaymentsService {
         await this.setSubscription(appUserId, 'active', subscriptionExpiresAt, productId)
         break
 
-      case 'CANCELLATION':
-        // 취소해도 만료 전까지는 이용 가능 → cancelled 상태로 표시
-        await this.setSubscription(appUserId, 'cancelled', subscriptionExpiresAt, productId)
+      case 'CANCELLATION': {
+        // 취소해도 만료 전까지는 이용 가능 → cancelled 상태로 표시.
+        // 환불(CUSTOMER_SUPPORT)은 만료 시각이 환불 시점으로 내려와 즉시 잠긴다.
+        const reason = describeCancelReason(event.cancel_reason)
+        this.logger.log(`구독 취소 사유: ${reason.label} (${event.cancel_reason ?? 'unknown'}) / 유저: ${appUserId} / 환불: ${reason.isRefund}`)
+        await this.setSubscription(appUserId, 'cancelled', subscriptionExpiresAt, productId, {
+          cancelReason: event.cancel_reason ?? null,
+          isRefund: reason.isRefund,
+        })
         break
+      }
 
-      case 'EXPIRATION':
+      case 'EXPIRATION': {
+        const reason = describeCancelReason(event.expiration_reason)
+        this.logger.log(`구독 만료 사유: ${reason.label} (${event.expiration_reason ?? 'unknown'}) / 유저: ${appUserId}`)
+        await this.setSubscription(appUserId, 'cancelled', null, productId, {
+          cancelReason: event.expiration_reason ?? null,
+          isRefund: reason.isRefund,
+        })
+        break
+      }
+
       case 'BILLING_ISSUE':
-        await this.setSubscription(appUserId, 'cancelled', null, productId)
+        this.logger.warn(`결제 실패 (BILLING_ISSUE) / 유저: ${appUserId} / 상품: ${productId}`)
+        await this.setSubscription(appUserId, 'cancelled', null, productId, {
+          cancelReason: 'BILLING_ERROR',
+          isRefund: false,
+        })
         break
 
       default:
@@ -96,6 +141,7 @@ export class PaymentsService {
     status: 'active' | 'trial' | 'cancelled',
     subscriptionExpiresAt: string | null,
     productId: string,
+    cancel?: { cancelReason: string | null; isRefund: boolean },
   ): Promise<void> {
     try {
       const userRef = this.firebase.collection('users').doc(uid)
@@ -108,6 +154,16 @@ export class PaymentsService {
           ...(subscriptionExpiresAt ? { subscriptionExpiresAt } : {}),
           subscriptionProductId: productId,
           subscriptionUpdatedAt: new Date().toISOString(),
+          // 취소·만료 사유 — 환불 분쟁·이탈 분석용. 활성화 시에는 지운다.
+          ...(cancel
+            ? {
+                subscriptionCancelReason: cancel.cancelReason,
+                subscriptionRefunded: cancel.isRefund,
+                subscriptionCancelledAt: new Date().toISOString(),
+              }
+            : status === 'active'
+              ? { subscriptionCancelReason: null, subscriptionRefunded: false }
+              : {}),
         },
         { merge: true },
       )

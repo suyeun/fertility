@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,12 @@ const _termsOfUseUrl =
     'https://cuboid-string-459.notion.site/BOM-3ab4e4079c788019b0e9e946d351ca7f';
 const _privacyPolicyUrl =
     'https://cuboid-string-459.notion.site/Lunera-3864e4079c7880699f4cf6ac9f9c7952';
+
+// 스토어 환불 요청 · 구독 관리 페이지
+const _appleRefundUrl = 'https://reportaproblem.apple.com/';
+const _appleManageUrl = 'https://apps.apple.com/account/subscriptions';
+const _googleRefundUrl = 'https://support.google.com/googleplay/answer/2479637';
+const _googleManageUrl = 'https://play.google.com/store/account/subscriptions';
 
 const _features = [
   (icon: Icons.savings_rounded, text: '💰 지원금 상세 내역 & 신청 서류 체크리스트'),
@@ -137,6 +145,86 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
         SnackBar(content: Text(result.error ?? '잠시 후 다시 시도해 주세요.')),
       );
     }
+  }
+
+  /// 환불·해지 안내 — 인앱 구독의 환불 결정권은 스토어에 있음을 명확히 하고,
+  /// 해지 시 남은 기간까지 이용 가능함과 임신 확인 후에도 쓸 수 있음을 알린다.
+  Widget _refundNotice() {
+    final isIOS = Platform.isIOS;
+    final store = isIOS ? 'App Store' : 'Google Play';
+    final refundUrl = isIOS ? _appleRefundUrl : _googleRefundUrl;
+    final manageUrl = isIOS ? _appleManageUrl : _googleManageUrl;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            '해지 · 환불 안내',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textDark,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '• 구독은 결제 즉시 이용이 시작되며, 해지하면 남은 기간까지 계속 이용할 수 있어요.\n'
+            '• 환불은 $store 정책에 따라 스토어가 심사·결정해요. 결제 후 7일 이내 요청이 가장 수월해요.\n'
+            '• 임신을 확인한 뒤에도 산전 검사 일정과 임신·출산 지원 안내를 계속 이용할 수 있어요.',
+            style: const TextStyle(
+              fontSize: 11,
+              color: AppColors.textMuted,
+              height: 1.6,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              TextButton(
+                onPressed: () => launchUrl(
+                  Uri.parse(manageUrl),
+                  mode: LaunchMode.externalApplication,
+                ),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 28),
+                ),
+                child: const Text(
+                  '구독 관리·해지',
+                  style: TextStyle(
+                    fontSize: 11,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                onPressed: () => launchUrl(
+                  Uri.parse(refundUrl),
+                  mode: LaunchMode.externalApplication,
+                ),
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(0, 28),
+                ),
+                child: Text(
+                  '$store 환불 요청',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _handleRestore() async {
@@ -486,6 +574,8 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
                   height: 1.6,
                 ),
               ),
+            const SizedBox(height: 10),
+            _refundNotice(),
             const SizedBox(height: 6),
             const Text(
               '구매 시 이용약관 및 개인정보처리방침에 동의하는 것으로 간주됩니다.',

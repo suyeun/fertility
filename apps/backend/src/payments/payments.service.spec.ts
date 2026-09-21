@@ -1,4 +1,4 @@
-import { PaymentsService, shouldIgnoreSandboxEvent } from './payments.service'
+import { PaymentsService, describeCancelReason, shouldIgnoreSandboxEvent } from './payments.service'
 
 describe('shouldIgnoreSandboxEvent', () => {
   it.each([
@@ -10,6 +10,16 @@ describe('shouldIgnoreSandboxEvent', () => {
     [undefined, 'production', undefined, false],
   ])('environment=%s nodeEnv=%s allow=%s → %s', (env, node, allow, expected) => {
     expect(shouldIgnoreSandboxEvent(env, node, allow)).toBe(expected)
+  })
+})
+
+describe('describeCancelReason', () => {
+  it('고객 지원 환불만 isRefund=true', () => {
+    expect(describeCancelReason('CUSTOMER_SUPPORT')).toEqual({ label: '고객 지원 환불', isRefund: true })
+    expect(describeCancelReason('UNSUBSCRIBE').isRefund).toBe(false)
+    expect(describeCancelReason('BILLING_ERROR').isRefund).toBe(false)
+    expect(describeCancelReason(undefined).label).toBe('사유 미상')
+    expect(describeCancelReason('SOMETHING_NEW').label).toBe('SOMETHING_NEW')
   })
 })
 
@@ -70,19 +80,51 @@ describe('PaymentsService.handleRevenueCatEvent', () => {
     )
   })
 
-  it('CANCELLATION → cancelled 이지만 만료일은 유지', async () => {
-    await service.handleRevenueCatEvent(event({ type: 'CANCELLATION', expiration_at_ms: Date.UTC(2027, 0, 1) }))
+  it('CANCELLATION(사용자 해지) → cancelled, 만료일 유지, 환불 아님', async () => {
+    await service.handleRevenueCatEvent(
+      event({ type: 'CANCELLATION', cancel_reason: 'UNSUBSCRIBE', expiration_at_ms: Date.UTC(2027, 0, 1) }),
+    )
     expect(set).toHaveBeenCalledWith(
-      expect.objectContaining({ subscriptionStatus: 'cancelled', subscriptionExpiresAt: '2027-01-01T00:00:00.000Z' }),
+      expect.objectContaining({
+        subscriptionStatus: 'cancelled',
+        subscriptionExpiresAt: '2027-01-01T00:00:00.000Z',
+        subscriptionCancelReason: 'UNSUBSCRIBE',
+        subscriptionRefunded: false,
+      }),
       { merge: true },
     )
   })
 
-  it('EXPIRATION → cancelled, 만료일 필드는 쓰지 않음', async () => {
-    await service.handleRevenueCatEvent(event({ type: 'EXPIRATION' }))
+  it('CANCELLATION(고객 지원 환불) → 환불 플래그 기록', async () => {
+    await service.handleRevenueCatEvent(
+      event({ type: 'CANCELLATION', cancel_reason: 'CUSTOMER_SUPPORT', expiration_at_ms: Date.UTC(2026, 8, 21) }),
+    )
+    const [data] = set.mock.calls[0]
+    expect(data.subscriptionRefunded).toBe(true)
+    expect(data.subscriptionCancelReason).toBe('CUSTOMER_SUPPORT')
+    expect(data.subscriptionCancelledAt).toBeDefined()
+  })
+
+  it('재구매(INITIAL_PURCHASE) 시 이전 취소 사유를 지운다', async () => {
+    await service.handleRevenueCatEvent(event({ type: 'INITIAL_PURCHASE', expiration_at_ms: Date.UTC(2027, 0, 1) }))
+    const [data] = set.mock.calls[0]
+    expect(data.subscriptionCancelReason).toBeNull()
+    expect(data.subscriptionRefunded).toBe(false)
+  })
+
+  it('EXPIRATION → cancelled, 만료일 필드는 쓰지 않음, 만료 사유 기록', async () => {
+    await service.handleRevenueCatEvent(event({ type: 'EXPIRATION', expiration_reason: 'UNSUBSCRIBE' }))
     const [data] = set.mock.calls[0]
     expect(data.subscriptionStatus).toBe('cancelled')
     expect(data).not.toHaveProperty('subscriptionExpiresAt')
+    expect(data.subscriptionCancelReason).toBe('UNSUBSCRIBE')
+  })
+
+  it('BILLING_ISSUE → 결제 실패 사유 기록', async () => {
+    await service.handleRevenueCatEvent(event({ type: 'BILLING_ISSUE' }))
+    const [data] = set.mock.calls[0]
+    expect(data.subscriptionCancelReason).toBe('BILLING_ERROR')
+    expect(data.subscriptionRefunded).toBe(false)
   })
 
   it('알 수 없는 이벤트 타입은 로그만 남기고 문서를 건드리지 않음', async () => {
