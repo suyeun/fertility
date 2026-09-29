@@ -48,6 +48,7 @@ class CommunityPost {
     required this.reactions,
     required this.createdAt,
     this.isDeleted,
+    this.isMine = false,
   });
 
   final String id;
@@ -65,6 +66,9 @@ class CommunityPost {
   final String createdAt;
   final bool? isDeleted;
 
+  /// 서버가 요청자 기준으로 계산해 내려주는 값 — 내 글이면 삭제 메뉴, 아니면 신고·차단 메뉴.
+  final bool isMine;
+
   factory CommunityPost.fromJson(Map<String, dynamic> j) => CommunityPost(
     id: j['id'] as String,
     authorToken: j['authorToken'] as String? ?? '',
@@ -79,6 +83,7 @@ class CommunityPost {
     reactions: Reactions.fromJson(j['reactions'] as Map<String, dynamic>?),
     createdAt: j['createdAt'] as String? ?? '',
     isDeleted: j['isDeleted'] as bool?,
+    isMine: j['isMine'] == true,
   );
 }
 
@@ -92,6 +97,7 @@ class CommunityComment {
     required this.isAuthor,
     required this.content,
     required this.createdAt,
+    this.isMine = false,
   });
 
   final String id;
@@ -102,6 +108,7 @@ class CommunityComment {
   final bool isAuthor;
   final String content;
   final String createdAt;
+  final bool isMine;
 
   factory CommunityComment.fromJson(Map<String, dynamic> j) => CommunityComment(
     id: j['id'] as String,
@@ -112,5 +119,6 @@ class CommunityComment {
     isAuthor: j['isAuthor'] as bool? ?? false,
     content: j['content'] as String? ?? '',
     createdAt: j['createdAt'] as String? ?? '',
+    isMine: j['isMine'] == true,
   );
 }

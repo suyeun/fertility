@@ -1,0 +1,8 @@
+# 릴리스 서명 키 — 이 파일을 key.properties 로 복사해 값을 채운다 (key.properties 와 *.jks 는 git 제외).
+# 키 생성:
+#   keytool -genkey -v -keystore ~/bom-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias bom
+# Play Console 은 앱 서명 키를 Google 이 관리(Play App Signing)하므로 이 키는 "업로드 키" 역할이다. 분실 시 재설정 절차 필요 — 안전한 곳에 백업.
+storeFile=/Users/<you>/bom-release.jks
+storePassword=
+keyAlias=bom
+keyPassword=

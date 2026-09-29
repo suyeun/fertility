@@ -1,36 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
+import { checkPremiumFromFirestore } from '../common/premium'
 
 // Expo Push Token 여부 판별
 const isExpoPushToken = (token: string) => token.startsWith('ExponentPushToken[') || token.startsWith('ExpoPushToken[')
 
-// ──────────────────────────────────────────
-// 구독 상태 확인 (백엔드 재검증)
-// RevenueCat 웹훅이 Firestore를 업데이트하는 단일 소스 구조.
-// 클라이언트가 보낸 값을 신뢰하지 않고 Firestore에서 직접 읽어 검증.
-// ──────────────────────────────────────────
-async function checkPremiumFromFirestore(
-  firebase: FirebaseService,
-  uid: string,
-): Promise<boolean> {
-  const doc = await firebase.collection('users').doc(uid).get()
-  if (!doc.exists) return false
-  const data = doc.data() as any
-  const status: string = data?.subscriptionStatus ?? 'cancelled'
-
-  if (status === 'active') return true
-  if (status === 'trial') {
-    const trialEndsAt: string | undefined = data?.trialEndsAt
-    if (!trialEndsAt) return true
-    return new Date(trialEndsAt) > new Date()
-  }
-  // 'cancelled' — subscriptionExpiresAt이 미래이면 만료 전 유효 기간
-  if (status === 'cancelled') {
-    const expiresAt: string | undefined = data?.subscriptionExpiresAt
-    if (expiresAt) return new Date(expiresAt) > new Date()
-  }
-  return false
-}
 
 @Injectable()
 export class NotificationsService {

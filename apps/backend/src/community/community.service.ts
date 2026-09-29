@@ -1,7 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { FirebaseService } from '../firebase/firebase.service'
 import { randomUUID } from 'node:crypto'
-import * as crypto from 'crypto'
 import sanitizeHtml from 'sanitize-html'
 
 const sanitize = (text: string) =>
@@ -11,8 +10,11 @@ import {
   type PostTag, type PostCategory, type PostTargetMode,
 } from '@fertility/shared'
 
-const hashUid = (uid: string) =>
-  crypto.createHash('sha256').update(uid + 'bom_salt').digest('hex').substring(0, 8)
+import { hashUid } from '../common/hash-uid'
+import { ReportReason } from './dto/moderation.dto'
+
+/// 서로 다른 신고자 수가 이 값에 도달하면 자동 숨김(운영자 검토 전까지).
+export const AUTO_HIDE_REPORT_THRESHOLD = 3
 
 const sortDesc = (arr: any[]) =>
   arr.sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
@@ -40,10 +42,18 @@ export class CommunityService {
   // 게시글
   // ============================
 
+  /// 차단한 작성자 토큰 목록 — users/{uid}.blockedAuthorTokens
+  async getBlockedTokens(uid: string): Promise<string[]> {
+    const doc = await this.firebase.collection('users').doc(uid).get()
+    const list = (doc.data() as any)?.blockedAuthorTokens
+    return Array.isArray(list) ? list : []
+  }
+
   async getPosts(params: {
     category?: PostCategory
     tag?: PostTag
     userMode?: string
+    viewerUid?: string
   }) {
     let q: any = this.firebase.collection('community_posts')
       .where('isDeleted', '==', false)
@@ -51,11 +61,19 @@ export class CommunityService {
     if (params.category) q = q.where('category', '==', params.category)
     if (params.tag)      q = q.where('tag', '==', params.tag)
 
-    const snap = await q.limit(50).get()
-    let posts = snap.docs.map((d: any) => {
-      const { authorToken, ...rest } = d.data()
-      return { id: d.id, ...rest }
-    })
+    const blocked = params.viewerUid ? await this.getBlockedTokens(params.viewerUid) : []
+    const myToken = params.viewerUid ? hashUid(params.viewerUid) : null
+
+    const snap = await q.limit(80).get()
+    let posts = snap.docs
+      .map((d: any) => d.data())
+      // 신고 누적 자동 숨김 + 차단한 작성자 글 제외 (서버에서 걸러 토큰을 노출하지 않는다)
+      .filter((p: any) => !p.isHidden && !blocked.includes(p.authorToken))
+      .map((p: any) => {
+        const { authorToken, ...rest } = p
+        return { id: p.id, ...rest, isMine: myToken != null && authorToken === myToken }
+      })
+      .slice(0, 50)
 
     const allowed = allowedTargetModes(params.userMode)
     posts = posts.filter((p: any) => allowed.includes(p.targetMode))
@@ -135,16 +153,111 @@ export class CommunityService {
   // 댓글
   // ============================
 
-  async getComments(postId: string) {
+  async getComments(postId: string, viewerUid?: string) {
+    const blocked = viewerUid ? await this.getBlockedTokens(viewerUid) : []
+    const myToken = viewerUid ? hashUid(viewerUid) : null
     const snap = await this.firebase.collection('community_comments')
       .where('postId', '==', postId)
       .get()
     return sortAsc(
-      snap.docs.map((d: any) => {
-        const { authorToken, ...rest } = d.data()
-        return { id: d.id, ...rest }
-      }),
+      snap.docs
+        .map((d: any) => d.data())
+        .filter((c: any) => !c.isHidden && !blocked.includes(c.authorToken))
+        .map((c: any) => {
+          const { authorToken, ...rest } = c
+          return { id: c.id, ...rest, isMine: myToken != null && authorToken === myToken }
+        }),
     )
+  }
+
+  // ============================
+  // 신고 · 차단 (App Store 1.2 / Play UGC 정책)
+  // ============================
+
+  /// 글·댓글 신고. 같은 사람이 같은 대상을 여러 번 신고해도 1건으로 센다.
+  /// 서로 다른 신고자가 AUTO_HIDE_REPORT_THRESHOLD 명에 도달하면 자동 숨김 후 운영자 검토.
+  async report(
+    uid: string,
+    target: { postId?: string; commentId?: string },
+    reason: ReportReason,
+    detail?: string,
+  ) {
+    const collection = target.commentId ? 'community_comments' : 'community_posts'
+    const targetId = target.commentId ?? target.postId
+    if (!targetId) throw new BadRequestException('신고 대상이 필요해요')
+
+    const targetRef = this.firebase.collection(collection).doc(targetId)
+    const targetDoc = await targetRef.get()
+    if (!targetDoc.exists) throw new NotFoundException('대상을 찾을 수 없어요')
+    if (targetDoc.data().authorToken === hashUid(uid)) {
+      throw new BadRequestException('본인이 작성한 글은 신고할 수 없어요')
+    }
+
+    const reportId = `${collection}_${targetId}_${hashUid(uid)}`
+    await this.firebase.collection('community_reports').doc(reportId).set(
+      {
+        targetCollection: collection,
+        targetId,
+        reporterUid: uid,
+        reason,
+        detail: detail ? sanitize(detail) : null,
+        status: 'open',
+        createdAt: new Date().toISOString(),
+      },
+      { merge: true },
+    )
+
+    const reportsSnap = await this.firebase.collection('community_reports')
+      .where('targetCollection', '==', collection)
+      .where('targetId', '==', targetId)
+      .get()
+    const reporterCount = new Set(reportsSnap.docs.map((d) => d.data().reporterUid)).size
+
+    let hidden = false
+    if (reporterCount >= AUTO_HIDE_REPORT_THRESHOLD && !targetDoc.data().isHidden) {
+      await targetRef.update({ isHidden: true, hiddenAt: new Date().toISOString(), hiddenReason: 'reports' })
+      hidden = true
+    }
+    return { success: true, reporterCount, hidden }
+  }
+
+  /// 글 또는 댓글의 작성자를 차단 — 이후 그 작성자의 글·댓글이 목록에서 사라진다.
+  async blockAuthor(uid: string, target: { postId?: string; commentId?: string }) {
+    const collection = target.commentId ? 'community_comments' : 'community_posts'
+    const targetId = target.commentId ?? target.postId
+    if (!targetId) throw new BadRequestException('차단 대상이 필요해요')
+
+    const doc = await this.firebase.collection(collection).doc(targetId).get()
+    if (!doc.exists) throw new NotFoundException('대상을 찾을 수 없어요')
+    const token: string = doc.data().authorToken
+    if (token === hashUid(uid)) throw new BadRequestException('본인은 차단할 수 없어요')
+
+    const userRef = this.firebase.collection('users').doc(uid)
+    const current = await this.getBlockedTokens(uid)
+    if (!current.includes(token)) {
+      await userRef.set({ blockedAuthorTokens: [...current, token] }, { merge: true })
+    }
+    return { success: true, blockedCount: current.includes(token) ? current.length : current.length + 1 }
+  }
+
+  async unblockAll(uid: string) {
+    await this.firebase.collection('users').doc(uid).set({ blockedAuthorTokens: [] }, { merge: true })
+    return { success: true }
+  }
+
+  /// 계정 삭제 시 작성 글·댓글 익명화 — 내용은 남기되 작성자 연결을 끊는다.
+  async anonymizeAuthor(uid: string): Promise<{ posts: number; comments: number }> {
+    const token = hashUid(uid)
+    let posts = 0, comments = 0
+    for (const [collection, counter] of [['community_posts', 'p'], ['community_comments', 'c']] as const) {
+      const snap = await this.firebase.collection(collection).where('authorToken', '==', token).get()
+      const batch = this.firebase.db.batch()
+      snap.docs.forEach((d) => batch.update(d.ref, { authorToken: 'deleted', authorName: '탈퇴한 사용자' }))
+      await batch.commit()
+      if (counter === 'p') posts = snap.size
+      else comments = snap.size
+    }
+    return { posts, comments }
   }
 
   async addComment(

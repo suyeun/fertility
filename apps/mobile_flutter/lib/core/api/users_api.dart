@@ -54,6 +54,10 @@ class UsersApi {
     return UserProfile.fromJson(res.data!);
   }
 
+  /// 계정 삭제 — 비밀번호 재확인. 성공하면 서버의 개인 기록이 삭제되고 토큰은 더 이상 유효하지 않다.
+  Future<void> deleteAccount(String password) =>
+      _client.delete<void>('/users/me', data: {'password': password});
+
   Future<UserProfile> updateProfile(UpdateProfilePayload data) async {
     final res = await _client.patch<Map<String, dynamic>>(
       '/users/profile',

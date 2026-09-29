@@ -1,6 +1,7 @@
 import '../models/cycle.dart';
 import '../models/daily_note.dart';
 import '../models/hormone_record.dart';
+import '../domain/prescription_scan.dart';
 import '../models/protocol_template.dart';
 import '../models/treatment.dart';
 import 'client.dart';
@@ -67,6 +68,29 @@ class TreatmentApi {
       data: data,
     );
     return TreatmentSchedule.fromJson(res.data!);
+  }
+
+  /// 스캔 잔여 횟수 (무료 평생 2회 · 프리미엄 하루 20회)
+  Future<ScanQuota> getScanQuota() async {
+    final res = await _client.get<Map<String, dynamic>>('/treatment/scan-quota');
+    return ScanQuota.fromJson(res.data ?? const {});
+  }
+
+  /// 처방전·주사 일정표 사진 분석 → 일정 초안 (서버는 이미지를 저장하지 않음)
+  Future<ScanResult> scanSchedule({
+    required String imageBase64,
+    required String mediaType,
+    String? referenceDate,
+  }) async {
+    final res = await _client.post<Map<String, dynamic>>(
+      '/treatment/scan-schedule',
+      data: {
+        'imageBase64': imageBase64,
+        'mediaType': mediaType,
+        if (referenceDate != null) 'referenceDate': referenceDate,
+      },
+    );
+    return ScanResult.fromJson(res.data ?? const {});
   }
 
   /// 회차 프로토콜 템플릿 (예시 일정)

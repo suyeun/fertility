@@ -248,7 +248,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                       ),
                       SizedBox(height: 3),
                       Text(
-                        '같은 길을 걷는 분들과 마음을 나눠요',
+                        '같은 길을 걷는 분들과 마음을 나눠요 · 불쾌한 글은 ⋯ 메뉴에서 신고·차단',
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.textMuted,
@@ -569,6 +569,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                   color: AppColors.textMutedLight,
                 ),
               ),
+              _postMenu(post),
             ],
           ),
           const SizedBox(height: 10),
@@ -710,7 +711,12 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                     )
                   else
                     ...comments.map(
-                      (c) => Container(
+                      (c) => InkWell(
+                        onLongPress: c.isMine
+                            ? null
+                            : () => _showCommentActions(c),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
@@ -751,6 +757,15 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                             ),
                           ],
                         ),
+                        ),
+                      ),
+                    ),
+                  if (comments.isNotEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: Text(
+                        '댓글을 길게 누르면 신고·차단할 수 있어요',
+                        style: TextStyle(fontSize: 9, color: AppColors.textMutedLight),
                       ),
                     ),
                 ],
@@ -760,6 +775,232 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
         ],
       ),
     );
+  }
+
+  // ── 신고 · 차단 · 삭제 ──────────────────────────────────
+
+  static const _reportReasons = <(String, String)>[
+    ('spam', '광고 · 홍보 · 도배'),
+    ('harassment', '욕설 · 비하 · 괴롭힘'),
+    ('medical_misinfo', '위험한 의학 정보 · 시술 권유'),
+    ('privacy', '개인정보 노출'),
+    ('sexual', '성적인 내용'),
+    ('other', '기타'),
+  ];
+
+  Widget _postMenu(CommunityPost post) {
+    return PopupMenuButton<String>(
+      padding: EdgeInsets.zero,
+      iconSize: 18,
+      icon: const Icon(Icons.more_horiz_rounded, color: AppColors.textMutedLight),
+      onSelected: (v) {
+        switch (v) {
+          case 'report':
+            _showReportSheet(postId: post.id);
+            break;
+          case 'block':
+            _confirmBlock(postId: post.id);
+            break;
+          case 'delete':
+            _confirmDeletePost(post);
+            break;
+        }
+      },
+      itemBuilder: (_) => post.isMine
+          ? const [
+              PopupMenuItem(value: 'delete', child: Text('내 글 삭제')),
+            ]
+          : const [
+              PopupMenuItem(value: 'report', child: Text('신고하기')),
+              PopupMenuItem(value: 'block', child: Text('이 작성자 차단')),
+            ],
+    );
+  }
+
+  void _showCommentActions(CommunityComment c) {
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.flag_outlined),
+              title: const Text('댓글 신고하기'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _showReportSheet(commentId: c.id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.block_rounded),
+              title: const Text('이 작성자 차단'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                _confirmBlock(commentId: c.id);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showReportSheet({String? postId, String? commentId}) {
+    String reason = _reportReasons.first.$1;
+    final detailCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, 20 + MediaQuery.of(ctx).viewInsets.bottom),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                '신고 사유를 선택해주세요',
+                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textDark),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                '신고는 운영자가 확인하며, 여러 사용자가 신고한 글은 검토 전까지 자동으로 숨겨져요.',
+                style: TextStyle(fontSize: 11, color: AppColors.textMuted, height: 1.4),
+              ),
+              const SizedBox(height: 10),
+              ..._reportReasons.map(
+                (r) => ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    reason == r.$1
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 18,
+                    color: reason == r.$1 ? AppColors.primary : AppColors.textMuted,
+                  ),
+                  title: Text(r.$2, style: const TextStyle(fontSize: 13)),
+                  onTap: () => setSheet(() => reason = r.$1),
+                ),
+              ),
+              TextField(
+                controller: detailCtrl,
+                maxLength: 500,
+                maxLines: 2,
+                decoration: const InputDecoration(hintText: '추가 설명 (선택)'),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.of(ctx).pop();
+                    await _submitReport(
+                      postId: postId,
+                      commentId: commentId,
+                      reason: reason,
+                      detail: detailCtrl.text.trim(),
+                    );
+                  },
+                  child: const Text('신고 접수'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitReport({
+    String? postId,
+    String? commentId,
+    required String reason,
+    String? detail,
+  }) async {
+    try {
+      final api = ref.read(communityApiProvider);
+      final result = commentId != null
+          ? await api.reportComment(commentId, reason, detail: detail)
+          : await api.reportPost(postId!, reason, detail: detail);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.hidden
+                ? '신고가 접수됐어요. 신고가 누적되어 검토 전까지 숨겨졌어요.'
+                : '신고가 접수됐어요. 운영자가 확인 후 조치할게요.',
+          ),
+        ),
+      );
+      if (result.hidden) _fetchPosts();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('신고를 접수하지 못했어요. 잠시 후 다시 시도해주세요.')),
+      );
+    }
+  }
+
+  Future<void> _confirmBlock({String? postId, String? commentId}) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('이 작성자를 차단할까요?'),
+        content: const Text(
+          '차단한 작성자의 글과 댓글이 더 이상 보이지 않아요. 설정 > 커뮤니티에서 차단을 모두 해제할 수 있어요.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('취소')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('차단', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await ref.read(communityApiProvider).blockAuthor(postId: postId, commentId: commentId);
+      await _fetchPosts();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('작성자를 차단했어요.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('차단하지 못했어요. 잠시 후 다시 시도해주세요.')),
+      );
+    }
+  }
+
+  Future<void> _confirmDeletePost(CommunityPost post) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('글을 삭제할까요?'),
+        content: const Text('삭제한 글은 되돌릴 수 없어요.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('취소')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('삭제', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true || !mounted) return;
+    try {
+      await ref.read(communityApiProvider).deletePost(post.id);
+      await _fetchPosts();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('글을 삭제하지 못했어요.')),
+      );
+    }
   }
 }
 

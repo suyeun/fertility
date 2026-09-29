@@ -11,7 +11,8 @@
     "seed:subsidy-rules": "ts-node --transpile-only scripts/seed-subsidy-rules.ts",
     "test": "jest",
     "test:watch": "jest --watch",
-    "seed:birth-benefits": "ts-node --transpile-only scripts/seed-birth-benefits.ts"
+    "seed:birth-benefits": "ts-node --transpile-only scripts/seed-birth-benefits.ts",
+    "set-admin": "ts-node --transpile-only scripts/set-admin-claim.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.100.0",

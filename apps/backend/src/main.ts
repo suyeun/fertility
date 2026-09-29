@@ -1,12 +1,15 @@
 import 'reflect-metadata'
 import { NestFactory } from '@nestjs/core'
+import { NestExpressApplication } from '@nestjs/platform-express'
 import { ValidationPipe, BadRequestException, Logger } from '@nestjs/common'
 import { AppModule } from './app.module'
 import { GlobalExceptionFilter } from './common/global-exception.filter'
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger'
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create<NestExpressApplication>(AppModule)
+  // 처방전 사진(base64) 업로드용 — 나머지 엔드포인트는 DTO 검증으로 크기를 제한한다
+  app.useBodyParser('json', { limit: '12mb' })
   const logger = new Logger('Bootstrap')
 
   const isProd = process.env.NODE_ENV === 'production'

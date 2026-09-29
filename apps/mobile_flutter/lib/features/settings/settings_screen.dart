@@ -174,6 +174,90 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     showPaywallModal(context, source: source, onSuccess: _handlePaywallSuccess);
   }
 
+  static const _supportEmail = 'pooh3715@gmail.com';
+
+  Future<void> _unblockAll() async {
+    try {
+      await ref.read(communityApiProvider).unblockAll();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('차단한 작성자를 모두 해제했어요.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('해제하지 못했어요. 잠시 후 다시 시도해주세요.')),
+      );
+    }
+  }
+
+  /// 회원 탈퇴 — 비밀번호 재확인 후 서버가 개인 기록을 삭제한다(되돌릴 수 없음).
+  /// 스토어 구독은 앱이 해지할 수 없으므로 안내만 한다.
+  Future<void> _handleDeleteAccount() async {
+    final pwCtrl = TextEditingController();
+    final hasSub = _subStatus.isActive;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('정말 탈퇴할까요?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '주기·수치·시술 일정·지원금 기록이 모두 삭제되고 복구할 수 없어요. 커뮤니티에 남긴 글은 "탈퇴한 사용자"로 익명 처리돼요.',
+              style: TextStyle(fontSize: 13, height: 1.5),
+            ),
+            if (hasSub) ...[
+              const SizedBox(height: 8),
+              const Text(
+                '⚠️ 구독이 활성 상태예요. 탈퇴해도 스토어 구독은 자동으로 해지되지 않으니 App Store / Google Play에서 먼저 해지해주세요.',
+                style: TextStyle(fontSize: 12, height: 1.5, color: Color(0xFF92400E)),
+              ),
+            ],
+            const SizedBox(height: 12),
+            TextField(
+              controller: pwCtrl,
+              obscureText: true,
+              autofocus: true,
+              decoration: const InputDecoration(labelText: '비밀번호 확인'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('취소')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('탈퇴하기', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    if (pwCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('비밀번호를 입력해주세요.')),
+      );
+      return;
+    }
+    try {
+      await ref.read(usersApiProvider).deleteAccount(pwCtrl.text);
+      await LocalNotifications.instance.cancelAllScheduled();
+      await ref.read(authControllerProvider.notifier).logout();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('탈퇴가 완료됐어요. 그동안 함께해 주셔서 감사해요.')),
+      );
+      context.go('/login');
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().contains('비밀번호')
+          ? '비밀번호가 일치하지 않아요.'
+          : '탈퇴 처리에 실패했어요. 잠시 후 다시 시도해주세요.';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
+
   Future<void> _handleLogout() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -598,6 +682,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ),
                     ),
                   ),
+                ),
+                const SizedBox(height: 10),
+                _row(
+                  label: '커뮤니티 차단 해제',
+                  desc: '차단한 작성자를 모두 해제',
+                  cta: '해제 ›',
+                  onTap: _unblockAll,
+                ),
+                _row(
+                  label: '문의하기',
+                  desc: '신고 처리·결제·계정 문의 ($_supportEmail)',
+                  cta: '메일 ›',
+                  onTap: () => launchUrl(
+                    Uri.parse('mailto:$_supportEmail?subject=[BOM] 문의'),
+                    mode: LaunchMode.externalApplication,
+                  ),
+                ),
+                _row(
+                  label: '회원 탈퇴',
+                  desc: '기록 삭제 · 되돌릴 수 없어요',
+                  cta: '탈퇴 ›',
+                  onTap: _handleDeleteAccount,
                 ),
                 const SizedBox(height: 20),
                 _sectionTitle(Icons.description_rounded, '약관 및 정책'),

@@ -25,6 +25,14 @@ function compareVersions(a: string, b: string): number {
   return 0
 }
 
+/// 스토어 링크 기본값 — 환경변수(APP_STORE_URL_IOS/ANDROID). 비어 있으면 앱이 이동 버튼을 숨긴다.
+function defaultStoreUrl(): { ios: string; android: string } {
+  return {
+    ios: process.env.APP_STORE_URL_IOS || '',
+    android: process.env.APP_STORE_URL_ANDROID || '',
+  }
+}
+
 @Injectable()
 export class AppVersionService {
   constructor(private readonly firebase: FirebaseService) {}
@@ -45,10 +53,7 @@ export class AppVersionService {
         latestVersion: currentVersion,
         minRequiredVersion: currentVersion,
         message: '',
-        storeUrl: {
-          ios: 'https://apps.apple.com/app/lunera',
-          android: 'https://play.google.com/store/apps/details?id=com.lunera.app',
-        },
+        storeUrl: defaultStoreUrl(),
       }
     }
 
@@ -57,10 +62,7 @@ export class AppVersionService {
     const latestVersion: string = platformData.latestVersion || currentVersion
     const minRequiredVersion: string = platformData.minRequiredVersion || '1.0.0'
     const message: string = data.message || '새로운 업데이트가 있어요.'
-    const storeUrl = data.storeUrl || {
-      ios: 'https://apps.apple.com/app/lunera',
-      android: 'https://play.google.com/store/apps/details?id=com.lunera.app',
-    }
+    const storeUrl = data.storeUrl || defaultStoreUrl()
 
     let status: VersionStatus = 'ok'
 

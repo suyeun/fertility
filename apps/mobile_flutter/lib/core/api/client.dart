@@ -8,10 +8,13 @@ import '../storage/token_store.dart';
 /// Mirrors packages/shared/lib/api.ts's request() wrapper: base URL resolution,
 /// Bearer-token header injection, timeouts, and Korean-language error surfacing.
 class ApiException implements Exception {
-  ApiException(this.message, {this.statusCode});
+  ApiException(this.message, {this.statusCode, this.code});
 
   final String message;
   final int? statusCode;
+
+  /// 서버가 함께 내려주는 기계용 코드 (예: SCAN_FREE_LIMIT). 없으면 null.
+  final String? code;
 
   @override
   String toString() => message;
@@ -76,7 +79,11 @@ class ApiClient {
         message = m is List ? m.join(', ') : m.toString();
       }
       return error.copyWith(
-        error: ApiException(message, statusCode: response.statusCode),
+        error: ApiException(
+          message,
+          statusCode: response.statusCode,
+          code: data is Map ? data['code']?.toString() : null,
+        ),
       );
     }
     // No HTTP response was ever received (DNS failure, connection refused,
@@ -104,8 +111,8 @@ class ApiClient {
     return _run(() => dio.put<T>(path, data: data));
   }
 
-  Future<Response<T>> delete<T>(String path) {
-    return _run(() => dio.delete<T>(path));
+  Future<Response<T>> delete<T>(String path, {Object? data}) {
+    return _run(() => dio.delete<T>(path, data: data));
   }
 
   Map<String, dynamic>? _clean(Map<String, dynamic>? query) {

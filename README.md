@@ -141,6 +141,30 @@ curl http://localhost:3001/api/subsidy/rules
 
 ---
 
+## 4-5. 처방표 스캔 (사진 → 일정 초안)
+
+캘린더 > **처방표 스캔**: 병원에서 받은 처방전·주사 일정표 사진을 찍으면 `POST /api/treatment/scan-schedule` 이 Claude(비전, `claude-opus-5-5`)로 약 이름·용량·날짜·시각·종류를 읽어 **초안**으로 돌려준다. 앱은 같은 약(이름·용량)을 한 일정 + 여러 투약 시각으로 묶어 확인 화면에 띄우고, 사용자가 날짜·시각·용량을 수정·체크한 뒤 등록 버튼을 눌러야 저장된다(자동 등록 없음). 확신도가 낮은 항목은 "확인 필요"로 표시한다.
+
+- **개인정보**: 사진은 base64 로 요청에만 실리고 서버·로그·DB 에 저장하지 않는다(로그는 건수·소요시간만). 개인정보 처리방침에 "처방전 이미지의 분석 처리 위탁(Anthropic), 저장 없음" 항목을 추가해야 한다. iOS 카메라·사진 권한 문구는 `Info.plist` 에 있음.
+- **설정**: 백엔드 `ANTHROPIC_API_KEY` 필수(없으면 503 안내). 요청 본문 한도 12MB(`main.ts`), 사용자당 분당 6회 제한. 앱은 긴 변 1600px·JPEG 80% 로 줄여 보낸다.
+- **비용**: 사진 1장 ≈ 입력 2~3천 토큰 + 출력 1천 토큰 → 약 3~5센트.
+- **횟수 정책**: 무료 사용자는 평생 2회, 프리미엄은 하루 20회(KST 기준 초기화). 성공한 분석만 센다. 서버가 `users/{uid}.scanFreeUsed / scanDailyUsed / scanDailyDate` 로 관리하고 `GET /api/treatment/scan-quota` 로 잔여 횟수를 내려준다. 초과 시 403 + `code: SCAN_FREE_LIMIT | SCAN_DAILY_LIMIT` — 앱은 무료 소진이면 페이월, 프리미엄 소진이면 안내를 띄운다.
+- **유료 경계**: 약물 알림이 붙는 저장은 프리미엄(기존 게이트). 무료는 첫 일정 1건·약물 없음만.
+- 카카오 알림톡 연동은 후속 과제(푸시로 먼저 출시).
+
+---
+
+## 4-4. 계정 삭제 · 커뮤니티 신고/차단 · 관리자 권한
+
+- **계정 삭제** `DELETE /api/users/me` (본문 `{ password }`): 비밀번호 재확인 → 배우자 연결 해제(상대 기록 유지) → 주기·수치·시술 일정·메모·예약 알림·지원금 프로필·푸시 토큰 삭제 → 커뮤니티 글·댓글은 "탈퇴한 사용자"로 익명화 → 사용자 문서 삭제. 앱: 설정 > 계정 > 회원 탈퇴. 스토어 구독은 앱이 해지할 수 없어 안내만 한다.
+- **신고** `POST /api/community/posts/:id/report`, `POST /api/community/comments/:id/report` (`reason`: spam·harassment·medical_misinfo·privacy·sexual·other, `detail` 선택). 서로 다른 신고자 3명이면 `isHidden` 으로 자동 숨김 후 관리자가 `community_reports` 에서 검토한다. 앱: 글 ⋯ 메뉴, 댓글 길게 누르기.
+- **차단** `POST /api/community/block` (`postId` 또는 `commentId`) — 서버가 작성자 토큰을 `users/{uid}.blockedAuthorTokens` 에 저장하고 목록·댓글 조회에서 걸러낸다(토큰 비노출). 해제 `DELETE /api/community/block`, 앱: 설정 > 커뮤니티 차단 해제.
+- **관리자 콘솔 권한**: `firestore.rules` 의 `isAdmin()` 은 Firebase Auth 커스텀 클레임 `admin=true` 를 본다. 부여: `cd apps/backend && npm run set-admin -- <콘솔 로그인 이메일>` 후 콘솔 재로그인. 배너·콘텐츠·앱설정·푸시 이력·병원(광고 계약)·아티클 쓰기, 사용자·광고 집계·신고 읽기가 관리자에게 열린다. 규칙 배포: `firebase deploy --only firestore:rules`.
+- **Android 릴리스 서명**: `android/key.properties.example` 을 `key.properties` 로 복사해 채우면 릴리스 빌드가 그 키로 서명된다(없으면 디버그 키 + 경고). `*.jks`, `key.properties` 는 git 제외.
+- **스토어 링크**: 백엔드 `APP_STORE_URL_IOS`, `APP_STORE_URL_ANDROID` (버전 체크 응답 기본값). `config/appVersion.storeUrl` 이 있으면 그 값 우선.
+
+---
+
 ## 4-3. 임신 확인 모드
 
 시술·자연임신 준비 사용자가 임신을 확인하면 `treatmentStage = 'pregnant'` 로 전환한다. 기획과 화면별 변화는 [docs/pregnancy-mode.md](docs/pregnancy-mode.md) 참고.
@@ -319,10 +343,15 @@ flutter build ipa --release \
 | POST | `/api/auth/login` | 로그인 → JWT 발급 |
 | GET | `/api/auth/me` | 내 정보 |
 | GET/PATCH | `/api/users/profile` | 프로필 조회/수정 |
+| DELETE | `/api/users/me` | 계정 삭제 (비밀번호 재확인) |
+| POST | `/api/community/posts/:id/report`, `/api/community/comments/:id/report` | 신고 |
+| POST/DELETE | `/api/community/block` | 작성자 차단 / 전체 해제 |
 | GET/POST | `/api/cycles` | 생리 주기 |
 | GET/POST/DELETE | `/api/hormones` | 호르몬 기록 |
 | GET/POST/PATCH/DELETE | `/api/treatment` | 시술 일정 |
 | GET | `/api/treatment/templates` | 회차 프로토콜 템플릿(예시 일정, `config/treatmentTemplates` 로 갱신 가능) |
+| POST | `/api/treatment/scan-schedule` | 처방전·일정표 사진 분석 → 일정 초안 (이미지 미저장, 분당 6회) |
+| GET | `/api/treatment/scan-quota` | 스캔 잔여 횟수 (무료 평생 2회 · 프리미엄 하루 20회) |
 | GET/GET(:date)/POST/DELETE | `/api/daily-notes` | 캘린더 일별 메모·컨디션 (감정일기 대체, 날짜당 1건) |
 | POST | `/api/ai/chat` | AI 채팅 (스트리밍) — 현재 호출하는 클라이언트 없음 (웹 동결, Flutter 미구현) |
 | GET/POST | `/api/ai/history` | 채팅 히스토리 — 현재 호출하는 클라이언트 없음 |

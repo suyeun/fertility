@@ -17,6 +17,7 @@ import '../subsidy/widgets/subsidy_inline_banner.dart';
 import 'cycle_summary_card.dart';
 import 'day_cell.dart';
 import 'day_detail_modal.dart';
+import 'prescription_scan_sheet.dart';
 import 'protocol_template_sheet.dart';
 import 'schedule_modal.dart';
 
@@ -225,8 +226,40 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
           Navigator.of(sheetContext).pop();
           showPaywallModal(context, source: source);
         },
-        onSaved: (saved) async {
+        onSaved: (saved) {
           Navigator.of(sheetContext).pop();
+          _handleBulkSaved(saved);
+        },
+      ),
+    );
+  }
+
+  /// 처방표 스캔 — 사진에서 약 이름·용량·시각을 읽어 초안을 만들고 확인·수정 후 일괄 등록.
+  void _openPrescriptionScanSheet() {
+    if (_treatmentMode == 'natural') return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => PrescriptionScanSheet(
+        initialDate: _selectedDate ?? DateTime.now(),
+        isPremium: _isPremium,
+        existingScheduleCount:
+            _schedules.where((s) => !s.isPartnerRecord).length,
+        onPaywall: (source) {
+          Navigator.of(sheetContext).pop();
+          showPaywallModal(context, source: source);
+        },
+        onSaved: (saved) {
+          Navigator.of(sheetContext).pop();
+          _handleBulkSaved(saved);
+        },
+      ),
+    );
+  }
+
+  /// 템플릿·스캔으로 여러 일정을 한 번에 등록한 뒤 공통 처리(목록·알림 갱신, 지원금 배너).
+  Future<void> _handleBulkSaved(List<TreatmentSchedule> saved) async {
           await _refreshSchedules();
           LocalNotifications.instance.rescheduleMedicationAlerts(
             _isPremium
@@ -265,9 +298,6 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
               SnackBar(content: Text('${saved.length}건의 일정을 등록했어요.')),
             );
           }
-        },
-      ),
-    );
   }
 
   /// 일정 변경(완료·삭제·수정) 후 목록·알림 갱신.
@@ -501,26 +531,31 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                           ),
                         ],
                       ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
+                      Wrap(
+                        alignment: WrapAlignment.end,
+                        spacing: 8,
+                        runSpacing: 6,
                         children: [
                           _headerBtn(
                             Icons.edit_note_rounded,
                             '기록하기',
                             () => context.push('/records'),
                           ),
-                          const SizedBox(width: 8),
                           _headerBtn(
                             Icons.add_rounded,
                             '일정 추가',
                             () => _openScheduleModal(),
                           ),
                           if (_treatmentMode != 'natural') ...[
-                            const SizedBox(width: 8),
                             _headerBtn(
                               Icons.auto_awesome_motion_rounded,
                               '회차 템플릿',
                               _openProtocolTemplateSheet,
+                            ),
+                            _headerBtn(
+                              Icons.document_scanner_rounded,
+                              '처방표 스캔',
+                              _openPrescriptionScanSheet,
                             ),
                           ],
                         ],

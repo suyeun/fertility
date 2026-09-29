@@ -6,6 +6,7 @@ import { UsersService } from '../users/users.service'
 import { makeAnonName } from '@fertility/shared'
 import type { PostCategory, PostTag } from '@fertility/shared'
 import { CreatePostDto, CreateCommentDto } from './dto/community.dto'
+import { BlockDto, ReportDto } from './dto/moderation.dto'
 
 @Controller('community')
 @UseGuards(JwtAuthGuard)
@@ -21,11 +22,36 @@ export class CommunityController {
 
   @Get('posts')
   getPosts(
+    @CurrentUser() user: JwtPayload,
     @Query('category') category?: PostCategory,
     @Query('tag') tag?: PostTag,
     @Query('userMode') userMode?: string,
   ) {
-    return this.community.getPosts({ category, tag, userMode })
+    return this.community.getPosts({ category, tag, userMode, viewerUid: user.sub })
+  }
+
+  // ============================
+  // 신고 · 차단
+  // ============================
+
+  @Post('posts/:id/report')
+  reportPost(@CurrentUser() user: JwtPayload, @Param('id') postId: string, @Body() body: ReportDto) {
+    return this.community.report(user.sub, { postId }, body.reason, body.detail)
+  }
+
+  @Post('comments/:id/report')
+  reportComment(@CurrentUser() user: JwtPayload, @Param('id') commentId: string, @Body() body: ReportDto) {
+    return this.community.report(user.sub, { commentId }, body.reason, body.detail)
+  }
+
+  @Post('block')
+  block(@CurrentUser() user: JwtPayload, @Body() body: BlockDto) {
+    return this.community.blockAuthor(user.sub, { postId: body.postId, commentId: body.commentId })
+  }
+
+  @Delete('block')
+  unblockAll(@CurrentUser() user: JwtPayload) {
+    return this.community.unblockAll(user.sub)
   }
 
   @Post('posts')
@@ -59,8 +85,8 @@ export class CommunityController {
   // ============================
 
   @Get('posts/:id/comments')
-  getComments(@Param('id') postId: string) {
-    return this.community.getComments(postId)
+  getComments(@CurrentUser() user: JwtPayload, @Param('id') postId: string) {
+    return this.community.getComments(postId, user.sub)
   }
 
   @Post('posts/:id/comments')
